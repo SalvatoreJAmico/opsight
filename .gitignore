@@ -1,0 +1,9 @@
+# internal design notes
+_design/
+.vscode/
+# Python cache
+__pycache__/
+
+# OS files
+.DS_Store
+Thumbs.db
