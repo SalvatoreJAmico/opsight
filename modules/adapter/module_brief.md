@@ -1,12 +1,10 @@
 # Adapter Module
 
 ## Purpose
-The adapter module converts incoming datasets from various formats into the Opsight canonical schema.  
-It standardizes raw input data so the rest of the pipeline can process records consistently.
+The adapter module converts loaded input datasets into the Opsight canonical schema.
+It standardizes records so the rest of the pipeline can process them consistently.
 
 ## Responsibilities
-- Detect input data format
-- Load data into a structured dataframe
 - Normalize column names and roles
 - Map records to the canonical schema
 - Output standardized records for downstream modules
@@ -21,7 +19,7 @@ The adapter may receive data from multiple formats:
 - Parquet
 - SQL sources
 
-These sources are detected and loaded by the ingestion logic before normalization.
+These sources are detected and loaded by ingestion before adapter transformation.
 
 ## Output Canonical Schema
 Each record is transformed into the Opsight canonical structure:
@@ -53,9 +51,9 @@ The adapter sits between ingestion and downstream processing.
 Pipeline flow:
 
 
-Ingestion
+Ingestion (read)
 ↓
-Adapter
+Adapter (transform)
 ↓
 Canonical Records
 ↓

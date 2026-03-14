@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Import external datasets into the Opsight system and store them in the raw data layer.
+Read external datasets into the Opsight pipeline.
 
 ## Inputs
 
@@ -10,4 +10,12 @@ Dataset file path
 
 ## Outputs
 
-Raw dataset stored in: data/raw/
+Loaded dataset in a dataframe-like structure for downstream transformation.
+
+## Responsibilities
+
+- detect source format
+- load source data
+- perform basic input record validation
+
+The ingestion module is responsible only for reading and validating source data before transformation.

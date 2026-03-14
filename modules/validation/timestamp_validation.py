@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 def validate_timestamp(timestamp):
     status = "valid"
     errors = []
@@ -10,11 +11,11 @@ def validate_timestamp(timestamp):
     else:
         try:
             datetime.fromisoformat(timestamp)
-        except ValueError:
+        except (TypeError, ValueError):
             status = "invalid"
             errors.append("Invalid timestamp format")
 
-    return ({
+    return {
         "status": status,
-        "errors": errors
-        })
+        "errors": errors,
+    }

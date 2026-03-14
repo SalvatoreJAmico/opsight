@@ -1,32 +1,18 @@
-def generate_validation_report(validation_results):
-
-    report = {
-        "dataset_status": validation_results["status"],
-        "records_processed": validation_results["total_records"],
-        "valid_records": validation_results["valid_records"],
-        "invalid_records": validation_results["invalid_records"],
-        "errors": validation_results["results"]
-    }
-
-    return report
-
-
 def generate_quality_report(validation_report, duplicate_results):
-
     report = {
         "pipeline_stage": "validation",
-        "dataset_status": validation_report["dataset_status"],
+        "dataset_status": validation_report.get("dataset_status", "invalid"),
         "summary": {
-            "records_processed": validation_report["records_processed"],
-            "valid_records": validation_report["valid_records"],
-            "invalid_records": validation_report["invalid_records"],
-            "duplicate_records": len(duplicate_results["duplicate_records"])
+            "records_processed": validation_report.get("records_processed", 0),
+            "valid_records": validation_report.get("valid_records", 0),
+            "invalid_records": validation_report.get("invalid_records", 0),
+            "duplicate_records": len(duplicate_results.get("duplicate_records", [])),
         },
-        "errors": validation_report["errors"],
-        "warnings": []
+        "errors": validation_report.get("errors", []),
+        "warnings": [],
     }
 
-    if duplicate_results["duplicates_found"]:
+    if duplicate_results.get("duplicates_found", False):
         report["warnings"].append("Duplicate records detected")
 
     return report
