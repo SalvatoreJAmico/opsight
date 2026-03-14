@@ -1,0 +1,20 @@
+[
+  {
+    "customer_id":101,
+    "customer_name":"Alice Smith",
+    "order_amount":25.5,
+    "order_date":"2026-03-12"
+  },
+  {
+    "customer_id":102,
+    "customer_name":"Bob Jones",
+    "order_amount":42.1,
+    "order_date":"2026-03-13"
+  },
+  {
+    "customer_id":103,
+    "customer_name":"Carol Lee",
+    "order_amount":13.75,
+    "order_date":"2026-03-14"
+  }
+]

@@ -1,0 +1,4 @@
+customer_id,customer_name,order_amount,order_date
+101,Alice Smith,25.5,2026-03-12
+102,Bob Jones,42.1,2026-03-13
+103,Carol Lee,13.75,2026-03-14
