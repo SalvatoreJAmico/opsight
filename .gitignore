@@ -1,6 +1,8 @@
 # internal design notes
 _design/
 .vscode/
+data/
+
 # Python cache
 __pycache__/
 
