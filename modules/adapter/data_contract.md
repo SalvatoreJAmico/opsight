@@ -1,14 +1,14 @@
 # Adapter Data Contract
 
 ## Overview
-The adapter module receives normalized datasets and converts them into the Opsight canonical schema.  
+The adapter module receives loaded datasets and converts them into the Opsight canonical schema.
 This contract defines the expected input structure and the output format produced by the adapter.
 
 ---
 
 ## Input Contract
 
-The adapter receives the output of the normalization step.
+The adapter receives a loaded dataset and produces a normalized internal representation before canonical mapping.
 
 Structure:
 
@@ -136,11 +136,9 @@ The adapter guarantees:
 
 Raw Source
 ↓
-Ingestion
+Ingestion (detect and load)
 ↓
-Normalization
-↓
-Adapter
+Adapter (normalize and map)
 ↓
 Canonical Records
 

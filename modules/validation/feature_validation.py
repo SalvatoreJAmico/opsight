@@ -4,8 +4,8 @@ def validate_features(features):
 
     if features is None:
         status = "invalid"
-        errors.append("Missing features.")
-        
+        errors.append("Missing features")
+
     elif not isinstance(features, dict):
         status = "invalid"
         errors.append("Features must be a dictionary")
@@ -14,9 +14,9 @@ def validate_features(features):
         for key, value in features.items():
             if value is None:
                 status = "invalid"
-                errors.append(f"Feature '{key}' has null value")
+                errors.append(f"Feature '{key}' is missing a value")
 
-    return ({
-        "status" : status,
+    return {
+        "status": status,
         "errors": errors
-    })
+    }

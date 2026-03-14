@@ -2,8 +2,8 @@
 
 ## Purpose
 
-The ingestion module imports external datasets into the Opsight system and converts them into a normalized internal event format.
-This document defines the expected input schema, normalized output schema, validation rules, and error handling behavior.
+The ingestion module is responsible for reading source data only.
+It detects source formats, loads datasets, and performs basic required-field checks before handoff to adapter transformation.
 
 ## Raw Input Record
 
@@ -79,75 +79,26 @@ Raw records represent operational events received from external datasets or exte
 }
 ```
 
-## Normalized Output Record
+## Source Format Detection
 
-The ingestion module converts raw records into a normalized internal structure used by Opsight.
+The ingestion module detects source format with `detect_format(source_path)`.
+Supported formats:
 
-## Normalized Fields
+- csv
+- tsv
+- json
+- parquet
+- excel
+- sql
+- text
 
-<table style="table-layout: fixed; width: 620px;">
-	<colgroup>
-		<col style="width: 180px;" />
-		<col style="width: 140px;" />
-		<col style="width: 300px;" />
-	</colgroup>
-	<thead>
-		<tr>
-			<th>Field</th>
-			<th>Type</th>
-			<th>Description</th>
-		</tr>
-	</thead>
-	<tbody>
-		<tr>
-			<td>event_time</td>
-			<td>datetime</td>
-			<td>Normalized timestamp</td>
-		</tr>
-		<tr>
-			<td>source_system</td>
-			<td>string</td>
-			<td>Data source</td>
-		</tr>
-		<tr>
-			<td>type</td>
-			<td>string</td>
-			<td>Event classification</td>
-		</tr>
-		<tr>
-			<td>severity</td>
-			<td>string</td>
-			<td>Normalized severity</td>
-		</tr>
-		<tr>
-			<td>description</td>
-			<td>string</td>
-			<td>Event message</td>
-		</tr>
-		<tr>
-			<td>asset</td>
-			<td>string</td>
-			<td>Infrastructure asset identifier</td>
-		</tr>
-	</tbody>
-</table>
+## Loaded Output Structure
 
-### Example Normalized Record
-
-```json
-{
-	"event_time": "2026-03-10T12:01:22Z",
-	"source_system": "sensor_gateway",
-	"type": "temperature_alert",
-	"severity": "warning",
-	"description": "Temperature exceeded threshold",
-	"asset": "rack-22"
-}
-```
+The ingestion module loads the source with `load_source(source_path, source_format)` and returns a dataframe-like dataset (pandas DataFrame).
 
 ## Validation Rules
 
-The ingestion module validates records before normalization.
+The ingestion module performs basic record validation before transformation.
 
 - `timestamp` must be a valid datetime.
 - `source` must be present.
@@ -164,3 +115,8 @@ If a record fails validation:
 - Ingestion continues for remaining records.
 
 This prevents ingestion pipelines from stopping due to malformed data.
+
+## Handoff Boundary
+
+The ingestion module does not normalize or map canonical records.
+Transformation to canonical schema is handled by the adapter module.
