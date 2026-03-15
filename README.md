@@ -1,68 +1,89 @@
 # Opsight
 
-Opsight is an experimental operational data pipeline for ingesting, normalizing, validating, and preparing structured data for analytics and machine learning workflows.
+Opsight is a modular operational data pipeline for ingesting heterogeneous datasets, normalizing them into a canonical schema, validating data integrity, and persisting validated records for downstream analytics.
 
-The system uses a modular pipeline architecture, allowing new data sources, validation rules, and storage backends to be added without modifying the core flow.
+The project is structured around small, composable pipeline stages and a single orchestration entrypoint. The repository already includes a working end-to-end runner, sample datasets, JSON and Parquet persistence backends, reporting artifacts, and unit tests covering both success and failure paths.
 
 ## Pipeline Overview
 
-Opsight processes data through these stages:
-
 ```text
-source data
-  -> ingestion
-  -> adapter
-  -> validation
-  -> persistence
+Opsight Pipeline Architecture
+               ┌───────────────┐
+               │   Source Data │
+               │ CSV / JSON /  │
+               │ Parquet / API │
+               └───────┬───────┘
+                       │
+                       ▼
+               ┌───────────────┐
+               │   Ingestion   │
+               │ Load dataset  │
+               │ Basic checks  │
+               └───────┬───────┘
+                       │
+                       ▼
+               ┌───────────────┐
+               │    Adapter    │
+               │ Normalize     │
+               │ Map schema    │
+               └───────┬───────┘
+                       │
+                       ▼
+               ┌───────────────┐
+               │  Canonical    │
+               │    Records    │
+               │ entity_id     │
+               │ timestamp     │
+               │ features{}    │
+               └───────┬───────┘
+                       │
+                       ▼
+               ┌───────────────┐
+               │  Validation   │
+               │ Field checks  │
+               │ duplicates    │
+               │ timestamps    │
+               └───────┬───────┘
+                       │
+                       ▼
+               ┌───────────────┐
+               │  Persistence  │
+               │ JSON / Parquet│
+               │ storage layer │
+               └───────┬───────┘
+                       │
+                       ▼
+               ┌───────────────┐
+               │ Observability │
+               │ Logs          │
+               │ Run summary   │
+               │ Error reports │
+               └───────────────┘
 ```
 
-## Module Responsibilities
+The system emphasizes:
 
-### Ingestion
+- modular pipeline stages
+- clear data contracts
+- centralized orchestration
+- observability through logs and run summaries
+- testable failure handling
 
-Reads raw datasets from heterogeneous source systems and prepares them for pipeline processing.
+## What The Project Does Today
 
-Responsibilities:
-- detect source file formats
-- load datasets from disk
-- perform basic source record validation
+Opsight currently ships with a runnable pipeline in `run_pipeline.py` that:
 
-### Adapter
+1. ingests a source dataset from the `data/` directory
+2. adapts the source rows into a canonical record shape
+3. validates each canonical record
+4. persists valid records through the configured storage backend
+5. writes a run summary and stage logs for observability
 
-Transforms source records into the Opsight canonical schema.
+The default pipeline configuration reads `data/opsight_sample_sales.csv` and persists valid records to `data/records.json` using the JSON storage backend.
 
-Responsibilities:
-- normalize source records
-- map heterogeneous schemas to canonical format
-- enforce canonical record structure
+## Canonical Record Schema
 
-### Validation
-
-Validates canonical records and produces quality reporting artifacts.
-
-Responsibilities:
-- canonical schema validation
-- timestamp validation
-- feature validation
-- duplicate detection
-- validation summary reporting
-- quality report generation
-
-### Persistence
-
-Stores validated records using configurable storage backends.
-
-Responsibilities:
-- abstract storage interface
-- local file storage
-- parquet storage backend
-- storage configuration and metadata tracking
-
-Status: Storage module and persistence backends implemented. Full pipeline integration occurs in Phase 4.
-
-## Canonical Record Structure
-
-Records in the pipeline follow this canonical schema:
+Canonical records in Opsight follow this structure:
 
 ```python
 {
@@ -73,132 +94,133 @@ Records in the pipeline follow this canonical schema:
 }
 ```
 
-This schema provides a consistent structure for validation and downstream analytics workflows.
+This schema creates a consistent contract between ingestion, transformation, validation, and persistence.
+
+## Core Modules
+
+### Ingestion
+
+The ingestion layer detects source format and loads data into a dataframe for downstream processing.
+
+Currently supported source handling:
+
+- CSV
+- TSV
+- JSON
+- Parquet
+- Excel
+- HTTP and HTTPS file URLs for common tabular formats
+
+### Adapter
+
+The adapter layer normalizes source column names and maps source rows into the canonical Opsight record format.
+
+Current mapping behavior:
+
+- columns containing `id` are treated as entity identifiers
+- columns containing `time` or `date` are treated as timestamps
+- all remaining columns are grouped into `features`
+
+### Validation
+
+The validation package includes:
+
+- canonical record validation
+- timestamp validation helpers
+- feature validation helpers
+- duplicate detection utilities
+- report and quality-report modules
+
+The current pipeline runner validates each canonical record before persistence and separates valid and invalid records for reporting.
+
+### Persistence
+
+The persistence layer provides a backend abstraction with implemented support for:
+
+- local JSON storage
+- Parquet storage
+
+Backend selection is handled through `StorageConfig` and `StorageFactory`.
+
+## Running The Pipeline
+
+Run the pipeline from the repository root:
+
+```bash
+python run_pipeline.py
+```
+
+Observed current sample run:
+
+```python
+{
+    "status": "SUCCESS",
+    "failed_stage": None,
+    "records_ingested": 3,
+    "records_valid": 3,
+    "records_invalid": 0,
+    "records_persisted": 3,
+    "runtime_seconds": 0.007852,
+}
+```
+
+## Generated Artifacts
+
+When the pipeline runs, Opsight produces:
+
+- stage logs in `logs/`
+- `reports/pipeline_run_summary.json` for every run
+- `reports/pipeline_failure_summary.json` when a run fails
+- persisted output in `data/records.json` by default
+
+## Testing
+
+Run the test suite with:
+
+```bash
+python -m unittest discover -s tests
+```
+
+The current test suite covers:
+
+- successful pipeline execution
+- ingestion, adapter, validation, and persistence failure paths
+- canonical record validation behavior
+- duplicate detection behavior
 
 ## Repository Layout
 
 ```text
 opsight/
-├── modules/
-│   ├── ingestion/
-│   │   ├── ingestion.py
-│   │   ├── data_contract.md
-│   │   └── module_brief.md
-│   ├── adapter/
-│   │   ├── adapter.py
-│   │   ├── data_contract.md
-│   │   └── module_brief.md
-│   ├── validation/
-│   │   ├── validator.py
-│   │   ├── batch_validator.py
-│   │   ├── timestamp_validation.py
-│   │   ├── feature_validation.py
-│   │   ├── duplicate_check.py
-│   │   ├── report.py
-│   │   ├── quality_report.py
-│   │   ├── data_contract.md
-│   │   └── module_brief.md
-│   └── persistence/
-│       ├── storage_interface.py
-│       ├── local_storage.py
-│       ├── parquet_storage.py
-│       ├── storage_factory.py
-│       ├── persistence_manager.py
-│       ├── storage_metadata.py
-│       ├── storage_error.py
-│       ├── data_contract.md
-│       └── module_brief.md
-├── data/               sample source datasets
-├── notebooks/          experimentation notebooks
-├── reports/            generated pipeline reports
-├── configs/            pipeline configuration files
+├── configs/            storage and pipeline configuration
+├── data/               sample input data and persisted records
+├── logs/               pipeline execution logs
 ├── models/             future model artifacts
-├── _design/            architecture and planning documents
-├── README.md
-└── LICENSE
+├── modules/
+│   ├── adapter/        source-to-canonical mapping
+│   ├── ingestion/      source loading and format detection
+│   ├── persistence/    storage backends and factory
+│   └── validation/     validation and quality checks
+├── notebooks/          exploratory notebooks
+├── reports/            pipeline summaries and failure reports
+├── tests/              unit tests for pipeline and validation
+├── run_pipeline.py     end-to-end pipeline entrypoint
+└── README.md
 ```
-
-## Current Project Status
-
-The project is being developed in structured phases.
-
-### Phase 1 - Pipeline Foundation
-
-Complete:
-- repository structure
-- module architecture
-- ingestion pipeline skeleton
-- adapter schema mapping
-- canonical schema definition
-
-### Phase 2 - Data Validation
-
-Complete:
-- canonical record validation
-- timestamp validation
-- feature validation
-- duplicate detection
-- validation reporting
-- quality reporting
-
-### Phase 3 - Storage and Persistence
-
-Complete at module level.
-
-Implemented components:
-- storage interface
-- local file storage backend
-- parquet storage backend
-- storage configuration
-- metadata tracking
-
-Pipeline persistence integration occurs in Phase 4 orchestration work.
 
 ## Sample Data
 
-The repository includes sample datasets used during development:
-- opsight_sample_customers.json
-- opsight_sample_events.parquet
-- opsight_sample_finance.xlsx
-- opsight_sample_sales.csv
+The repository includes representative source files for development and testing:
 
-These files simulate heterogeneous source systems for pipeline testing.
+- `data/opsight_sample_customers.json`
+- `data/opsight_sample_events.parquet`
+- `data/opsight_sample_finance.xlsx`
+- `data/opsight_sample_sales.csv`
 
-## Development Model
+## Project Status
 
-Development follows an issue-driven workflow.
-
-Current storage-focused issue stream:
-- PS-019 Storage Interface
-- PS-020 Local File Storage
-- PS-021 Parquet Storage Backend
-- PS-022 Storage Configuration
-- PS-023 Storage Factory
-- PS-024 Persist Validated Records
-- PS-025 Storage Error Handling
-- PS-026 Storage Metadata Tracking
-
-This approach keeps pipeline architecture aligned with implementation.
+Opsight is under active development, but the repository already contains a functional end-to-end pipeline path for local file-based sources. The current implementation is strongest in modular design, orchestration structure, failure reporting, and local persistence. Future work can extend configuration, richer validation orchestration, and additional source and storage integrations.
 
 ## License
 
-This project is licensed under the MIT License.
-
-See LICENSE for details.
-
-## Status
-
-Opsight is an experimental engineering project under active development.
-
-Current phase summary:
-
-- [x] Phase 1 complete
-- [x] Phase 2 complete
-- [x] Phase 3 persistence module complete
-- [ ] Phase 4 pipeline orchestration
-- [ ] Phase 5 API layer
-- [ ] Phase 6 UI / visualization
-- [ ] Phase 7 intelligence layer
-- [ ] Phase 8 production readiness
-
-The repository currently represents a functional ingestion, adapter, validation, and persistence module foundation. Future work focuses on orchestrating these modules end-to-end and then layering API and UI capabilities.
+This project is licensed under the MIT License. See `LICENSE` for details.

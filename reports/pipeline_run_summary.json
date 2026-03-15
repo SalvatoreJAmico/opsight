@@ -1,6 +1,9 @@
 {
+    "status": "SUCCESS",
+    "failed_stage": null,
     "records_ingested": 3,
     "records_valid": 3,
     "records_invalid": 0,
-    "records_persisted": 3
+    "records_persisted": 3,
+    "runtime_seconds": 0.007852
 }
