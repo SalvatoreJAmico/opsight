@@ -24,40 +24,43 @@ These sources are detected and loaded by ingestion before adapter transformation
 ## Output Canonical Schema
 Each record is transformed into the Opsight canonical structure:
 
-
+```text
 entity_id
 timestamp
 features
 metadata
-
+```
 
 Example:
 
-
+```json
 {
-entity_id: 101,
-timestamp: "2026-03-13",
-features: {
-amount: 45.00,
-region: "west"
+"entity_id": 101,
+"timestamp": "2026-03-13",
+"features": {
+  "amount": 45.00,
+  "region": "west"
 },
-metadata: {}
+"metadata": {}
 }
-
+```
 
 ## Role in the Opsight Pipeline
 The adapter sits between ingestion and downstream processing.
 
 Pipeline flow:
 
-
+```text
 Ingestion (read)
 ↓
 Adapter (transform)
 ↓
 Canonical Records
 ↓
-Feature / analytics modules
+Validation
+```
+
+Full orchestration with persistence occurs in Phase 4.
 
 
 The adapter ensures all downstream components receive data in a consistent format regardless of the original source.

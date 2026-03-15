@@ -58,7 +58,7 @@ Responsibilities:
 - parquet storage backend
 - storage configuration and metadata tracking
 
-Persistence is currently under development.
+Status: Storage module and persistence backends implemented. Full pipeline integration occurs in Phase 4.
 
 ## Canonical Record Structure
 
@@ -99,7 +99,15 @@ opsight/
 │   │   ├── data_contract.md
 │   │   └── module_brief.md
 │   └── persistence/
-│       └── storage.py
+│       ├── storage_interface.py
+│       ├── local_storage.py
+│       ├── parquet_storage.py
+│       ├── storage_factory.py
+│       ├── persistence_manager.py
+│       ├── storage_metadata.py
+│       ├── storage_error.py
+│       ├── data_contract.md
+│       └── module_brief.md
 ├── data/               sample source datasets
 ├── notebooks/          experimentation notebooks
 ├── reports/            generated pipeline reports
@@ -135,15 +143,16 @@ Complete:
 
 ### Phase 3 - Storage and Persistence
 
-In progress.
+Complete at module level.
 
-Planned components:
+Implemented components:
 - storage interface
 - local file storage backend
 - parquet storage backend
 - storage configuration
 - metadata tracking
-- pipeline persistence integration
+
+Pipeline persistence integration occurs in Phase 4 orchestration work.
 
 ## Sample Data
 
@@ -181,6 +190,15 @@ See LICENSE for details.
 
 Opsight is an experimental engineering project under active development.
 
-The repository currently represents a functional validation pipeline and the foundation for a modular operational data processing system.
+Current phase summary:
 
-Future work will expand persistence, pipeline orchestration, and analytics capabilities.
+- [x] Phase 1 complete
+- [x] Phase 2 complete
+- [x] Phase 3 persistence module complete
+- [ ] Phase 4 pipeline orchestration
+- [ ] Phase 5 API layer
+- [ ] Phase 6 UI / visualization
+- [ ] Phase 7 intelligence layer
+- [ ] Phase 8 production readiness
+
+The repository currently represents a functional ingestion, adapter, validation, and persistence module foundation. Future work focuses on orchestrating these modules end-to-end and then layering API and UI capabilities.

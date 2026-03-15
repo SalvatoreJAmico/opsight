@@ -13,6 +13,10 @@ Validate canonical records before they move further in the pipeline and produce 
 - detect duplicate entity and timestamp combinations
 - generate validation summary and quality reports
 
+## Current Status
+
+Phase 2 validation scope is complete, including validation tests in `tests/test_validation.py`.
+
 ## Current Files
 
 - `validator.py` for record-level canonical validation

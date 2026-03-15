@@ -22,11 +22,27 @@ The current expected input is a list of validated canonical records.
 ]
 ```
 
+Validation expectation:
+
+- records should already be validated by the validation module
+- each record should include `entity_id`, `timestamp`, `features`, and `metadata`
+
 ## Output Contract
 
-Phase 3 will define the durable storage output format. For now, the module exposes a storage entry point and does not yet return persisted record metadata.
+The persistence interface exposes two operations:
+
+- `save_records(records)` persists records and returns `None`
+- `load_records()` returns a list of canonical records
+
+Backend behavior:
+
+- JSON backend (`local_storage.py`) writes to `data/records.json`
+- Parquet backend (`parquet_storage.py`) writes to `data/records.parquet`
+
+`persistence_manager.py` delegates persistence through the backend selected by `storage_factory.py`.
 
 ## Notes
 
 - input records should already have passed validation
-- persistence backends may include files, databases, or services in later work
+- current supported backends are `json` and `parquet`
+- full pipeline orchestration wiring occurs in Phase 4

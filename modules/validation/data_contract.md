@@ -1,6 +1,6 @@
 # Validation Data Contract
 
-This module validates canonical records.
+This module validates canonical records produced by the adapter module.
 
 Expected record structure:
 
@@ -8,6 +8,8 @@ Expected record structure:
 - timestamp
 - features
 - metadata
+
+Record-level validation is implemented in `validator.py` via `validate_canonical_record(record)`.
 
 Invalid records return a validation error object.
 
@@ -36,6 +38,14 @@ errors
   ]
 }
 
+`errors` may include:
+
+- Missing entity_id
+- Missing timestamp
+- Missing features
+- Features must be a dictionary
+- Missing metadata
+
 ## Batch Validation Output
 
 Batch validation returns aggregate validation results using this structure:
@@ -51,6 +61,30 @@ Batch validation returns aggregate validation results using this structure:
 ```
 
 If invalid records are present, `results` contains per-record error entries.
+
+## Duplicate Validation Output
+
+Duplicate detection is implemented in `duplicate_check.py` with `detect_duplicates(records)`.
+
+```json
+{
+  "duplicates_found": true,
+  "duplicate_records": [
+    {
+      "record_index": 1,
+      "entity_id": "cust-001",
+      "timestamp": "2026-03-15T12:00:00"
+    }
+  ]
+}
+```
+
+Duplicates are identified by the `(entity_id, timestamp)` pair.
+
+## Timestamp and Feature Validation
+
+- `timestamp_validation.py` exposes `validate_timestamp(timestamp)` and returns `{ "status": "valid|invalid", "errors": [] }`.
+- `feature_validation.py` exposes `validate_features(features)` and returns `{ "status": "valid|invalid", "errors": [] }`.
 
 ## Validation Summary Output
 

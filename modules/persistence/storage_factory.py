@@ -14,10 +14,7 @@ class StorageFactory:
         if backend == "json":
             return LocalStorage()
 
-        # TODO
-        # if backend == "parquet", return the correct storage implementation
-
-        if backend is "parquet":
+        if backend == "parquet":
             return ParquetStorage()
 
         raise ValueError(f"Unsupported storage backend: {backend}")
