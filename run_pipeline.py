@@ -37,60 +37,60 @@ def run_pipeline():
 
     start_time = datetime.now(timezone.utc)
     logging.info("Pipeline started")
+    status = "SUCCESS"
+    try:
+        # -------------------------
+        # Stage 1: Ingestion
+        # -------------------------
+        logging.info("Stage: ingestion started")
+        raw_data = ingest_data(DATA_SOURCE)
+        logging.info("Stage: ingestion completed")
 
-    # -------------------------
-    # Stage 1: Ingestion
-    # -------------------------
-    logging.info("Stage: ingestion started")
+        # -------------------------
+        # Stage 2: Adapter
+        # -------------------------
+        logging.info("Stage: adapter started")
 
-    raw_data = ingest_data(DATA_SOURCE)
+        canonical_records = adapt_records(raw_data)
 
-    logging.info("Stage: ingestion completed")
+        logging.info(f"Stage: adapter completed | records={len(canonical_records)}")
 
-    # -------------------------
-    # Stage 2: Adapter
-    # -------------------------
-    logging.info("Stage: adapter started")
+        # -------------------------
+        # Stage 3: Validation
+        # -------------------------
+        logging.info("Stage: validation started")
 
-    canonical_records = adapt_records(raw_data)
+        valid_records = []
+        invalid_records = []
 
-    logging.info(f"Stage: adapter completed | records={len(canonical_records)}")
+        for record in canonical_records:
+            result = validate_canonical_record(record)
 
-    # -------------------------
-    # Stage 3: Validation
-    # -------------------------
-    logging.info("Stage: validation started")
+            if result["status"] == "valid":
+                valid_records.append(record)
+            else:
+                invalid_records.append(record)
 
-    valid_records = []
-    invalid_records = []
+        logging.info(
+            f"Stage: validation completed | valid={len(valid_records)} invalid={len(invalid_records)}"
+        )
 
-    for record in canonical_records:
-        result = validate_canonical_record(record)
-
-        if result["status"] == "valid":
-            valid_records.append(record)
-        else:
-            invalid_records.append(record)
-
-    logging.info(
-        f"Stage: validation completed | valid={len(valid_records)} invalid={len(invalid_records)}"
-    )
-
-    # -------------------------
-    # Stage 4: Persistence
-    # -------------------------
-    logging.info("Stage: persistence started")
-
-    storage_config = StorageConfig(backend="json")
-    storage = StorageFactory.create_storage(storage_config)
-
-    storage.save_records(valid_records)
-
-    logging.info("Stage: persistence completed")
-
-    end_time = datetime.now(timezone.utc)
-
-    logging.info(f"Pipeline finished | runtime={end_time - start_time}")
+        # -------------------------
+        # Stage 4: Persistence
+        # -------------------------
+        logging.info("Stage: persistence started")
+        storage_config = StorageConfig(backend="json")
+        storage = StorageFactory.create_storage(storage_config)
+        storage.save_records(valid_records)
+        logging.info("Stage: persistence completed")
+       
+    except Exception as e:
+        status = "FAILED"
+        logging.error(f"Pipeline failed with error: | status={status} | {str(e)}")
+        raise
+    finally:
+        end_time = datetime.now(timezone.utc)
+        logging.info(f"Pipeline finished | status={status} | runtime={end_time - start_time}")
 
     # console summary
     print("Pipeline completed")
