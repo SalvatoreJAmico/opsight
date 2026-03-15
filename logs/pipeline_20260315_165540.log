@@ -1,0 +1,10 @@
+2026-03-15 16:55:40,179 - INFO - Pipeline started
+2026-03-15 16:55:40,179 - INFO - Stage: ingestion started
+2026-03-15 16:55:40,182 - INFO - Stage: ingestion completed
+2026-03-15 16:55:40,182 - INFO - Stage: adapter started
+2026-03-15 16:55:40,183 - INFO - Stage: adapter completed | records=3
+2026-03-15 16:55:40,183 - INFO - Stage: validation started
+2026-03-15 16:55:40,183 - INFO - Stage: validation completed | valid=3 invalid=0
+2026-03-15 16:55:40,183 - INFO - Stage: persistence started
+2026-03-15 16:55:40,184 - INFO - Stage: persistence completed
+2026-03-15 16:55:40,184 - INFO - Pipeline finished | runtime=0:00:00.005519
