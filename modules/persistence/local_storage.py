@@ -2,7 +2,7 @@ import json
 import os
 
 from modules.persistence.storage_interface import StorageInterface
-
+from modules.persistence.storage_error import StorageError
 
 class LocalStorage(StorageInterface):
     """
@@ -16,8 +16,12 @@ class LocalStorage(StorageInterface):
         os.makedirs(self.storage_dir, exist_ok=True)
 
     def save_records(self, records: list):
-        with open(self.filepath, "w") as f:
-            json.dump(records, f, indent=2)
+        try:
+            with open(self.filepath, "w") as f:
+                json.dump(records, f, indent=2)
+
+        except Exception as e:
+            raise StorageError(f"Failed to save records: {e}")
 
     def load_records(self):
         if not os.path.exists(self.filepath):
