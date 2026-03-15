@@ -62,3 +62,23 @@ def load_source(source_path: str, source_format: str):
         return pd.read_excel(source_path)
 
     raise ValueError(f"Unsupported source format: {source_format}")
+
+
+def ingest_data(source_path: str):
+    """
+    Ingest a source into a dataframe-like structure for the adapter layer.
+    """
+    # Handle web URLs by inferring format from extension when possible.
+    if source_path.startswith(("http://", "https://")):
+        source_lower = source_path.lower()
+        if source_lower.endswith(".csv"):
+            return pd.read_csv(source_path)
+        if source_lower.endswith(".json"):
+            return pd.read_json(source_path)
+        if source_lower.endswith(".parquet"):
+            return pd.read_parquet(source_path)
+        if source_lower.endswith((".xlsx", ".xlsm", ".xltx", ".xltm", ".xls")):
+            return pd.read_excel(source_path)
+
+    source_format = detect_format(source_path)
+    return load_source(source_path, source_format)

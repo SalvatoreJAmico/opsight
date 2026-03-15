@@ -64,3 +64,11 @@ def to_canonical_schema(record):
         canonical.append(canonical_data)
 
     return canonical
+
+
+def adapt_records(records):
+    """
+    Transform raw ingested records into canonical records.
+    """
+    normalized = normalize_record(records)
+    return to_canonical_schema(normalized)
