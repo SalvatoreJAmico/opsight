@@ -4,7 +4,7 @@ Phase 4 – Pipeline Orchestration
 
 Runs the full Opsight pipeline end-to-end.
 """
-
+import json
 from modules.ingestion.ingestion import ingest_data
 from modules.adapter.adapter import adapt_records
 from modules.validation.validator import validate_canonical_record
@@ -92,11 +92,17 @@ def run_pipeline():
         end_time = datetime.now(timezone.utc)
         logging.info(f"Pipeline finished | status={status} | runtime={end_time - start_time}")
 
-    # console summary
-    print("Pipeline completed")
-    print(f"Valid records: {len(valid_records)}")
-    print(f"Invalid records: {len(invalid_records)}")
-    print(f"Log file: {LOG_DIR}")
+    summary = {
+        "records_ingested": len(raw_data),
+        "records_valid": len(valid_records),
+        "records_invalid": len(invalid_records),
+        "records_persisted": len(valid_records),
+    }
+
+    print(summary)
+    with open("reports/pipeline_run_summary.json", "w") as f:
+        json.dump(summary, f, indent=4)
+    return summary
 
 if __name__ == "__main__":
     run_pipeline()
