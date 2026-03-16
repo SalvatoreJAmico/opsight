@@ -42,6 +42,17 @@ def to_canonical_schema(record):
         features
         metadata
     """
+    if not record["entity_id_cols"]:
+        raise ValueError(
+            "Cannot convert to canonical schema: no entity_id column detected. "
+            "Ensure the source data contains a column with 'id' in its name."
+        )
+    if not record["timestamp_cols"]:
+        raise ValueError(
+            "Cannot convert to canonical schema: no timestamp column detected. "
+            "Ensure the source data contains a column with 'time' or 'date' in its name."
+        )
+
     canonical = []
 
     for _, row in record["data"].iterrows():
