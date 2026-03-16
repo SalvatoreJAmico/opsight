@@ -43,7 +43,8 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "processed")
         self.assertEqual(response.json()["records_ingested"], 3)
-        mocked_runner.assert_called_once_with("data/opsight_sample_sales.csv")
+        expected_path = str((Path(__file__).resolve().parents[1] / "data" / "opsight_sample_sales.csv").resolve())
+        mocked_runner.assert_called_once_with(expected_path)
 
     def test_ingestion_endpoint_returns_500_when_pipeline_runner_fails(self):
         failed_summary = {
