@@ -10,6 +10,8 @@ from modules.ui.views.upload import render_upload_view
 from modules.ui.views.metrics import render_metrics_view
 from modules.ui.views.entity_explorer import render_entity_explorer
 from modules.ui.views.validation_errors import render_validation_errors
+from modules.ui.views.anomalies import render_anomalies_view
+
 
 st.set_page_config(page_title="Opsight UI", layout="wide")
 
@@ -31,3 +33,4 @@ render_upload_view()
 render_metrics_view()
 render_entity_explorer()
 render_validation_errors()
+render_anomalies_view()
