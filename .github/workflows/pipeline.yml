@@ -3,15 +3,11 @@ name: Run Pipeline
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -29,10 +25,3 @@ jobs:
 
       - name: Run pipeline
         run: python run_pipeline.py
-
-      - name: Upload run summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pipeline-reports
-          path: reports/
