@@ -7,7 +7,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 from modules.ui.views.upload import render_upload_view
-
+from modules.ui.views.metrics import render_metrics_view
 
 st.set_page_config(page_title="Opsight UI", layout="wide")
 
@@ -26,3 +26,4 @@ st.write(f"Pipeline summary exists: {summary_path.exists()}")
 st.info("Placeholder UI loaded successfully. Dashboard views will be added next.")
 
 render_upload_view()
+render_metrics_view()
