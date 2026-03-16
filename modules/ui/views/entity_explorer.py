@@ -42,7 +42,7 @@ def render_entity_explorer():
             flat_rows.append(row)
 
         df = pd.DataFrame(flat_rows)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
 
         st.write("### Raw Records")
         st.json(records)
