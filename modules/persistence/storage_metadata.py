@@ -1,5 +1,4 @@
-from datetime import datetime, timezone
-
+from datetime import datetime
 
 class StorageMetadata:
     """
@@ -12,4 +11,8 @@ class StorageMetadata:
 
     def update(self, records):
         self.record_count = len(records)
-        self.last_updated = datetime.now(timezone.utc)
+        self.last_updated = datetime.now(datetime.UTC)
+        
+
+
+        
