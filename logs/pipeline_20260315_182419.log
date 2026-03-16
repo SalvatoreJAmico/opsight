@@ -1,0 +1,117 @@
+2026-03-15 18:24:19,184 - INFO - Pipeline started
+2026-03-15 18:24:19,184 - INFO - Stage: ingestion started
+2026-03-15 18:24:19,184 - INFO - Stage: ingestion completed
+2026-03-15 18:24:19,184 - INFO - Stage: adapter started
+2026-03-15 18:24:19,185 - ERROR - Pipeline failed with error: | status=FAILED | Adapter failed: bad mapping
+Traceback (most recent call last):
+  File "C:\Users\samic\OneDrive\Desktop\spring project\opsight\run_pipeline.py", line 68, in run_pipeline
+    canonical_records = adapt_records(raw_data)
+                        ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1193, in _execute_mock_call
+    raise effect
+RuntimeError: bad mapping
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\samic\OneDrive\Desktop\spring project\opsight\run_pipeline.py", line 72, in run_pipeline
+    raise RuntimeError(f"Adapter failed: {e}") from e
+RuntimeError: Adapter failed: bad mapping
+2026-03-15 18:24:19,189 - INFO - Pipeline finished | status=FAILED | runtime=0:00:00.004525
+2026-03-15 18:24:19,203 - INFO - Pipeline started
+2026-03-15 18:24:19,203 - INFO - Stage: ingestion started
+2026-03-15 18:24:19,203 - ERROR - Pipeline failed with error: | status=FAILED | Ingestion failed: broken source
+Traceback (most recent call last):
+  File "C:\Users\samic\OneDrive\Desktop\spring project\opsight\run_pipeline.py", line 57, in run_pipeline
+    raw_data = ingest_data(DATA_SOURCE)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1193, in _execute_mock_call
+    raise effect
+RuntimeError: broken source
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\samic\OneDrive\Desktop\spring project\opsight\run_pipeline.py", line 61, in run_pipeline
+    raise RuntimeError(f"Ingestion failed: {e}") from e
+RuntimeError: Ingestion failed: broken source
+2026-03-15 18:24:19,203 - INFO - Pipeline finished | status=FAILED | runtime=0:00:00
+2026-03-15 18:24:19,213 - INFO - Pipeline started
+2026-03-15 18:24:19,213 - INFO - Stage: ingestion started
+2026-03-15 18:24:19,213 - INFO - Stage: ingestion completed
+2026-03-15 18:24:19,213 - INFO - Stage: adapter started
+2026-03-15 18:24:19,213 - INFO - Stage: adapter completed | records=1
+2026-03-15 18:24:19,213 - INFO - Stage: validation started
+2026-03-15 18:24:19,213 - INFO - Stage: validation completed | valid=1 invalid=0
+2026-03-15 18:24:19,213 - INFO - Stage: persistence started
+2026-03-15 18:24:19,213 - ERROR - Pipeline failed with error: | status=FAILED | Persistence failed: disk full
+Traceback (most recent call last):
+  File "C:\Users\samic\OneDrive\Desktop\spring project\opsight\run_pipeline.py", line 103, in run_pipeline
+    storage.save_records(valid_records)
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1193, in _execute_mock_call
+    raise effect
+RuntimeError: disk full
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\samic\OneDrive\Desktop\spring project\opsight\run_pipeline.py", line 107, in run_pipeline
+    raise RuntimeError(f"Persistence failed: {e}") from e
+RuntimeError: Persistence failed: disk full
+2026-03-15 18:24:19,214 - INFO - Pipeline finished | status=FAILED | runtime=0:00:00.001358
+2026-03-15 18:24:19,226 - INFO - Pipeline started
+2026-03-15 18:24:19,226 - INFO - Stage: ingestion started
+2026-03-15 18:24:19,226 - INFO - Stage: ingestion completed
+2026-03-15 18:24:19,226 - INFO - Stage: adapter started
+2026-03-15 18:24:19,227 - INFO - Stage: adapter completed | records=2
+2026-03-15 18:24:19,227 - INFO - Stage: validation started
+2026-03-15 18:24:19,227 - INFO - Stage: validation completed | valid=1 invalid=1
+2026-03-15 18:24:19,227 - INFO - Stage: persistence started
+2026-03-15 18:24:19,227 - INFO - Stage: persistence completed
+2026-03-15 18:24:19,227 - INFO - Pipeline finished | status=SUCCESS | runtime=0:00:00.001000
+2026-03-15 18:24:19,230 - INFO - Pipeline started
+2026-03-15 18:24:19,231 - INFO - Stage: ingestion started
+2026-03-15 18:24:19,231 - INFO - Stage: ingestion completed
+2026-03-15 18:24:19,231 - INFO - Stage: adapter started
+2026-03-15 18:24:19,231 - INFO - Stage: adapter completed | records=1
+2026-03-15 18:24:19,231 - INFO - Stage: validation started
+2026-03-15 18:24:19,231 - ERROR - Pipeline failed with error: | status=FAILED | Validation failed: validator crashed
+Traceback (most recent call last):
+  File "C:\Users\samic\OneDrive\Desktop\spring project\opsight\run_pipeline.py", line 82, in run_pipeline
+    result = validate_canonical_record(record)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samic\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1193, in _execute_mock_call
+    raise effect
+RuntimeError: validator crashed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\samic\OneDrive\Desktop\spring project\opsight\run_pipeline.py", line 94, in run_pipeline
+    raise RuntimeError(f"Validation failed: {e}") from e
+RuntimeError: Validation failed: validator crashed
+2026-03-15 18:24:19,231 - INFO - Pipeline finished | status=FAILED | runtime=0:00:00.000999
