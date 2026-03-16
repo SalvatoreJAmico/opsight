@@ -57,7 +57,7 @@ def render_anomalies_view():
     st.bar_chart(df[[feature]])
 
     st.write("### Records")
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     anomalies = df[df["is_anomaly"]]
 
@@ -65,4 +65,4 @@ def render_anomalies_view():
         st.success("No anomalies detected for the selected feature.")
     else:
         st.write("### Anomalous Records")
-        st.dataframe(anomalies, use_container_width=True)
+        st.dataframe(anomalies, width="stretch")
