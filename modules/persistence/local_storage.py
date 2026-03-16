@@ -29,3 +29,7 @@ class LocalStorage(StorageInterface):
 
         with open(self.filepath, "r") as f:
             return json.load(f)
+        
+    def get_records_by_entity(self, entity_id):
+        records = self.load_records()
+        return [record for record in records if str(record.get("entity_id")) == str(entity_id)]
