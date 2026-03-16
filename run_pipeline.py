@@ -36,7 +36,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-def run_pipeline():
+def run_pipeline(input_data=None):
 
     start_time = datetime.now(timezone.utc)
     logging.info("Pipeline started")
@@ -54,7 +54,7 @@ def run_pipeline():
         # -------------------------
         try:
             logging.info("Stage: ingestion started")
-            raw_data = ingest_data(DATA_SOURCE)
+            raw_data = ingest_data(DATA_SOURCE) if input_data is None else ingest_data(input_data)
             logging.info("Stage: ingestion completed")
         except Exception as e:
             failed_stage = "ingestion"
