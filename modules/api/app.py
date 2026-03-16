@@ -5,6 +5,8 @@ from .routes.entities import router as entities_router
 app = FastAPI(title="Opsight API", version="0.1")
 app.include_router(ingest_router)
 app.include_router(entities_router)
+from .routes.status import router as status_router
+app.include_router(status_router)
 
 @app.get("/health")
 def health():
