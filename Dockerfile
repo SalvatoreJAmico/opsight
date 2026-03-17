@@ -19,4 +19,4 @@ RUN mkdir -p logs reports
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn modules.api.app:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["uvicorn", "modules.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
