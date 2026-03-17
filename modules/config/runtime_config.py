@@ -20,6 +20,7 @@ class RuntimeConfig:
     enable_pipeline: bool
     input_source_path: Optional[str]
     pipeline_summary_path: Optional[str]
+    azure_storage_connection_string: Optional[str]
 
 
 def get_env(name: str, required: bool = True, default: Optional[str] = None) -> Optional[str]:
@@ -60,12 +61,37 @@ def load_runtime_config() -> RuntimeConfig:
     enable_pipeline = _to_bool(get_env("ENABLE_PIPELINE", required=False, default="true"), default=True)
     input_source_path = get_env("INPUT_SOURCE_PATH", required=False, default=None)
     pipeline_summary_path = get_env("PIPELINE_SUMMARY_PATH")
+    azure_storage_connection_string = get_env("AZURE_STORAGE_CONNECTION_STRING", required=False, default=None)
 
+    # ===== PRODUCTION MODE VALIDATION =====
     if app_env == "prod":
+        # Production must NOT use local fallback
         if allow_local_fallback:
-            raise RuntimeError("Local fallback is not allowed in production")
-        blob_account = get_env("BLOB_ACCOUNT")
-        blob_container = get_env("BLOB_CONTAINER")
+            raise RuntimeError(
+                "Local fallback is not allowed in production. "
+                "Set ALLOW_LOCAL_FALLBACK=false in production."
+            )
+
+        # Production MUST have all three Blob parameters set
+        if not blob_account or not blob_account.strip():
+            raise RuntimeError(
+                "Production mode requires BLOB_ACCOUNT to be set. "
+                "Blob is the mandatory ingestion source in production."
+            )
+        if not blob_container or not blob_container.strip():
+            raise RuntimeError(
+                "Production mode requires BLOB_CONTAINER to be set. "
+                "Blob is the mandatory ingestion source in production."
+            )
+        if not blob_path or not blob_path.strip():
+            raise RuntimeError(
+                "Production mode requires BLOB_PATH to be set. "
+                "Blob is the mandatory ingestion source in production."
+            )
+
+        # In production, INPUT_SOURCE_PATH should not be used for ingestion
+        # (it will only be used if explicitly passed to run_pipeline)
+        # This ensures no silent fallback to local files
 
     return RuntimeConfig(
         app_env=app_env,
@@ -83,4 +109,5 @@ def load_runtime_config() -> RuntimeConfig:
         enable_pipeline=enable_pipeline,
         input_source_path=input_source_path,
         pipeline_summary_path=pipeline_summary_path,
+        azure_storage_connection_string=azure_storage_connection_string,
     )

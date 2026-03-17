@@ -3,6 +3,7 @@ Opsight Pipeline Runner
 Phase 4 – Pipeline Orchestration
 
 Runs the full Opsight pipeline end-to-end.
+PS-094: Config-driven ingestion source (Blob/Local) with clear error handling.
 """
 import json
 import logging
@@ -10,6 +11,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from modules.ingestion.ingestion import ingest_data
+from modules.ingestion.blob_client import (
+    BlobAuthenticationError,
+    BlobNotFoundError,
+    BlobNetworkError,
+)
 from modules.adapter.adapter import adapt_records
 from modules.validation.validator import validate_canonical_record
 from modules.intelligence import detect_anomalies, score_records, evaluate
@@ -56,14 +62,12 @@ def run_pipeline(input_data=None):
                 "Stage started",
                 extra={"event": "stage_started", "stage": "ingestion"},
             )
-            if input_data is None:
-                if not runtime_config.input_source_path:
-                    raise RuntimeError("Missing required environment variable: INPUT_SOURCE_PATH")
-                source_path = runtime_config.input_source_path
-            else:
-                source_path = input_data
-
-            raw_data = ingest_data(source_path)
+            
+            # PS-094: Config-driven ingestion routing
+            # Calls ingest_data() with optional source_path override for testing
+            # Config determines: Blob in prod, Local/Blob fallback in dev
+            raw_data = ingest_data(source_path=input_data)
+            
             logger.info(
                 "Stage completed",
                 extra={
@@ -72,6 +76,27 @@ def run_pipeline(input_data=None):
                     "records_ingested": len(raw_data),
                 },
             )
+        except BlobAuthenticationError as e:
+            failed_stage = "ingestion"
+            logger.error(
+                "Blob authentication failed",
+                extra={"event": "stage_failed", "stage": failed_stage, "error_category": "blob_auth"},
+            )
+            raise RuntimeError(f"Ingestion failed - Blob authentication error: {e}") from e
+        except BlobNotFoundError as e:
+            failed_stage = "ingestion"
+            logger.error(
+                "Blob resource not found",
+                extra={"event": "stage_failed", "stage": failed_stage, "error_category": "blob_not_found"},
+            )
+            raise RuntimeError(f"Ingestion failed - Blob not found: {e}") from e
+        except BlobNetworkError as e:
+            failed_stage = "ingestion"
+            logger.error(
+                "Blob network error",
+                extra={"event": "stage_failed", "stage": failed_stage, "error_category": "blob_network"},
+            )
+            raise RuntimeError(f"Ingestion failed - Blob network error: {e}") from e
         except Exception as e:
             failed_stage = "ingestion"
             logger.exception(

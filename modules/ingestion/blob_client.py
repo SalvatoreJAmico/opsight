@@ -1,0 +1,257 @@
+"""
+Blob Storage Client for Opsight Ingestion
+PS-094: Centralized Blob access with clear auth/network/notfound error handling
+
+Supports two auth paths:
+- Managed identity (production preferred)
+- Connection string (transitional/local fallback only)
+
+Error categories:
+- BlobAuthenticationError: auth/permission failures
+- BlobNotFoundError: missing blob/container
+- BlobNetworkError: connectivity issues
+"""
+
+import io
+import logging
+from typing import Any, Dict, Optional
+from enum import Enum
+
+import pandas as pd
+from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobServiceClient, BlobClient
+from azure.core.exceptions import (
+    ClientAuthenticationError,
+    ResourceNotFoundError,
+    ServiceRequestError,
+    HttpResponseError,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class BlobErrorCategory(Enum):
+    """Categories of Blob access errors"""
+    AUTHENTICATION = "auth"
+    NOT_FOUND = "not_found"
+    NETWORK = "network"
+    UNKNOWN = "unknown"
+
+
+class BlobAuthenticationError(Exception):
+    """
+    Raised when Blob authentication or authorization fails.
+    Examples: invalid credentials, no role assignment, identity cannot access container.
+    """
+    def __init__(self, message: str, details: Optional[str] = None):
+        full_msg = f"Blob authentication failed: {message}"
+        if details:
+            full_msg += f" ({details})"
+        super().__init__(full_msg)
+
+
+class BlobNotFoundError(Exception):
+    """
+    Raised when Blob or container is not found.
+    Examples: blob path wrong, container wrong, file not found.
+    """
+    def __init__(self, message: str, details: Optional[str] = None):
+        full_msg = f"Blob not found: {message}"
+        if details:
+            full_msg += f" ({details})"
+        super().__init__(full_msg)
+
+
+class BlobNetworkError(Exception):
+    """
+    Raised when network connectivity issue occurs.
+    Examples: DNS failure, timeout, storage endpoint unavailable.
+    """
+    def __init__(self, message: str, details: Optional[str] = None):
+        full_msg = f"Blob network error: {message}"
+        if details:
+            full_msg += f" ({details})"
+        super().__init__(full_msg)
+
+
+class BlobClient:
+    """
+    Centralized Blob Storage access layer.
+    Handles both managed identity and connection string auth paths.
+    Routes requests through configuration to enforce dev/prod rules.
+    """
+
+    def __init__(
+        self,
+        blob_account: str,
+        blob_container: str,
+        blob_path: str,
+        connection_string: Optional[str] = None,
+    ):
+        """
+        Initialize BlobClient.
+
+        Args:
+            blob_account: Storage account name (e.g., "mystorageaccount")
+            blob_container: Container name (e.g., "data")
+            blob_path: Path within container (e.g., "input.csv")
+            connection_string: Optional connection string for transitional auth.
+                              If None, uses managed identity via DefaultAzureCredential.
+
+        Raises:
+            ValueError: If required parameters are missing or invalid.
+        """
+        if not blob_account or not blob_account.strip():
+            raise ValueError("blob_account cannot be empty")
+        if not blob_container or not blob_container.strip():
+            raise ValueError("blob_container cannot be empty")
+        if not blob_path or not blob_path.strip():
+            raise ValueError("blob_path cannot be empty")
+
+        self.blob_account = blob_account.strip()
+        self.blob_container = blob_container.strip()
+        self.blob_path = blob_path.strip()
+        self.connection_string = connection_string
+
+        self._service_client = None
+        self._auth_method = "connection_string" if connection_string else "managed_identity"
+
+    def _get_service_client(self) -> object:
+        """
+        Lazily initialize and return the BlobServiceClient.
+        Supports both managed identity and connection string auth.
+
+        Returns:
+            BlobServiceClient instance
+
+        Raises:
+            BlobAuthenticationError: If client initialization fails.
+        """
+        if self._service_client is not None:
+            return self._service_client
+
+        try:
+            if self.connection_string:
+                logger.debug("Initializing BlobServiceClient with connection string")
+                self._service_client = BlobServiceClient.from_connection_string(
+                    self.connection_string
+                )
+            else:
+                logger.debug("Initializing BlobServiceClient with managed identity")
+                credential = DefaultAzureCredential()
+                account_url = f"https://{self.blob_account}.blob.core.windows.net"
+                self._service_client = BlobServiceClient(
+                    account_url=account_url,
+                    credential=credential,
+                )
+            return self._service_client
+        except ClientAuthenticationError as e:
+            raise BlobAuthenticationError(
+                f"Failed to authenticate with Blob Storage ({self._auth_method})",
+                str(e),
+            ) from e
+        except Exception as e:
+            raise BlobAuthenticationError(
+                f"Failed to initialize Blob Storage client ({self._auth_method})",
+                str(e),
+            ) from e
+
+    def read_blob_csv(self) -> Dict[str, Any]:
+        """
+        Read blob content as CSV and return a structured payload.
+
+        Returns:
+            dict with status, rows (DataFrame), and source metadata
+
+        Raises:
+            BlobAuthenticationError: If auth/permission fails
+            BlobNotFoundError: If blob/container not found
+            BlobNetworkError: If connectivity issue occurs
+        """
+        try:
+            service_client = self._get_service_client()
+            container_client = service_client.get_container_client(self.blob_container)
+            blob_client = container_client.get_blob_client(self.blob_path)
+
+            logger.debug(
+                f"Reading blob: account={self.blob_account}, "
+                f"container={self.blob_container}, path={self.blob_path}"
+            )
+
+            # Download blob content into bytes buffer
+            download_stream = blob_client.download_blob()
+            blob_bytes = download_stream.readall()
+
+            # Parse CSV from bytes into DataFrame
+            df = pd.read_csv(io.BytesIO(blob_bytes))
+            return {
+                "status": "success",
+                "rows": df,
+                "source": "blob",
+            }
+
+        except ClientAuthenticationError as e:
+            error_msg = (
+                f"Authentication/authorization failed for "
+                f"account={self.blob_account}, container={self.blob_container}"
+            )
+            logger.error(error_msg)
+            raise BlobAuthenticationError(error_msg, str(e)) from e
+
+        except ResourceNotFoundError as e:
+            # Distinguish between container not found and blob not found
+            if "ContainerNotFound" in str(e):
+                error_msg = f"Container '{self.blob_container}' not found"
+            else:
+                error_msg = f"Blob '{self.blob_path}' not found in container '{self.blob_container}'"
+            logger.error(error_msg)
+            raise BlobNotFoundError(error_msg, str(e)) from e
+
+        except (ServiceRequestError, HttpResponseError) as e:
+            # Network-level errors or transient HTTP errors
+            error_msg = (
+                f"Network error accessing Blob Storage "
+                f"(account={self.blob_account})"
+            )
+            logger.error(error_msg)
+            raise BlobNetworkError(error_msg, str(e)) from e
+
+        except Exception as e:
+            # Catch other potential errors and categorize as network
+            error_msg = f"Unexpected error reading blob: {type(e).__name__}"
+            logger.error(error_msg)
+            raise BlobNetworkError(error_msg, str(e)) from e
+
+
+def read_blob_csv(
+    blob_account: str,
+    blob_container: str,
+    blob_path: str,
+    connection_string: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Convenience function to read CSV from Blob Storage.
+
+    This is the main entry point for the ingestion layer to read from Blob.
+
+    Args:
+        blob_account: Storage account name
+        blob_container: Container name
+        blob_path: Path within container
+        connection_string: Optional connection string for transitional auth
+
+    Returns:
+        dict with status, rows (DataFrame), and source metadata
+
+    Raises:
+        BlobAuthenticationError: If auth/permission fails
+        BlobNotFoundError: If blob/container not found
+        BlobNetworkError: If connectivity issue occurs
+    """
+    client = BlobClient(
+        blob_account=blob_account,
+        blob_container=blob_container,
+        blob_path=blob_path,
+        connection_string=connection_string,
+    )
+    return client.read_blob_csv()
