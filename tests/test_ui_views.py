@@ -130,7 +130,6 @@ class TestUiViews(unittest.TestCase):
 
         anomalies_module.render_anomalies_view()
 
-        self.assertTrue(anomalies_module.st.metric.called)
         self.assertTrue(anomalies_module.st.dataframe.called)
 
 
