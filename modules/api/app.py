@@ -8,10 +8,32 @@ from modules.config.logging_config import setup_logging
 from modules.config.runtime_config import load_runtime_config
 from modules.api.errors import register_error_handlers
 
-runtime_config = load_runtime_config()
-
 setup_logging(service_name="opsight.api")
 logger = logging.getLogger("opsight.api")
+
+try:
+    runtime_config = load_runtime_config()
+except Exception as exc:
+    logger.error(
+        "Runtime config load failed during API startup",
+        extra={
+            "event": "runtime_config_error",
+            "error_type": "runtime_config_error",
+            "error_message": str(exc),
+        },
+    )
+    raise
+
+logger.info(
+    "Runtime configuration loaded",
+    extra={
+        "event": "runtime_config_loaded",
+        "app_env": runtime_config.app_env,
+        "app_version": runtime_config.app_version,
+        "persistence_mode": runtime_config.persistence_mode,
+        "port": runtime_config.port,
+    },
+)
 
 logger.info(
     "API startup configuration loaded",

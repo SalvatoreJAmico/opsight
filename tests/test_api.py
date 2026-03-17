@@ -149,17 +149,20 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.json()["status"], "processed")
 
     def test_protected_attempt_logging_excludes_secret(self):
-        with patch("modules.api.access_control.logger.info") as mocked_log:
+        with patch("modules.api.access_control.logger.info") as mocked_info, patch(
+            "modules.api.access_control.logger.warning"
+        ) as mocked_warning:
             self.client.post(
                 "/data",
                 json={"source_path": "data/opsight_sample_sales.csv"},
                 headers={"X-Upload-Access-Code": "wrong-code"},
             )
 
-        self.assertTrue(mocked_log.called)
+        self.assertTrue(mocked_info.called or mocked_warning.called)
+        log_calls = [*mocked_info.call_args_list, *mocked_warning.call_args_list]
         protected_events = [
             kwargs.get("extra", {})
-            for _, kwargs in mocked_log.call_args_list
+            for _, kwargs in log_calls
             if kwargs.get("extra", {}).get("event") == "protected_access_attempt"
         ]
         self.assertTrue(protected_events)

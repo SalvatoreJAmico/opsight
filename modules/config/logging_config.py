@@ -14,20 +14,22 @@ class JsonFormatter(logging.Formatter):
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
+            "event": getattr(record, "event", "log_record"),
+            "app_env": getattr(record, "app_env", os.getenv("APP_ENV", "unknown")),
+            "app_version": getattr(record, "app_version", os.getenv("APP_VERSION", "unknown")),
             "message": record.getMessage(),
         }
-
-        if hasattr(record, "stage"):
-            payload["stage"] = record.stage
-
-        if hasattr(record, "event"):
-            payload["event"] = record.event
 
         for key in (
             "service",
             "method",
             "path",
+            "route",
+            "status",
             "status_code",
+            "source",
+            "error_type",
+            "error_message",
             "runtime_ms",
             "records_ingested",
             "records_valid",
@@ -35,6 +37,11 @@ class JsonFormatter(logging.Formatter):
             "records_persisted",
             "runtime_seconds",
             "failed_stage",
+            "stage",
+            "port",
+            "persistence_mode",
+            "access_code_valid",
+            "client_ip",
         ):
             if hasattr(record, key):
                 payload[key] = getattr(record, key)
