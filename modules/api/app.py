@@ -1,19 +1,63 @@
+import logging
+import time
+
 from fastapi import FastAPI
-from .routes.ingest import router as ingest_router
-from .routes.entities import router as entities_router
+from fastapi import Request
+
+from modules.config.logging_config import setup_logging
 from modules.api.errors import register_error_handlers
 
+setup_logging(service_name="opsight.api")
+logger = logging.getLogger("opsight.api")
 
-
+from .routes.ingest import router as ingest_router
+from .routes.entities import router as entities_router
+from .routes.status import router as status_router
 
 
 app = FastAPI(title="Opsight API", version="0.1")
 app.include_router(ingest_router)
 app.include_router(entities_router)
-from .routes.status import router as status_router
 app.include_router(status_router)
 register_error_handlers(app)
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    logger.info(
+        "Request started",
+        extra={
+            "event": "request_started",
+            "method": request.method,
+            "path": request.url.path,
+        },
+    )
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "Request failed",
+            extra={
+                "event": "request_failed",
+                "method": request.method,
+                "path": request.url.path,
+            },
+        )
+        raise
+
+    runtime_ms = round((time.perf_counter() - start) * 1000, 2)
+    logger.info(
+        "Request completed",
+        extra={
+            "event": "request_completed",
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "runtime_ms": runtime_ms,
+        },
+    )
+    return response
 
 
 
