@@ -2,6 +2,8 @@ import requests
 import streamlit as st
 from pathlib import Path
 
+from modules.ui.views._config import API_BASE_URL
+
 
 def render_upload_view():
     st.subheader("Dataset Upload")
@@ -24,7 +26,7 @@ def render_upload_view():
     if st.button("Run Pipeline"):
         try:
             response = requests.post(
-                "http://127.0.0.1:8000/data",
+                f"{API_BASE_URL}/data",
                 json={"source_path": str(saved_path.resolve())}
             )
 

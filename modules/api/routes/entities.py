@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException
+from modules.config.storage_config import StorageConfig
 from modules.persistence.local_storage import LocalStorage
 
 router = APIRouter()
-storage = LocalStorage()
+storage = LocalStorage(storage_path=StorageConfig().storage_path)
 
 @router.get("/entity/{entity_id}")
 def get_entity(entity_id: str):

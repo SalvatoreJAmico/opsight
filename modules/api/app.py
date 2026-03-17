@@ -5,7 +5,18 @@ from fastapi import FastAPI
 from fastapi import Request
 
 from modules.config.logging_config import setup_logging
+from modules.config.runtime_config import load_runtime_config
 from modules.api.errors import register_error_handlers
+
+runtime_config = load_runtime_config()
+
+print(
+    {
+        "app_env": runtime_config.app_env,
+        "app_version": runtime_config.app_version,
+        "persistence_mode": runtime_config.persistence_mode,
+    }
+)
 
 setup_logging(service_name="opsight.api")
 logger = logging.getLogger("opsight.api")
@@ -15,7 +26,7 @@ from .routes.entities import router as entities_router
 from .routes.status import router as status_router
 
 
-app = FastAPI(title="Opsight API", version="0.1")
+app = FastAPI(title="Opsight API", version=runtime_config.app_version)
 app.include_router(ingest_router)
 app.include_router(entities_router)
 app.include_router(status_router)

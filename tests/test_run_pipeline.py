@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -6,6 +7,18 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+os.environ.setdefault("APP_ENV", "dev")
+os.environ.setdefault("APP_VERSION", "0.1.0-test")
+os.environ.setdefault("PORT", "8000")
+os.environ.setdefault("UPLOAD_ACCESS_CODE", "test-access-code")
+os.environ.setdefault("PERSISTENCE_MODE", "json")
+os.environ.setdefault("STORAGE_PATH", "data/test-records.json")
+os.environ.setdefault("LOG_LEVEL", "INFO")
+os.environ.setdefault("ALLOW_LOCAL_FALLBACK", "true")
+os.environ.setdefault("API_BASE_URL", "http://api-test.local:8000")
+os.environ.setdefault("INPUT_SOURCE_PATH", "data/opsight_sample_sales.csv")
+os.environ.setdefault("PIPELINE_SUMMARY_PATH", "reports/pipeline_run_summary.json")
 
 import run_pipeline
 
@@ -25,10 +38,12 @@ class TestRunPipeline(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             reports_dir = Path(tmp_dir)
             reports_dir.mkdir(parents=True, exist_ok=True)
+            run_summary_path = reports_dir / "pipeline_run_summary.json"
+            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
 
             storage = MagicMock()
 
-            with patch.object(run_pipeline, "REPORTS_DIR", reports_dir), \
+            with patch.dict(os.environ, {"PIPELINE_SUMMARY_PATH": str(run_summary_path)}), \
                 patch("run_pipeline.ingest_data", return_value=[{"id": 1}, {"id": 2}]), \
                 patch("run_pipeline.adapt_records", return_value=canonical_records), \
                 patch("run_pipeline.validate_canonical_record", side_effect=validation_results), \
@@ -46,9 +61,6 @@ class TestRunPipeline(unittest.TestCase):
 
             storage.save_records.assert_called_once_with([canonical_records[0]])
 
-            run_summary_path = reports_dir / "pipeline_run_summary.json"
-            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
-
             self.assertTrue(run_summary_path.exists())
             self.assertFalse(failure_summary_path.exists())
 
@@ -62,8 +74,10 @@ class TestRunPipeline(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             reports_dir = Path(tmp_dir)
             reports_dir.mkdir(parents=True, exist_ok=True)
+            run_summary_path = reports_dir / "pipeline_run_summary.json"
+            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
 
-            with patch.object(run_pipeline, "REPORTS_DIR", reports_dir), \
+            with patch.dict(os.environ, {"PIPELINE_SUMMARY_PATH": str(run_summary_path)}), \
                 patch("run_pipeline.ingest_data", side_effect=RuntimeError("broken source")):
 
                 summary = run_pipeline.run_pipeline()
@@ -75,9 +89,6 @@ class TestRunPipeline(unittest.TestCase):
             self.assertEqual(summary["records_invalid"], 0)
             self.assertEqual(summary["records_persisted"], 0)
             self.assertGreaterEqual(summary["runtime_seconds"], 0)
-
-            run_summary_path = reports_dir / "pipeline_run_summary.json"
-            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
 
             self.assertTrue(run_summary_path.exists())
             self.assertTrue(failure_summary_path.exists())
@@ -96,11 +107,13 @@ class TestRunPipeline(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             reports_dir = Path(tmp_dir)
             reports_dir.mkdir(parents=True, exist_ok=True)
+            run_summary_path = reports_dir / "pipeline_run_summary.json"
+            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
 
             storage = MagicMock()
             storage.save_records.side_effect = RuntimeError("disk full")
 
-            with patch.object(run_pipeline, "REPORTS_DIR", reports_dir), \
+            with patch.dict(os.environ, {"PIPELINE_SUMMARY_PATH": str(run_summary_path)}), \
                 patch("run_pipeline.ingest_data", return_value=[{"id": 1}]), \
                 patch("run_pipeline.adapt_records", return_value=canonical_records), \
                 patch("run_pipeline.validate_canonical_record", return_value={"status": "valid", "errors": []}), \
@@ -116,9 +129,6 @@ class TestRunPipeline(unittest.TestCase):
             self.assertEqual(summary["records_persisted"], 0)
             self.assertGreaterEqual(summary["runtime_seconds"], 0)
 
-            run_summary_path = reports_dir / "pipeline_run_summary.json"
-            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
-
             self.assertTrue(run_summary_path.exists())
             self.assertTrue(failure_summary_path.exists())
 
@@ -132,8 +142,10 @@ class TestRunPipeline(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             reports_dir = Path(tmp_dir)
             reports_dir.mkdir(parents=True, exist_ok=True)
+            run_summary_path = reports_dir / "pipeline_run_summary.json"
+            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
 
-            with patch.object(run_pipeline, "REPORTS_DIR", reports_dir), \
+            with patch.dict(os.environ, {"PIPELINE_SUMMARY_PATH": str(run_summary_path)}), \
                 patch("run_pipeline.ingest_data", return_value=[{"id": 1}]), \
                 patch("run_pipeline.adapt_records", side_effect=RuntimeError("bad mapping")):
 
@@ -146,9 +158,6 @@ class TestRunPipeline(unittest.TestCase):
             self.assertEqual(summary["records_invalid"], 0)
             self.assertEqual(summary["records_persisted"], 0)
             self.assertGreaterEqual(summary["runtime_seconds"], 0)
-
-            run_summary_path = reports_dir / "pipeline_run_summary.json"
-            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
 
             self.assertTrue(run_summary_path.exists())
             self.assertTrue(failure_summary_path.exists())
@@ -167,8 +176,10 @@ class TestRunPipeline(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             reports_dir = Path(tmp_dir)
             reports_dir.mkdir(parents=True, exist_ok=True)
+            run_summary_path = reports_dir / "pipeline_run_summary.json"
+            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
 
-            with patch.object(run_pipeline, "REPORTS_DIR", reports_dir), \
+            with patch.dict(os.environ, {"PIPELINE_SUMMARY_PATH": str(run_summary_path)}), \
                 patch("run_pipeline.ingest_data", return_value=[{"id": 1}]), \
                 patch("run_pipeline.adapt_records", return_value=canonical_records), \
                 patch("run_pipeline.validate_canonical_record", side_effect=RuntimeError("validator crashed")):
@@ -182,9 +193,6 @@ class TestRunPipeline(unittest.TestCase):
             self.assertEqual(summary["records_invalid"], 0)
             self.assertEqual(summary["records_persisted"], 0)
             self.assertGreaterEqual(summary["runtime_seconds"], 0)
-
-            run_summary_path = reports_dir / "pipeline_run_summary.json"
-            failure_summary_path = reports_dir / "pipeline_failure_summary.json"
 
             self.assertTrue(run_summary_path.exists())
             self.assertTrue(failure_summary_path.exists())

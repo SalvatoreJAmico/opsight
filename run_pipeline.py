@@ -17,6 +17,7 @@ from modules.intelligence import detect_anomalies, score_records, evaluate
 from modules.persistence.storage_factory import StorageFactory
 from modules.config.storage_config import StorageConfig
 from modules.config.logging_config import setup_logging
+from modules.config.runtime_config import load_runtime_config
 
 # TODO:
 # Replace broad Exception catches with stage-specific exception types as modules mature.
@@ -27,13 +28,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 REPORTS_DIR = PROJECT_ROOT / "reports"
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# TODO:
-# Move DATA_SOURCE and logging settings into a pipeline config file later.
-DATA_SOURCE = str(PROJECT_ROOT / "data" / "opsight_sample_sales.csv")
 logger = logging.getLogger("opsight.pipeline")
 
 def run_pipeline(input_data=None):
+    runtime_config = load_runtime_config()
     setup_logging(service_name="opsight.pipeline")
+    summary_path = Path(runtime_config.pipeline_summary_path)
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    failure_summary_path = summary_path.with_name("pipeline_failure_summary.json")
 
     start_time = datetime.now(timezone.utc)
     logger.info("Pipeline started", extra={"event": "pipeline_started"})
@@ -54,7 +56,14 @@ def run_pipeline(input_data=None):
                 "Stage started",
                 extra={"event": "stage_started", "stage": "ingestion"},
             )
-            raw_data = ingest_data(DATA_SOURCE) if input_data is None else ingest_data(input_data)
+            if input_data is None:
+                if not runtime_config.input_source_path:
+                    raise RuntimeError("Missing required environment variable: INPUT_SOURCE_PATH")
+                source_path = runtime_config.input_source_path
+            else:
+                source_path = input_data
+
+            raw_data = ingest_data(source_path)
             logger.info(
                 "Stage completed",
                 extra={
@@ -224,11 +233,11 @@ def run_pipeline(input_data=None):
     )
 
     print(summary)
-    with open(REPORTS_DIR / "pipeline_run_summary.json", "w") as f:
+    with open(summary_path, "w") as f:
         json.dump(summary, f, indent=4)
 
     if status == "FAILED":
-        with open(REPORTS_DIR / "pipeline_failure_summary.json", "w") as f:
+        with open(failure_summary_path, "w") as f:
             json.dump(summary, f, indent=4)
 
     return summary

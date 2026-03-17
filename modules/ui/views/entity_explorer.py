@@ -2,6 +2,8 @@ import requests
 import streamlit as st
 import pandas as pd
 
+from modules.ui.views._config import API_BASE_URL
+
 
 def render_entity_explorer():
     st.subheader("Entity Record Explorer")
@@ -12,7 +14,7 @@ def render_entity_explorer():
         return
 
     try:
-        response = requests.get(f"http://127.0.0.1:8000/entity/{entity_id}")
+        response = requests.get(f"{API_BASE_URL}/entity/{entity_id}")
 
         if response.status_code == 404:
             st.info("No records found for that entity_id.")

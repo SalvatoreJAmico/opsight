@@ -200,14 +200,23 @@ Opsight reads runtime configuration from environment variables.
 At minimum, set these for runtime:
 
 - `APP_ENV`
-- `APP_HOST`
-- `APP_PORT`
-- `STORAGE_BACKEND`
+- `APP_VERSION`
+- `PORT`
+- `UPLOAD_ACCESS_CODE`
+- `PERSISTENCE_MODE`
 - `STORAGE_PATH`
 - `LOG_LEVEL`
+- `ALLOW_LOCAL_FALLBACK`
 
 Optional Azure settings:
 
+- `BLOB_ACCOUNT` (required when `APP_ENV=prod`)
+- `BLOB_CONTAINER` (required when `APP_ENV=prod`)
+- `BLOB_PATH`
+- `API_BASE_URL`
+- `ENABLE_PIPELINE`
+- `INPUT_SOURCE_PATH`
+- `PIPELINE_SUMMARY_PATH`
 - `AZURE_STORAGE_CONNECTION_STRING`
 - `AZURE_STORAGE_CONTAINER`
 - `AZURE_KEY_VAULT_URL`
