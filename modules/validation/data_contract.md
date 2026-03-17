@@ -25,11 +25,18 @@ errors
     A list of validation error messages.
     Empty if the record is valid.
 
+Example valid result:
+
+```json
 {
   "status": "valid",
   "errors": []
 }
+```
 
+Example invalid result:
+
+```json
 {
   "status": "invalid",
   "errors": [
@@ -37,6 +44,7 @@ errors
       "Features must be a dictionary"
   ]
 }
+```
 
 `errors` may include:
 
