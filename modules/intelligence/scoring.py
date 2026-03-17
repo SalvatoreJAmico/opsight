@@ -1,14 +1,39 @@
-from typing import Any, Dict, List
+from typing import Dict
+import pandas as pd
+
+LOW_THRESHOLD = 1.0
+MEDIUM_THRESHOLD = 2.0
+HIGH_THRESHOLD = 3.0
 
 
-def score_records(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Stub scoring function for Phase 7.
+def score_records(anomaly_results: pd.DataFrame, thresholds: Dict[str, float] | None = None) -> pd.DataFrame:
+    if anomaly_results.empty:
+        return anomaly_results
 
-    Accepts records and returns them unchanged for now.
-    Later phases will attach scores and alert levels.
-    """
-    if not isinstance(records, list):
-        raise ValueError("records must be a list")
+    df = anomaly_results.copy()
 
-    return records
+    if "anomaly_score" not in df.columns:
+        df["anomaly_score"] = 0.0
+
+    if "is_anomaly" not in df.columns:
+        df["is_anomaly"] = False
+
+    config = thresholds or {
+        "low": LOW_THRESHOLD,
+        "medium": MEDIUM_THRESHOLD,
+        "high": HIGH_THRESHOLD,
+    }
+
+    def get_severity(score: float) -> str:
+        if score >= config["high"]:
+            return "critical"
+        if score >= config["medium"]:
+            return "high"
+        if score >= config["low"]:
+            return "medium"
+        return "low"
+
+    df["severity"] = df["anomaly_score"].apply(get_severity)
+    df["alert"] = df["is_anomaly"].apply(lambda x: "ALERT" if x else "OK")
+
+    return df
