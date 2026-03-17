@@ -51,16 +51,19 @@ async def require_upload_access_code(request: Request, payload: Optional[dict]) 
 
     route = request.url.path
     client_ip = request.client.host if request.client else None
-    logger.info(
-        "Protected endpoint access attempt",
-        extra={
-            "event": "protected_access_attempt",
-            "route": route,
-            "access_code_valid": is_valid,
-            "client_ip": client_ip,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        },
-    )
+    log_payload = {
+        "event": "protected_access_attempt",
+        "route": route,
+        "status": "success" if is_valid else "failed",
+        "access_code_valid": is_valid,
+        "client_ip": client_ip,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    if is_valid:
+        logger.info("Protected endpoint access attempt", extra=log_payload)
+    else:
+        logger.warning("Protected endpoint access attempt", extra=log_payload)
 
     if not is_valid:
         raise HTTPException(status_code=403, detail="Invalid or missing upload access code")

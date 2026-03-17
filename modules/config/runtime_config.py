@@ -1,6 +1,24 @@
 import os
+import logging
 from dataclasses import dataclass
 from typing import Optional
+
+
+logger = logging.getLogger("opsight.config")
+
+
+def _raise_runtime_config_error(message: str, *, cause: Optional[Exception] = None) -> None:
+    logger.error(
+        "Runtime configuration error",
+        extra={
+            "event": "runtime_config_error",
+            "error_type": "runtime_config_error",
+            "error_message": message,
+        },
+    )
+    if cause:
+        raise RuntimeError(message) from cause
+    raise RuntimeError(message)
 
 
 @dataclass(frozen=True)
@@ -26,7 +44,7 @@ class RuntimeConfig:
 def get_env(name: str, required: bool = True, default: Optional[str] = None) -> Optional[str]:
     value = os.getenv(name, default)
     if required and (value is None or str(value).strip() == ""):
-        raise RuntimeError(f"Missing required environment variable: {name}")
+        _raise_runtime_config_error(f"Missing required environment variable: {name}")
     return value
 
 
@@ -39,7 +57,7 @@ def _to_bool(value: Optional[str], default: bool = False) -> bool:
 def load_runtime_config() -> RuntimeConfig:
     app_env = get_env("APP_ENV")
     if app_env not in {"dev", "prod"}:
-        raise RuntimeError("APP_ENV must be one of: dev, prod")
+        _raise_runtime_config_error("APP_ENV must be one of: dev, prod")
 
     app_version = get_env("APP_VERSION")
     port_raw = get_env("PORT")
@@ -51,7 +69,7 @@ def load_runtime_config() -> RuntimeConfig:
     try:
         port = int(port_raw)
     except ValueError as exc:
-        raise RuntimeError("Environment variable PORT must be an integer") from exc
+        _raise_runtime_config_error("Environment variable PORT must be an integer", cause=exc)
 
     allow_local_fallback = _to_bool(get_env("ALLOW_LOCAL_FALLBACK", required=False, default="true"), default=True)
     blob_account = get_env("BLOB_ACCOUNT", required=False, default=None)
@@ -67,24 +85,24 @@ def load_runtime_config() -> RuntimeConfig:
     if app_env == "prod":
         # Production must NOT use local fallback
         if allow_local_fallback:
-            raise RuntimeError(
+            _raise_runtime_config_error(
                 "Local fallback is not allowed in production. "
                 "Set ALLOW_LOCAL_FALLBACK=false in production."
             )
 
         # Production MUST have all three Blob parameters set
         if not blob_account or not blob_account.strip():
-            raise RuntimeError(
+            _raise_runtime_config_error(
                 "Production mode requires BLOB_ACCOUNT to be set. "
                 "Blob is the mandatory ingestion source in production."
             )
         if not blob_container or not blob_container.strip():
-            raise RuntimeError(
+            _raise_runtime_config_error(
                 "Production mode requires BLOB_CONTAINER to be set. "
                 "Blob is the mandatory ingestion source in production."
             )
         if not blob_path or not blob_path.strip():
-            raise RuntimeError(
+            _raise_runtime_config_error(
                 "Production mode requires BLOB_PATH to be set. "
                 "Blob is the mandatory ingestion source in production."
             )

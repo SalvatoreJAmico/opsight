@@ -319,6 +319,25 @@ A release is considered ready when:
 - Require passing checks before merge
 - Disallow force-pushes to main
 
+## Logging and Monitoring
+
+Opsight runtime logs are emitted as structured JSON for API, pipeline, and ingestion components.
+
+- Logs are written to stdout by default
+- Azure can ingest stdout logs through Container Apps and Log Analytics
+- Key lifecycle events and categorized failures are intentionally logged
+- Secret values (for example, access codes and credentials) are never logged
+
+Structured log payloads include stable fields for queryability:
+
+- event
+- level
+- timestamp
+- app_env
+- app_version
+
+Additional fields are included when relevant, such as route, status, source, error_type, and error_message.
+
 ### Use Docker Compose
 
 Start services (API + pipeline service definition):

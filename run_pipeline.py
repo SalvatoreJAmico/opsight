@@ -37,16 +37,49 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 logger = logging.getLogger("opsight.pipeline")
 
 def run_pipeline(input_data=None):
-    runtime_config = load_runtime_config()
     setup_logging(service_name="opsight.pipeline")
+    try:
+        runtime_config = load_runtime_config()
+    except Exception as exc:
+        logger.error(
+            "Runtime config load failed before pipeline execution",
+            extra={
+                "event": "runtime_config_error",
+                "error_type": "runtime_config_error",
+                "error_message": str(exc),
+            },
+        )
+        raise
+
+    logger.info(
+        "Runtime configuration loaded",
+        extra={
+            "event": "runtime_config_loaded",
+            "app_env": runtime_config.app_env,
+            "app_version": runtime_config.app_version,
+            "persistence_mode": runtime_config.persistence_mode,
+            "port": runtime_config.port,
+        },
+    )
+
     summary_path = Path(runtime_config.pipeline_summary_path)
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     failure_summary_path = summary_path.with_name("pipeline_failure_summary.json")
 
     start_time = datetime.now(timezone.utc)
-    logger.info("Pipeline started", extra={"event": "pipeline_started"})
+    source = "explicit" if input_data else ("blob" if runtime_config.app_env == "prod" else "local_or_blob_fallback")
+    logger.info(
+        "Pipeline execution started",
+        extra={
+            "event": "pipeline_execution_started",
+            "status": "started",
+            "source": source,
+        },
+    )
     status = "SUCCESS"
     failed_stage = None
+    pipeline_error_type = None
+    pipeline_error_message = None
 
     raw_data = None
     canonical_records = []
@@ -73,35 +106,71 @@ def run_pipeline(input_data=None):
                 extra={
                     "event": "stage_completed",
                     "stage": "ingestion",
+                    "source": source,
                     "records_ingested": len(raw_data),
                 },
             )
         except BlobAuthenticationError as e:
             failed_stage = "ingestion"
+            pipeline_error_type = "blob_authentication_error"
+            pipeline_error_message = str(e)
             logger.error(
                 "Blob authentication failed",
-                extra={"event": "stage_failed", "stage": failed_stage, "error_category": "blob_auth"},
+                extra={
+                    "event": "blob_authentication_failed",
+                    "stage": failed_stage,
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": pipeline_error_type,
+                    "error_message": pipeline_error_message,
+                },
             )
             raise RuntimeError(f"Ingestion failed - Blob authentication error: {e}") from e
         except BlobNotFoundError as e:
             failed_stage = "ingestion"
+            pipeline_error_type = "blob_not_found_error"
+            pipeline_error_message = str(e)
             logger.error(
                 "Blob resource not found",
-                extra={"event": "stage_failed", "stage": failed_stage, "error_category": "blob_not_found"},
+                extra={
+                    "event": "blob_not_found",
+                    "stage": failed_stage,
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": pipeline_error_type,
+                    "error_message": pipeline_error_message,
+                },
             )
             raise RuntimeError(f"Ingestion failed - Blob not found: {e}") from e
         except BlobNetworkError as e:
             failed_stage = "ingestion"
+            pipeline_error_type = "blob_network_error"
+            pipeline_error_message = str(e)
             logger.error(
                 "Blob network error",
-                extra={"event": "stage_failed", "stage": failed_stage, "error_category": "blob_network"},
+                extra={
+                    "event": "blob_network_error",
+                    "stage": failed_stage,
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": pipeline_error_type,
+                    "error_message": pipeline_error_message,
+                },
             )
             raise RuntimeError(f"Ingestion failed - Blob network error: {e}") from e
         except Exception as e:
             failed_stage = "ingestion"
+            pipeline_error_type = "pipeline_execution_error"
+            pipeline_error_message = str(e)
             logger.exception(
                 "Stage failed",
-                extra={"event": "stage_failed", "stage": failed_stage},
+                extra={
+                    "event": "stage_failed",
+                    "stage": failed_stage,
+                    "status": "failed",
+                    "error_type": pipeline_error_type,
+                    "error_message": pipeline_error_message,
+                },
             )
             raise RuntimeError(f"Ingestion failed: {e}") from e
     
@@ -124,9 +193,17 @@ def run_pipeline(input_data=None):
             )
         except Exception as e:
             failed_stage = "adapter"
+            pipeline_error_type = "pipeline_execution_error"
+            pipeline_error_message = str(e)
             logger.exception(
                 "Stage failed",
-                extra={"event": "stage_failed", "stage": failed_stage},
+                extra={
+                    "event": "stage_failed",
+                    "stage": failed_stage,
+                    "status": "failed",
+                    "error_type": pipeline_error_type,
+                    "error_message": pipeline_error_message,
+                },
             )
             raise RuntimeError(f"Adapter failed: {e}") from e
         
@@ -159,9 +236,17 @@ def run_pipeline(input_data=None):
             )
         except Exception as e:
             failed_stage = "validation"
+            pipeline_error_type = "pipeline_execution_error"
+            pipeline_error_message = str(e)
             logger.exception(
                 "Stage failed",
-                extra={"event": "stage_failed", "stage": failed_stage},
+                extra={
+                    "event": "stage_failed",
+                    "stage": failed_stage,
+                    "status": "failed",
+                    "error_type": pipeline_error_type,
+                    "error_message": pipeline_error_message,
+                },
             )
             raise RuntimeError(f"Validation failed: {e}") from e
 
@@ -194,44 +279,70 @@ def run_pipeline(input_data=None):
                 df = detect_anomalies(valid_records)
                 df = score_records(df)
                 metrics = evaluate(df)
-                print("Intelligence Metrics:", metrics)
                 logger.info(
                     "Stage completed",
-                    extra={"event": "stage_completed", "stage": "intelligence"},
+                    extra={
+                        "event": "stage_completed",
+                        "stage": "intelligence",
+                        "status": "success",
+                    },
                 )
             except Exception as intelligence_error:
-                logger.exception(
+                logger.warning(
                     "Stage failed (non-blocking)",
-                    extra={"event": "stage_failed", "stage": "intelligence"},
+                    extra={
+                        "event": "stage_failed",
+                        "stage": "intelligence",
+                        "status": "failed",
+                        "error_type": "pipeline_execution_error",
+                        "error_message": str(intelligence_error),
+                    },
                 )
         except Exception as e:
             failed_stage = "persistence"
+            pipeline_error_type = "pipeline_execution_error"
+            pipeline_error_message = str(e)
             logger.exception(
                 "Stage failed",
-                extra={"event": "stage_failed", "stage": failed_stage},
+                extra={
+                    "event": "stage_failed",
+                    "stage": failed_stage,
+                    "status": "failed",
+                    "error_type": pipeline_error_type,
+                    "error_message": pipeline_error_message,
+                },
             )
             raise RuntimeError(f"Persistence failed: {e}") from e
        
     except Exception as e:
         status = "FAILED"
+        if pipeline_error_type is None:
+            pipeline_error_type = "pipeline_execution_error"
+        if pipeline_error_message is None:
+            pipeline_error_message = str(e)
         logger.exception(
-            "Pipeline failed",
+            "Pipeline execution failed",
             extra={
-                "event": "pipeline_failed",
+                "event": "pipeline_execution_failed",
+                "status": "failed",
+                "error_type": pipeline_error_type,
+                "error_message": pipeline_error_message,
                 "failed_stage": failed_stage,
             },
         )
     finally:
         end_time = datetime.now(timezone.utc)
         runtime_seconds = (end_time - start_time).total_seconds()
-        logger.info(
-            "Pipeline finished",
-            extra={
-                "event": "pipeline_finished",
-                "runtime_seconds": runtime_seconds,
-                "failed_stage": failed_stage,
-            },
-        )
+        if status == "SUCCESS":
+            logger.info(
+                "Pipeline execution completed",
+                extra={
+                    "event": "pipeline_execution_completed",
+                    "status": "success",
+                    "runtime_seconds": runtime_seconds,
+                    "failed_stage": failed_stage,
+                },
+            )
 
     summary = {
         "status": status,
@@ -257,7 +368,6 @@ def run_pipeline(input_data=None):
         },
     )
 
-    print(summary)
     with open(summary_path, "w") as f:
         json.dump(summary, f, indent=4)
 

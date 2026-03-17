@@ -27,7 +27,7 @@ from azure.core.exceptions import (
     HttpResponseError,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("opsight.ingestion.blob")
 
 
 class BlobErrorCategory(Enum):
@@ -132,12 +132,26 @@ class BlobClient:
 
         try:
             if self.connection_string:
-                logger.debug("Initializing BlobServiceClient with connection string")
+                logger.debug(
+                    "Initializing BlobServiceClient with connection string",
+                    extra={
+                        "event": "blob_client_initialization",
+                        "source": "blob",
+                        "status": "started",
+                    },
+                )
                 self._service_client = BlobServiceClient.from_connection_string(
                     self.connection_string
                 )
             else:
-                logger.debug("Initializing BlobServiceClient with managed identity")
+                logger.debug(
+                    "Initializing BlobServiceClient with managed identity",
+                    extra={
+                        "event": "blob_client_initialization",
+                        "source": "blob",
+                        "status": "started",
+                    },
+                )
                 credential = DefaultAzureCredential()
                 account_url = f"https://{self.blob_account}.blob.core.windows.net"
                 self._service_client = BlobServiceClient(
@@ -146,11 +160,31 @@ class BlobClient:
                 )
             return self._service_client
         except ClientAuthenticationError as e:
+            logger.error(
+                "Blob authentication failed during client initialization",
+                extra={
+                    "event": "blob_authentication_failed",
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": "blob_authentication_error",
+                    "error_message": str(e),
+                },
+            )
             raise BlobAuthenticationError(
                 f"Failed to authenticate with Blob Storage ({self._auth_method})",
                 str(e),
             ) from e
         except Exception as e:
+            logger.error(
+                "Blob client initialization failed",
+                extra={
+                    "event": "blob_network_error",
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": "blob_network_error",
+                    "error_message": str(e),
+                },
+            )
             raise BlobAuthenticationError(
                 f"Failed to initialize Blob Storage client ({self._auth_method})",
                 str(e),
@@ -173,9 +207,13 @@ class BlobClient:
             container_client = service_client.get_container_client(self.blob_container)
             blob_client = container_client.get_blob_client(self.blob_path)
 
-            logger.debug(
-                f"Reading blob: account={self.blob_account}, "
-                f"container={self.blob_container}, path={self.blob_path}"
+            logger.info(
+                "Blob read started",
+                extra={
+                    "event": "blob_read_started",
+                    "source": "blob",
+                    "status": "started",
+                },
             )
 
             # Download blob content into bytes buffer
@@ -184,6 +222,14 @@ class BlobClient:
 
             # Parse CSV from bytes into DataFrame
             df = pd.read_csv(io.BytesIO(blob_bytes))
+            logger.info(
+                "Blob read completed",
+                extra={
+                    "event": "blob_read_completed",
+                    "source": "blob",
+                    "status": "success",
+                },
+            )
             return {
                 "status": "success",
                 "rows": df,
@@ -195,7 +241,16 @@ class BlobClient:
                 f"Authentication/authorization failed for "
                 f"account={self.blob_account}, container={self.blob_container}"
             )
-            logger.error(error_msg)
+            logger.error(
+                error_msg,
+                extra={
+                    "event": "blob_authentication_failed",
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": "blob_authentication_error",
+                    "error_message": str(e),
+                },
+            )
             raise BlobAuthenticationError(error_msg, str(e)) from e
 
         except ResourceNotFoundError as e:
@@ -204,7 +259,16 @@ class BlobClient:
                 error_msg = f"Container '{self.blob_container}' not found"
             else:
                 error_msg = f"Blob '{self.blob_path}' not found in container '{self.blob_container}'"
-            logger.error(error_msg)
+            logger.error(
+                error_msg,
+                extra={
+                    "event": "blob_not_found",
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": "blob_not_found_error",
+                    "error_message": str(e),
+                },
+            )
             raise BlobNotFoundError(error_msg, str(e)) from e
 
         except (ServiceRequestError, HttpResponseError) as e:
@@ -213,13 +277,31 @@ class BlobClient:
                 f"Network error accessing Blob Storage "
                 f"(account={self.blob_account})"
             )
-            logger.error(error_msg)
+            logger.error(
+                error_msg,
+                extra={
+                    "event": "blob_network_error",
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": "blob_network_error",
+                    "error_message": str(e),
+                },
+            )
             raise BlobNetworkError(error_msg, str(e)) from e
 
         except Exception as e:
             # Catch other potential errors and categorize as network
             error_msg = f"Unexpected error reading blob: {type(e).__name__}"
-            logger.error(error_msg)
+            logger.error(
+                error_msg,
+                extra={
+                    "event": "blob_network_error",
+                    "source": "blob",
+                    "status": "failed",
+                    "error_type": "blob_network_error",
+                    "error_message": str(e),
+                },
+            )
             raise BlobNetworkError(error_msg, str(e)) from e
 
 
