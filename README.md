@@ -175,10 +175,97 @@ When the pipeline runs, Opsight produces:
 
 ## Testing
 
-Run the test suite with:
+Install dependencies, then run the full test suite:
 
 ```bash
-python -m unittest discover -s tests
+pip install -r requirements.txt
+python -m pytest
+```
+
+If dependencies are already installed, run:
+
+```bash
+python -m pytest
+```
+
+## Deployment And Operations
+
+### Environment Variables
+
+Opsight reads runtime configuration from environment variables.
+
+- `.env.example` provides a local baseline
+- `configs/production.env` provides production-oriented defaults
+
+At minimum, set these for runtime:
+
+- `APP_ENV`
+- `APP_HOST`
+- `APP_PORT`
+- `STORAGE_BACKEND`
+- `STORAGE_PATH`
+- `LOG_LEVEL`
+
+Optional Azure settings:
+
+- `AZURE_STORAGE_CONNECTION_STRING`
+- `AZURE_STORAGE_CONTAINER`
+- `AZURE_KEY_VAULT_URL`
+- `AZURE_OPENAI_API_KEY`
+- `AZURE_OPENAI_ENDPOINT`
+
+### Run API Locally
+
+From repository root:
+
+```bash
+uvicorn modules.api.app:app --host 0.0.0.0 --port 8000
+```
+
+Health check:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+### Build And Run Docker Image
+
+Build image:
+
+```bash
+docker build -t opsight:final .
+```
+
+Run API container:
+
+```bash
+docker run --rm -p 8000:8000 --name opsight-api opsight:final
+```
+
+### Use Docker Compose
+
+Start services (API + pipeline service definition):
+
+```bash
+docker compose up --build
+```
+
+Run in detached mode:
+
+```bash
+docker compose up --build -d
+```
+
+Stop services:
+
+```bash
+docker compose down
 ```
 
 The current test suite covers:
