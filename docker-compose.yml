@@ -1,0 +1,19 @@
+services:
+  opsight-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      STORAGE_BACKEND: json
+      STORAGE_PATH: data/records.json
+
+  opsight-pipeline:
+    build: .
+    command: ["python", "run_pipeline.py"]
+    environment:
+      APP_ENV: production
+      STORAGE_BACKEND: json
+      STORAGE_PATH: data/records.json
