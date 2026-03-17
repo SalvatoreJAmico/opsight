@@ -10,16 +10,19 @@ from modules.api.errors import register_error_handlers
 
 runtime_config = load_runtime_config()
 
-print(
-    {
+setup_logging(service_name="opsight.api")
+logger = logging.getLogger("opsight.api")
+
+logger.info(
+    "API startup configuration loaded",
+    extra={
+        "event": "api_startup",
         "app_env": runtime_config.app_env,
         "app_version": runtime_config.app_version,
         "persistence_mode": runtime_config.persistence_mode,
-    }
+        "port": runtime_config.port,
+    },
 )
-
-setup_logging(service_name="opsight.api")
-logger = logging.getLogger("opsight.api")
 
 from .routes.ingest import router as ingest_router
 from .routes.entities import router as entities_router
@@ -75,5 +78,8 @@ async def log_requests(request: Request, call_next):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "version": runtime_config.app_version,
+    }
 
