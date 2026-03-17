@@ -14,3 +14,16 @@ Thumbs.db
 
 # runtime artifacts
 logs/
+
+# local environment and secret artifacts
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+
+# keep shareable templates/examples tracked
+!.env.example
+!configs/production.env

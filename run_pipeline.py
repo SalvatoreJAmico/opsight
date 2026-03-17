@@ -11,7 +11,7 @@ from modules.validation.validator import validate_canonical_record
 from modules.intelligence import detect_anomalies, score_records, evaluate
 
 from modules.persistence.storage_factory import StorageFactory
-from configs.storage_config import StorageConfig
+from modules.config.storage_config import StorageConfig
 
 import logging
 from datetime import datetime, timezone
