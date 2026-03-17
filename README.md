@@ -319,6 +319,82 @@ A release is considered ready when:
 - Require passing checks before merge
 - Disallow force-pushes to main
 
+## Deployment Flow (Pre-CI/CD)
+
+Opsight uses two deployment paths.
+
+### API Deployment Path
+
+1. Develop and validate API changes locally.
+2. Merge validated changes through `feature/* -> dev -> main`.
+3. Build a versioned Docker image from the repository.
+4. Push the image to Azure Container Registry (ACR).
+5. Update Azure Container Apps to use the new image tag.
+6. Azure creates a new revision for the API deployment.
+7. Validate the live API after deployment.
+
+### UI Deployment Path
+
+1. Develop and validate UI changes locally.
+2. Merge validated changes through `feature/* -> dev -> main`.
+3. Deploy the UI source to Azure Static Web Apps.
+4. Configure the UI to use the deployed API base URL.
+5. Validate the live UI after deployment.
+
+### Runtime Configuration
+
+The API runs in Azure Container Apps using:
+
+- environment variables
+- secrets
+- managed identity
+- Azure Blob ingestion
+- structured stdout logging
+
+The API is deployed as a versioned container image, not by shipping source files directly.
+
+### Update Model
+
+Each release should:
+
+- complete scoped work
+- pass validation
+- include documentation updates if needed
+- deliberately bump `APP_VERSION`
+- produce a new API image version
+- update the deployed Container App revision
+- deploy UI changes when frontend behavior changed
+- validate the live system
+
+### Rollback Model
+
+- API rollback uses the previous known-good container image/revision.
+- UI rollback uses the previous known-good frontend deployment.
+
+### Clean Architecture Flow
+
+```text
+Local Repo
+        |
+        v
+GitHub Repository
+        |
+        |-- UI source -> Azure Static Web Apps
+        |
+        `-- API source -> Docker image build
+                                                                |
+                                                                v
+                                        Azure Container Registry
+                                                                |
+                                                                v
+                                  Azure Container Apps
+                                                                |
+                                                                |-- Env vars / secrets
+                                                                |-- Managed identity
+                                                                |-- Azure Blob access
+                                                                `-- Log Analytics / Azure Monitor
+```
+
 ## Logging and Monitoring
 
 Opsight runtime logs are emitted as structured JSON for API, pipeline, and ingestion components.
