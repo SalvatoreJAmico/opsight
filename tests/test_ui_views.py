@@ -4,6 +4,8 @@ import types
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
+from pyarrow import json
+
 
 class _FakeResponse:
     def __init__(self, status_code=200, payload=None):
@@ -128,8 +130,29 @@ class TestUiViews(unittest.TestCase):
         anomalies_module.st = MagicMock()
         anomalies_module.st.selectbox.return_value = "order_amount"
 
-        anomalies_module.render_anomalies_view()
+        fake_records = [
+            {
+                "entity_id": "101",
+                "timestamp": "2026-03-15",
+                "features": {"order_amount": 10.0},
+            },
+            {
+                "entity_id": "102",
+                "timestamp": "2026-03-15",
+                "features": {"order_amount": 12.0},
+            },
+            {
+                "entity_id": "103",
+                "timestamp": "2026-03-15",
+                "features": {"order_amount": 200.0},
+            },
+        ]
 
+        with patch("pathlib.Path.exists", return_value=True), \
+            patch("builtins.open", mock_open(read_data=json.dumps(fake_records))):
+            anomalies_module.render_anomalies_view()
+
+        self.assertTrue(anomalies_module.st.metric.called)
         self.assertTrue(anomalies_module.st.dataframe.called)
 
 
