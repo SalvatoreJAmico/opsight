@@ -32,6 +32,8 @@ class TestApiLayer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client = TestClient(api_app_module.app)
+        cls.access_code = os.environ["UPLOAD_ACCESS_CODE"]
+        cls.valid_headers = {"X-Upload-Access-Code": cls.access_code}
 
     def test_service_starts_and_health_endpoint_is_available(self):
         response = self.client.get("/health")
@@ -51,7 +53,11 @@ class TestApiLayer(unittest.TestCase):
         }
 
         with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary) as mocked_runner:
-            response = self.client.post("/data", json={"source_path": "data/opsight_sample_sales.csv"})
+            response = self.client.post(
+                "/data",
+                json={"source_path": "data/opsight_sample_sales.csv"},
+                headers=self.valid_headers,
+            )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "processed")
@@ -71,7 +77,11 @@ class TestApiLayer(unittest.TestCase):
         }
 
         with patch("modules.api.routes.ingest.run_pipeline", return_value=failed_summary):
-            response = self.client.post("/data", json={"source_path": "data/missing.csv"})
+            response = self.client.post(
+                "/data",
+                json={"source_path": "data/missing.csv"},
+                headers=self.valid_headers,
+            )
 
         self.assertEqual(response.status_code, 500)
         body = response.json()
@@ -79,7 +89,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertIn("Pipeline failure at stage: ingestion", body["detail"])
 
     def test_ingestion_endpoint_requires_source_path(self):
-        response = self.client.post("/data", json={})
+        response = self.client.post("/data", json={}, headers=self.valid_headers)
 
         self.assertEqual(response.status_code, 422)
         body = response.json()
@@ -93,6 +103,69 @@ class TestApiLayer(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["error"], "Invalid request")
         self.assertTrue(isinstance(body["detail"], list))
+
+    def test_protected_endpoint_rejects_missing_access_code(self):
+        response = self.client.post("/data", json={"source_path": "data/opsight_sample_sales.csv"})
+
+        self.assertEqual(response.status_code, 403)
+        body = response.json()
+        self.assertEqual(body["error"], "Request failed")
+        self.assertEqual(body["detail"], "Invalid or missing upload access code")
+
+    def test_protected_endpoint_rejects_wrong_access_code(self):
+        response = self.client.post(
+            "/data",
+            json={"source_path": "data/opsight_sample_sales.csv"},
+            headers={"X-Upload-Access-Code": "wrong-code"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        body = response.json()
+        self.assertEqual(body["error"], "Request failed")
+        self.assertEqual(body["detail"], "Invalid or missing upload access code")
+
+    def test_pipeline_trigger_endpoint_accepts_correct_access_code(self):
+        mocked_summary = {
+            "status": "SUCCESS",
+            "failed_stage": None,
+            "records_ingested": 2,
+            "records_valid": 2,
+            "records_invalid": 0,
+            "records_persisted": 2,
+            "runtime_seconds": 0.1,
+        }
+
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary):
+            response = self.client.post(
+                "/pipeline/trigger",
+                json={"source_path": "data/opsight_sample_sales.csv"},
+                headers=self.valid_headers,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "processed")
+
+    def test_protected_attempt_logging_excludes_secret(self):
+        with patch("modules.api.access_control.logger.info") as mocked_log:
+            self.client.post(
+                "/data",
+                json={"source_path": "data/opsight_sample_sales.csv"},
+                headers={"X-Upload-Access-Code": "wrong-code"},
+            )
+
+        self.assertTrue(mocked_log.called)
+        protected_events = [
+            kwargs.get("extra", {})
+            for _, kwargs in mocked_log.call_args_list
+            if kwargs.get("extra", {}).get("event") == "protected_access_attempt"
+        ]
+        self.assertTrue(protected_events)
+        extra = protected_events[-1]
+        self.assertIn("route", extra)
+        self.assertIn("access_code_valid", extra)
+        self.assertFalse(extra["access_code_valid"])
+        self.assertIn("timestamp", extra)
+        self.assertNotIn("access_code", extra)
 
     def test_entity_endpoint_returns_records_for_entity(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
