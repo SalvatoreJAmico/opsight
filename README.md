@@ -280,6 +280,45 @@ Run API container:
 docker run --rm -p 8000:8000 --name opsight-api opsight:final
 ```
 
+## Branching and Release Workflow
+
+### Branch Roles
+
+- main: production-ready branch
+- dev: active development and integration branch
+- feature/*: isolated work for individual issues or changes
+
+### Standard Flow
+
+```text
+feature/* -> dev -> main
+```
+
+### Merge Rules
+
+- No direct commits to main
+- All production-bound changes must be reviewed before merging
+- Changes should merge into dev first, then be promoted to main
+- main must always remain deployable
+- main should only receive validated changes from dev, not ad hoc feature branches
+
+### Release Rules
+
+A release is considered ready when:
+
+- Relevant issue scope is complete
+- Tests pass
+- Documentation is updated when behavior or configuration changes
+- APP_VERSION is deliberately bumped
+- The validated release is merged into main
+
+### Conceptual Branch Protection
+
+- Protect main
+- Require pull requests for merge
+- Require passing checks before merge
+- Disallow force-pushes to main
+
 ### Use Docker Compose
 
 Start services (API + pipeline service definition):

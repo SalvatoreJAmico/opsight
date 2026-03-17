@@ -79,8 +79,9 @@ class TestRuntimeConfigModes(unittest.TestCase):
 
         message = str(context.exception)
         self.assertTrue(
-            "Missing required environment variable: BLOB_ACCOUNT" in message
-            or "Missing required environment variable: BLOB_CONTAINER" in message
+            "Production mode requires BLOB_ACCOUNT to be set" in message
+            or "Production mode requires BLOB_CONTAINER to be set" in message
+            or "Production mode requires BLOB_PATH to be set" in message
         )
 
     def test_prod_mode_passes_with_blob_config_present(self):
@@ -89,6 +90,7 @@ class TestRuntimeConfigModes(unittest.TestCase):
         os.environ["ALLOW_LOCAL_FALLBACK"] = "false"
         os.environ["BLOB_ACCOUNT"] = "acc"
         os.environ["BLOB_CONTAINER"] = "container"
+        os.environ["BLOB_PATH"] = "incoming/data.csv"
 
         config = load_runtime_config()
 
@@ -96,6 +98,7 @@ class TestRuntimeConfigModes(unittest.TestCase):
         self.assertFalse(config.allow_local_fallback)
         self.assertEqual(config.blob_account, "acc")
         self.assertEqual(config.blob_container, "container")
+        self.assertEqual(config.blob_path, "incoming/data.csv")
 
 
 if __name__ == "__main__":
