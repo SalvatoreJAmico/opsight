@@ -8,6 +8,7 @@ import json
 from modules.ingestion.ingestion import ingest_data
 from modules.adapter.adapter import adapt_records
 from modules.validation.validator import validate_canonical_record
+from modules.intelligence import detect_anomalies, score_records, evaluate
 
 from modules.persistence.storage_factory import StorageFactory
 from configs.storage_config import StorageConfig
@@ -102,6 +103,16 @@ def run_pipeline(input_data=None):
             storage = StorageFactory.create_storage(storage_config)
             storage.save_records(valid_records)
             logging.info("Stage: persistence completed")
+
+            # Stage 5: Intelligence (best-effort, non-blocking)
+            try:
+                df = detect_anomalies(valid_records)
+                df = score_records(df)
+                metrics = evaluate(df)
+                print("Intelligence Metrics:", metrics)
+                logging.info("Stage: intelligence completed")
+            except Exception as intelligence_error:
+                logging.warning(f"Stage: intelligence failed (non-blocking): {intelligence_error}")
         except Exception as e:
             failed_stage = "persistence"
             raise RuntimeError(f"Persistence failed: {e}") from e
