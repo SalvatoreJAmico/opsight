@@ -139,7 +139,7 @@ def run_pipeline(input_data=None):
                 "Stage started",
                 extra={"event": "stage_started", "stage": "persistence"},
             )
-            storage_config = StorageConfig(backend="json")
+            storage_config = StorageConfig()
             storage = StorageFactory.create_storage(storage_config)
             storage.save_records(valid_records)
             logger.info(
