@@ -11,7 +11,13 @@ logger = logging.getLogger("opsight.api")
 def register_error_handlers(app):
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        logger.error(f"Validation error | path={request.url.path} | detail={exc.errors()}")
+        logger.error(
+            "Validation error",
+            extra={
+                "event": "request_validation_error",
+                "path": request.url.path,
+            },
+        )
         return JSONResponse(
             status_code=400,
             content={
@@ -22,7 +28,14 @@ def register_error_handlers(app):
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-        logger.error(f"HTTP error | path={request.url.path} | status={exc.status_code} | detail={exc.detail}")
+        logger.error(
+            "HTTP error",
+            extra={
+                "event": "http_error",
+                "path": request.url.path,
+                "status_code": exc.status_code,
+            },
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -33,7 +46,13 @@ def register_error_handlers(app):
 
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception):
-        logger.exception(f"Unhandled error | path={request.url.path} | error={str(exc)}")
+        logger.exception(
+            "Unhandled error",
+            extra={
+                "event": "unhandled_error",
+                "path": request.url.path,
+            },
+        )
         return JSONResponse(
             status_code=500,
             content={
