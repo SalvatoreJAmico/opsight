@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -11,6 +12,14 @@ from modules.ui.views.metrics import render_metrics_view
 from modules.ui.views.entity_explorer import render_entity_explorer
 from modules.ui.views.validation_errors import render_validation_errors
 from modules.ui.views.anomalies import render_anomalies_view
+from modules.ui.views._config import STORAGE_PATH
+
+
+def _get_summary_path() -> Path:
+    summary_path = os.getenv("PIPELINE_SUMMARY_PATH")
+    if not summary_path:
+        raise RuntimeError("Missing required environment variable: PIPELINE_SUMMARY_PATH")
+    return Path(summary_path)
 
 
 st.set_page_config(page_title="Opsight UI", layout="wide")
@@ -18,9 +27,8 @@ st.set_page_config(page_title="Opsight UI", layout="wide")
 st.title("Opsight Dashboard")
 st.write("Phase 6 visualization service is running.")
 
-project_root = Path(__file__).resolve().parents[2]
-records_path = project_root / "data" / "records.json"
-summary_path = project_root / "reports" / "pipeline_run_summary.json"
+records_path = Path(STORAGE_PATH)
+summary_path = _get_summary_path()
 
 st.subheader("Connectivity Check")
 

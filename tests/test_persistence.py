@@ -59,7 +59,7 @@ class TestPersistenceLayer(unittest.TestCase):
             self.assertEqual(loaded, [])
 
     def test_storage_factory_unsupported_backend_raises_value_error(self):
-        config = SimpleNamespace(backend="unsupported")
+        config = SimpleNamespace(backend="unsupported", storage_path="data/test-records.json")
 
         with self.assertRaises(ValueError) as context:
             StorageFactory.create_storage(config)

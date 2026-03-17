@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -6,6 +7,16 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+os.environ.setdefault("APP_ENV", "dev")
+os.environ.setdefault("APP_VERSION", "0.1.0-test")
+os.environ.setdefault("PORT", "8000")
+os.environ.setdefault("UPLOAD_ACCESS_CODE", "test-access-code")
+os.environ.setdefault("PERSISTENCE_MODE", "json")
+os.environ.setdefault("LOG_LEVEL", "INFO")
+os.environ.setdefault("STORAGE_PATH", "data/test-records.json")
+os.environ.setdefault("ALLOW_LOCAL_FALLBACK", "true")
+os.environ.setdefault("INPUT_SOURCE_PATH", "data/opsight_sample_sales.csv")
 
 import run_pipeline
 

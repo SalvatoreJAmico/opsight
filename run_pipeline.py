@@ -17,6 +17,7 @@ from modules.intelligence import detect_anomalies, score_records, evaluate
 from modules.persistence.storage_factory import StorageFactory
 from modules.config.storage_config import StorageConfig
 from modules.config.logging_config import setup_logging
+from modules.config.runtime_config import load_runtime_config
 
 # TODO:
 # Replace broad Exception catches with stage-specific exception types as modules mature.
@@ -27,12 +28,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 REPORTS_DIR = PROJECT_ROOT / "reports"
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# TODO:
-# Move DATA_SOURCE and logging settings into a pipeline config file later.
-DATA_SOURCE = str(PROJECT_ROOT / "data" / "opsight_sample_sales.csv")
 logger = logging.getLogger("opsight.pipeline")
 
 def run_pipeline(input_data=None):
+    runtime_config = load_runtime_config()
     setup_logging(service_name="opsight.pipeline")
 
     start_time = datetime.now(timezone.utc)
@@ -54,7 +53,14 @@ def run_pipeline(input_data=None):
                 "Stage started",
                 extra={"event": "stage_started", "stage": "ingestion"},
             )
-            raw_data = ingest_data(DATA_SOURCE) if input_data is None else ingest_data(input_data)
+            if input_data is None:
+                if not runtime_config.input_source_path:
+                    raise RuntimeError("Missing required environment variable: INPUT_SOURCE_PATH")
+                source_path = runtime_config.input_source_path
+            else:
+                source_path = input_data
+
+            raw_data = ingest_data(source_path)
             logger.info(
                 "Stage completed",
                 extra={
@@ -157,10 +163,11 @@ def run_pipeline(input_data=None):
                     "Stage started",
                     extra={"event": "stage_started", "stage": "intelligence"},
                 )
-                df = detect_anomalies(valid_records)
-                df = score_records(df)
-                metrics = evaluate(df)
-                print("Intelligence Metrics:", metrics)
+                if runtime_config.enable_pipeline:
+                    df = detect_anomalies(valid_records)
+                    df = score_records(df)
+                    metrics = evaluate(df)
+                    print("Intelligence Metrics:", metrics)
                 logger.info(
                     "Stage completed",
                     extra={"event": "stage_completed", "stage": "intelligence"},

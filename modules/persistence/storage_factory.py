@@ -10,11 +10,12 @@ class StorageFactory:
     @staticmethod
     def create_storage(config):
         backend = config.backend
+        storage_path = config.storage_path
 
         if backend == "json":
-            return LocalStorage()
+            return LocalStorage(storage_path=storage_path)
 
         if backend == "parquet":
-            return ParquetStorage()
+            return ParquetStorage(storage_path=storage_path)
 
         raise ValueError(f"Unsupported storage backend: {backend}")

@@ -1,5 +1,7 @@
 import os
 
+from modules.config.runtime_config import load_runtime_config
+
 
 class StorageConfig:
     """
@@ -8,9 +10,11 @@ class StorageConfig:
     """
 
     def __init__(self, backend=None):
-        self.app_env = os.getenv("APP_ENV", "development")
-        self.backend = backend or os.getenv("STORAGE_BACKEND", "json")
-        self.storage_path = os.getenv("STORAGE_PATH", "data/records.json")
+        runtime_config = load_runtime_config()
+
+        self.app_env = runtime_config.app_env
+        self.backend = backend or runtime_config.persistence_mode
+        self.storage_path = runtime_config.storage_path
 
         self.azure_storage_connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
         self.azure_storage_container = os.getenv("AZURE_STORAGE_CONTAINER", "")

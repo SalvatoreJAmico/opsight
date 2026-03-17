@@ -1,12 +1,17 @@
 # modules/api/routes/status.py
 import json
+import os
 from pathlib import Path
 from fastapi import APIRouter
 
 router = APIRouter()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-SUMMARY_PATH = PROJECT_ROOT / "reports" / "pipeline_run_summary.json"
+summary_path_env = os.getenv("PIPELINE_SUMMARY_PATH")
+if not summary_path_env:
+    raise RuntimeError("Missing required environment variable: PIPELINE_SUMMARY_PATH")
+
+SUMMARY_PATH = Path(summary_path_env)
 
 @router.get("/pipeline/status")
 def get_pipeline_status():

@@ -1,10 +1,14 @@
 import importlib
+import os
 import sys
 import types
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
 import json as std_json
+
+os.environ["API_BASE_URL"] = "http://ui-test.local:8000"
+os.environ["STORAGE_PATH"] = "data/records.json"
 
 
 class _FakeResponse:
@@ -47,7 +51,7 @@ class TestUiViews(unittest.TestCase):
         post_url = upload_module.requests.post.call_args[0][0]
         post_json = upload_module.requests.post.call_args[1]["json"]
 
-        self.assertEqual(post_url, "http://127.0.0.1:8000/data")
+        self.assertEqual(post_url, "http://ui-test.local:8000/data")
         self.assertTrue(post_json["source_path"].endswith("phase6_upload.csv"))
 
     def test_metrics_view_renders_pipeline_summary(self):
@@ -69,7 +73,7 @@ class TestUiViews(unittest.TestCase):
 
         metrics_module.render_metrics_view()
 
-        metrics_module.requests.get.assert_called_once_with("http://127.0.0.1:8000/pipeline/status")
+        metrics_module.requests.get.assert_called_once_with("http://ui-test.local:8000/pipeline/status")
         self.assertTrue(metric_columns[0].metric.called)
         self.assertTrue(metric_columns[1].metric.called)
         self.assertTrue(metric_columns[2].metric.called)
@@ -97,7 +101,7 @@ class TestUiViews(unittest.TestCase):
 
         entity_module.render_entity_explorer()
 
-        entity_module.requests.get.assert_called_once_with("http://127.0.0.1:8000/entity/101")
+        entity_module.requests.get.assert_called_once_with("http://ui-test.local:8000/entity/101")
         self.assertTrue(entity_module.st.dataframe.called)
 
     def test_validation_errors_view_handles_zero_invalid(self):
@@ -109,7 +113,7 @@ class TestUiViews(unittest.TestCase):
 
         validation_module.render_validation_errors()
 
-        validation_module.requests.get.assert_called_once_with("http://127.0.0.1:8000/pipeline/status")
+        validation_module.requests.get.assert_called_once_with("http://ui-test.local:8000/pipeline/status")
         validation_module.st.success.assert_called_once()
 
     def test_validation_errors_view_renders_error_breakdown(self):

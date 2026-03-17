@@ -1,12 +1,14 @@
 import requests
 import streamlit as st
 
+from modules.ui.views._config import API_BASE_URL
+
 
 def render_metrics_view():
     st.subheader("Pipeline Metrics Dashboard")
 
     try:
-        response = requests.get("http://127.0.0.1:8000/pipeline/status")
+        response = requests.get(f"{API_BASE_URL}/pipeline/status")
 
         if response.status_code != 200:
             st.error("Failed to load pipeline metrics")

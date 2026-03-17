@@ -4,12 +4,13 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from modules.ui.views._config import STORAGE_PATH
+
 
 def render_anomalies_view():
     st.subheader("Anomaly Visualization")
 
-    project_root = Path(__file__).resolve().parents[3]
-    records_path = project_root / "data" / "records.json"
+    records_path = Path(STORAGE_PATH)
 
     if not records_path.exists():
         st.info("No processed records available yet.")
