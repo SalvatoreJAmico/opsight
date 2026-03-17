@@ -4,7 +4,7 @@ import types
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-from pyarrow import json
+import json as std_json
 
 
 class _FakeResponse:
@@ -149,7 +149,7 @@ class TestUiViews(unittest.TestCase):
         ]
 
         with patch("pathlib.Path.exists", return_value=True), \
-            patch("builtins.open", mock_open(read_data=json.dumps(fake_records))):
+            patch("builtins.open", mock_open(read_data=std_json.dumps(fake_records))):
             anomalies_module.render_anomalies_view()
 
         self.assertTrue(anomalies_module.st.metric.called)
