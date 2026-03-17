@@ -2,18 +2,40 @@ services:
   opsight-api:
     build: .
     ports:
-      - "8000:8000"
+      - "${PORT}:${PORT}"
     environment:
-      APP_ENV: production
-      APP_HOST: 0.0.0.0
-      APP_PORT: 8000
-      STORAGE_BACKEND: json
+      APP_ENV: prod
+      APP_VERSION: 1.0.0
+      PORT: 8000
+      UPLOAD_ACCESS_CODE: replace-me
+      PERSISTENCE_MODE: json
       STORAGE_PATH: data/records.json
+      LOG_LEVEL: INFO
+      ALLOW_LOCAL_FALLBACK: false
+      BLOB_ACCOUNT: demo-account
+      BLOB_CONTAINER: demo-container
+      BLOB_PATH: sample/input.csv
+      API_BASE_URL: http://127.0.0.1:8000
+      ENABLE_PIPELINE: true
+      INPUT_SOURCE_PATH: data/opsight_sample_sales.csv
+      PIPELINE_SUMMARY_PATH: reports/pipeline_run_summary.json
 
   opsight-pipeline:
     build: .
     command: ["python", "run_pipeline.py"]
     environment:
-      APP_ENV: production
-      STORAGE_BACKEND: json
+      APP_ENV: prod
+      APP_VERSION: 1.0.0
+      PORT: 8000
+      UPLOAD_ACCESS_CODE: replace-me
+      PERSISTENCE_MODE: json
       STORAGE_PATH: data/records.json
+      LOG_LEVEL: INFO
+      ALLOW_LOCAL_FALLBACK: false
+      BLOB_ACCOUNT: demo-account
+      BLOB_CONTAINER: demo-container
+      BLOB_PATH: sample/input.csv
+      API_BASE_URL: http://127.0.0.1:8000
+      ENABLE_PIPELINE: true
+      INPUT_SOURCE_PATH: data/opsight_sample_sales.csv
+      PIPELINE_SUMMARY_PATH: reports/pipeline_run_summary.json

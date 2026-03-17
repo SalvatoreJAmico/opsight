@@ -2,12 +2,14 @@ import requests
 import streamlit as st
 import pandas as pd
 
+from modules.ui.views._config import API_BASE_URL
+
 
 def render_validation_errors():
     st.subheader("Validation Error Visualization")
 
     try:
-        response = requests.get("http://127.0.0.1:8000/pipeline/status")
+        response = requests.get(f"{API_BASE_URL}/pipeline/status")
 
         if response.status_code != 200:
             st.error("Could not load pipeline status")

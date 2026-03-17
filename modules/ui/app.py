@@ -11,6 +11,7 @@ from modules.ui.views.metrics import render_metrics_view
 from modules.ui.views.entity_explorer import render_entity_explorer
 from modules.ui.views.validation_errors import render_validation_errors
 from modules.ui.views.anomalies import render_anomalies_view
+from modules.ui.views._config import PIPELINE_SUMMARY_PATH, STORAGE_PATH
 
 
 st.set_page_config(page_title="Opsight UI", layout="wide")
@@ -18,9 +19,8 @@ st.set_page_config(page_title="Opsight UI", layout="wide")
 st.title("Opsight Dashboard")
 st.write("Phase 6 visualization service is running.")
 
-project_root = Path(__file__).resolve().parents[2]
-records_path = project_root / "data" / "records.json"
-summary_path = project_root / "reports" / "pipeline_run_summary.json"
+records_path = Path(STORAGE_PATH)
+summary_path = Path(PIPELINE_SUMMARY_PATH)
 
 st.subheader("Connectivity Check")
 
