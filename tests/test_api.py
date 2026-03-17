@@ -39,7 +39,10 @@ class TestApiLayer(unittest.TestCase):
         response = self.client.get("/health")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "ok"})
+        self.assertEqual(
+            response.json(),
+            {"status": "ok", "version": os.environ["APP_VERSION"]},
+        )
 
     def test_ingestion_endpoint_runs_pipeline_runner(self):
         mocked_summary = {

@@ -208,6 +208,29 @@ At minimum, set these for runtime:
 - `LOG_LEVEL`
 - `ALLOW_LOCAL_FALLBACK`
 
+### Versioning Strategy (PS-096)
+
+Opsight uses semantic versioning with release baseline `v1.0.0`.
+
+- Version source of truth: `APP_VERSION` environment variable
+- Startup observability: API startup logs include `app_version`
+- Runtime observability: `GET /health` returns `version`
+- Deployment updates: update `APP_VERSION` in deployment environment configuration before rollout
+
+Recommended semantic version increments:
+
+- `MAJOR` for breaking API or data-contract changes
+- `MINOR` for backward-compatible features
+- `PATCH` for backward-compatible fixes
+
+Example deployment update:
+
+```bash
+APP_VERSION=1.0.1
+```
+
+Then deploy and confirm the release via `GET /health`.
+
 Optional Azure settings:
 
 - `BLOB_ACCOUNT` (required when `APP_ENV=prod`)

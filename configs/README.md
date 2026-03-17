@@ -11,3 +11,4 @@ Opsight supports environment-based configuration through environment variables.
 - Never commit real secrets
 - Use environment variables for credentials and connection strings
 - Production should not rely on development-only defaults
+- Bump `APP_VERSION` deliberately for each release deployment (semantic versioning, baseline `1.0.0`)
