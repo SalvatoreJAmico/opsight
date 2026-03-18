@@ -15,6 +15,11 @@ Thumbs.db
 # runtime artifacts
 logs/
 
+# frontend generated artifacts (top-level Vite app)
+ui/node_modules/
+ui/.vite/
+ui/dist/
+
 # local environment and secret artifacts
 .env
 .env.local
