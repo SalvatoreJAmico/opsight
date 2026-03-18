@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Read APP_VERSION from .env.example
+      - name: Read APP_VERSION
         id: version
         run: |
           APP_VERSION=$(grep '^APP_VERSION=' .env.example | cut -d '=' -f2 | tr -d '\r')
@@ -32,12 +32,10 @@ jobs:
         run: az acr login --name ${{ secrets.AZURE_ACR_NAME }}
 
       - name: Build image
-        run: |
-          docker build -t ${{ steps.version.outputs.image }} .
+        run: docker build -t ${{ steps.version.outputs.image }} .
 
       - name: Push image
-        run: |
-          docker push ${{ steps.version.outputs.image }}
+        run: docker push ${{ steps.version.outputs.image }}
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
