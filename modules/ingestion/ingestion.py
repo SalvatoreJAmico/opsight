@@ -208,18 +208,30 @@ def ingest_data(source_path: str = None) -> pd.DataFrame:
             if source_lower.endswith((".xlsx", ".xlsm", ".xltx", ".xltm", ".xls")):
                 return pd.read_excel(source_path)
 
-        # Treat container/blob style paths as Azure Blob paths
-        if "/" in source_path and config.blob_account:
-            parts = source_path.split("/", 1)
-            blob_container = parts[0]
-            blob_path = parts[1]
+        local_path = Path(source_path)
 
-            return _load_from_blob(
-                blob_account=config.blob_account,
-                blob_container=blob_container,
-                blob_path=blob_path,
-                connection_string=config.azure_storage_connection_string,
-            )
+        # Treat container/blob style paths as Azure Blob paths when they are not
+        # explicit local path forms (absolute path, ./relative, ../relative).
+        if (
+            "/" in source_path
+            and config.blob_account
+            and not local_path.is_absolute()
+            and not source_path.startswith(("./", "../", "/"))
+            and not local_path.exists()
+        ):
+            blob_container, blob_path = source_path.split("/", 1)
+            if blob_container and blob_path:
+                logger.info(
+                    "Using explicit Blob source path: container=%s path=%s",
+                    blob_container,
+                    blob_path,
+                )
+                return _load_from_blob(
+                    blob_account=config.blob_account,
+                    blob_container=blob_container,
+                    blob_path=blob_path,
+                    connection_string=config.azure_storage_connection_string,
+                )
 
         return _load_local_file(source_path)
 
