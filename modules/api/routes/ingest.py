@@ -14,7 +14,11 @@ def _normalize_source_path(source_path: str) -> str:
         source_file = Path(source_path)
         if not source_file.is_absolute():
             project_root = Path(__file__).resolve().parents[3]
-            normalized_source_path = str((project_root / source_file).resolve())
+            resolved_source = (project_root / source_file).resolve()
+            # Keep non-existent relative paths unchanged so explicit Blob-style
+            # container/blob paths can be routed correctly by ingestion.
+            if resolved_source.exists():
+                normalized_source_path = str(resolved_source)
     return normalized_source_path
 
 

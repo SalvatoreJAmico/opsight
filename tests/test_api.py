@@ -91,6 +91,30 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(body["error"], "Request failed")
         self.assertIn("Pipeline failure at stage: ingestion", body["detail"])
 
+    def test_ingestion_endpoint_keeps_blob_style_source_path_unmodified(self):
+        mocked_summary = {
+            "status": "SUCCESS",
+            "failed_stage": None,
+            "records_ingested": 3,
+            "records_valid": 3,
+            "records_invalid": 0,
+            "records_persisted": 3,
+            "runtime_seconds": 0.1,
+        }
+
+        blob_source_path = "opsight-raw/csv/opsight_sample_sales.csv"
+
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary) as mocked_runner:
+            response = self.client.post(
+                "/data",
+                json={"source_path": blob_source_path},
+                headers=self.valid_headers,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "processed")
+        mocked_runner.assert_called_once_with(blob_source_path)
+
     def test_ingestion_endpoint_requires_source_path(self):
         response = self.client.post("/data", json={}, headers=self.valid_headers)
 
