@@ -43,3 +43,4 @@ jobs:
           resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
           containerAppName: ${{ secrets.AZURE_CONTAINER_APP_NAME }}
           imageToDeploy: ${{ steps.version.outputs.image }}
+          
