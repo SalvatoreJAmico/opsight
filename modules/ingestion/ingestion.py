@@ -194,11 +194,10 @@ def ingest_data(source_path: str = None) -> pd.DataFrame:
     """
     config = _get_runtime_config()
 
-    # If explicit source_path provided (testing/override), use it
     if source_path:
         logger.info(f"Using explicit source path: {source_path}")
+
         if source_path.startswith(("http://", "https://")):
-            # Handle web URLs
             source_lower = source_path.lower()
             if source_lower.endswith(".csv"):
                 return pd.read_csv(source_path)
@@ -208,8 +207,21 @@ def ingest_data(source_path: str = None) -> pd.DataFrame:
                 return pd.read_parquet(source_path)
             if source_lower.endswith((".xlsx", ".xlsm", ".xltx", ".xltm", ".xls")):
                 return pd.read_excel(source_path)
-        else:
-            return _load_local_file(source_path)
+
+        # Treat container/blob style paths as Azure Blob paths
+        if "/" in source_path and config.blob_account:
+            parts = source_path.split("/", 1)
+            blob_container = parts[0]
+            blob_path = parts[1]
+
+            return _load_from_blob(
+                blob_account=config.blob_account,
+                blob_container=blob_container,
+                blob_path=blob_path,
+                connection_string=config.azure_storage_connection_string,
+            )
+
+        return _load_local_file(source_path)
 
     # ===== PRODUCTION MODE: Blob mandatory =====
     if config.app_env == "prod":
