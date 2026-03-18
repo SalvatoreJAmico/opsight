@@ -1,121 +1,89 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
 
-function App() {
-  const [count, setCount] = useState(0)
+const tabs = [
+  { id: "upload", label: "Upload" },
+  { id: "metrics", label: "Metrics" },
+  { id: "charts", label: "Charts" },
+  { id: "ml", label: "ML" },
+];
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState("upload");
+
+  const renderPanel = () => {
+    switch (activeTab) {
+      case "upload":
+        return (
+          <>
+            <h2>Upload</h2>
+            <p>Upload workflow will appear here.</p>
+            <p>Dataset upload and sample dataset selection will be added in PS-119.</p>
+          </>
+        );
+      case "metrics":
+        return (
+          <>
+            <h2>Metrics</h2>
+            <p>Summary metrics and KPI views will appear here.</p>
+            <p>Connected metrics UI will be added in PS-120.</p>
+          </>
+        );
+      case "charts":
+        return (
+          <>
+            <h2>Charts</h2>
+            <p>Dataset visualizations will appear here.</p>
+            <p>Chart rendering will be added in PS-114.</p>
+          </>
+        );
+      case "ml":
+        return (
+          <>
+            <h2>ML</h2>
+            <p>Anomaly detection outputs will appear here.</p>
+            <p>ML result views will be added in PS-115.</p>
+          </>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "2rem" }}>
+      <header style={{ marginBottom: "1.5rem" }}>
+        <h1>Opsight</h1>
+        <p>Operational analytics, visualization, and anomaly detection demo UI.</p>
+      </header>
 
-      <div className="ticks"></div>
+      <nav style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: "0.75rem 1rem",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              cursor: "pointer",
+              fontWeight: activeTab === tab.id ? "700" : "400",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <main
+        style={{
+          border: "1px solid #ddd",
+          borderRadius: "12px",
+          padding: "1.5rem",
+          minHeight: "280px",
+        }}
+      >
+        {renderPanel()}
+      </main>
+    </div>
+  );
 }
-
-export default App
