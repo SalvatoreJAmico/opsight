@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    test: {
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.js',
+      globals: true,
+      clearMocks: true,
+    },
     server: {
       proxy: {
         '/api-local': {
