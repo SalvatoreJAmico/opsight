@@ -47,15 +47,19 @@ async function request(path, options = {}) {
 }
 
 export async function getHealth() {
-  return request("/health", {
+  return request(ENDPOINTS.HEALTH, {
     method: "GET",
   });
 }
 
-// Add more endpoint helpers here as Phase 11 continues
-export async function runPipeline(payload) {
-  return request("/pipeline/run", {
+export async function triggerPipeline(payload) {
+  return request(ENDPOINTS.PIPELINE_TRIGGER, {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+// Backward-compatible alias for older callers.
+export async function runPipeline(payload) {
+  return triggerPipeline(payload);
 }

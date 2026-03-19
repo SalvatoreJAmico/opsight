@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getHealth } from "./api/client";
+import UploadTab from "./UploadTab";
 
 const tabs = [
   { id: "upload", label: "Upload" },
@@ -34,13 +35,7 @@ export default function App() {
   const renderPanel = () => {
     switch (activeTab) {
       case "upload":
-        return (
-          <>
-            <h2>Upload</h2>
-            <p>Upload workflow will appear here.</p>
-            <p>Dataset upload and sample dataset selection will be added in PS-119.</p>
-          </>
-        );
+        return <UploadTab />;
       case "metrics":
         return (
           <>
