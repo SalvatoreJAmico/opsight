@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { triggerPipeline } from "./api/client";
 
-const SAMPLE_SOURCE_PATH = "csv/opsight_sample_sales.csv";
+const BLOB_SAMPLE_SOURCE_PATH = "opsight-raw/csv/opsight_sample_sales.csv";
+const LOCAL_SAMPLE_SOURCE_PATH = "data/opsight_sample_sales.csv";
+const CLOUD_PROXY_BASE_URL = "/api-cloud";
+const LOCAL_PROXY_BASE_URL = "/api-local";
 
 export default function UploadTab() {
   const [accessCode, setAccessCode] = useState("demo-code");
-  const [sourcePath, setSourcePath] = useState(SAMPLE_SOURCE_PATH);
+  const [sourcePath, setSourcePath] = useState(BLOB_SAMPLE_SOURCE_PATH);
+  const [targetEnvironment, setTargetEnvironment] = useState("cloud");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -34,9 +38,16 @@ export default function UploadTab() {
     setSuccessMessage("");
     setResult(null);
 
+    const requestBaseUrl =
+      targetEnvironment === "local"
+        ? LOCAL_PROXY_BASE_URL
+        : CLOUD_PROXY_BASE_URL;
+
     const response = await triggerPipeline({
       access_code: trimmedAccessCode,
       source_path: trimmedSourcePath,
+    }, {
+      baseUrl: requestBaseUrl,
     });
 
     setLoading(false);
@@ -46,13 +57,17 @@ export default function UploadTab() {
         setError("Invalid or missing access code.");
       } else if (response.status === 400) {
         setError(response.error || "Invalid request.");
+      } else if (response.status === 0 && targetEnvironment === "local") {
+        setError("Local API is unavailable. Start the API on http://127.0.0.1:8000 and try again.");
       } else {
         setError(response.error || "Pipeline trigger failed.");
       }
       return;
     }
 
-    setSuccessMessage("Pipeline triggered successfully.");
+    const destinationLabel =
+      targetEnvironment === "local" ? "local API" : "deployed API";
+    setSuccessMessage(`Pipeline triggered successfully on ${destinationLabel}.`);
     setResult(response.data);
   }
 
@@ -90,7 +105,7 @@ export default function UploadTab() {
             type="text"
             value={sourcePath}
             onChange={(event) => setSourcePath(event.target.value)}
-            placeholder="csv/opsight_sample_sales.csv"
+            placeholder="opsight-raw/csv/opsight_sample_sales.csv"
             style={{
               width: "100%",
               padding: "0.75rem",
@@ -98,6 +113,9 @@ export default function UploadTab() {
               border: "1px solid #ccc",
             }}
           />
+          <p style={{ marginTop: "0.5rem", opacity: 0.85 }}>
+            Use <strong>container/path</strong> format for Blob paths.
+          </p>
         </div>
 
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -119,7 +137,10 @@ export default function UploadTab() {
 
           <button
             type="button"
-            onClick={() => setSourcePath(SAMPLE_SOURCE_PATH)}
+            onClick={() => {
+              setSourcePath(BLOB_SAMPLE_SOURCE_PATH);
+              setTargetEnvironment("cloud");
+            }}
             disabled={loading}
             style={{
               width: "fit-content",
@@ -130,9 +151,32 @@ export default function UploadTab() {
               fontWeight: 600,
             }}
           >
-            Use Sample Dataset
+            Use Blob Sample
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSourcePath(LOCAL_SAMPLE_SOURCE_PATH);
+              setTargetEnvironment("local");
+            }}
+            disabled={loading}
+            style={{
+              width: "fit-content",
+              padding: "0.75rem 1rem",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              cursor: loading ? "not-allowed" : "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Use Local Sample
           </button>
         </div>
+
+        <p style={{ marginTop: "0.25rem", opacity: 0.85 }}>
+          Target: <strong>{targetEnvironment === "local" ? "Local API (this computer)" : "Deployed API (cloud)"}</strong>
+        </p>
       </div>
 
       {loading ? <p style={{ marginTop: "1rem" }}>Submitting pipeline request...</p> : null}

@@ -1,8 +1,9 @@
 import { API_BASE_URL } from "../config/env";
 import { ENDPOINTS } from "./endpoints";
 
-async function request(path, options = {}) {
-  const url = `${API_BASE_URL}${path}`;
+async function request(path, options = {}, baseUrlOverride = null) {
+  const requestBaseUrl = (baseUrlOverride || API_BASE_URL).replace(/\/+$/, "");
+  const url = `${requestBaseUrl}${path}`;
 
   try {
     const response = await fetch(url, {
@@ -52,11 +53,11 @@ export async function getHealth() {
   });
 }
 
-export async function triggerPipeline(payload) {
+export async function triggerPipeline(payload, config = {}) {
   return request(ENDPOINTS.PIPELINE_TRIGGER, {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, config.baseUrl);
 }
 
 // Backward-compatible alias for older callers.
