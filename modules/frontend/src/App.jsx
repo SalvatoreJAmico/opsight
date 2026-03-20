@@ -3,6 +3,8 @@ import { getHealth } from "./api/client";
 import UploadTab from "./tabs/UploadTab";
 import MetricsTab from "./tabs/MetricsTab";
 import ChartsTab from "./tabs/ChartsTab";
+import MlTab from "./tabs/MlTab";
+
 
 const tabs = [
   { id: "upload", label: "Upload" },
@@ -44,13 +46,7 @@ export default function App() {
       case "charts":
          return <ChartsTab />;
       case "ml":
-        return (
-          <>
-            <h2>ML</h2>
-            <p>Anomaly detection outputs will appear here.</p>
-            <p>ML result views will be added in PS-115.</p>
-          </>
-        );
+         return <MlTab />;
       default:
         return null;
     }
