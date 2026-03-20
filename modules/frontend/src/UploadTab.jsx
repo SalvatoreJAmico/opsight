@@ -2,6 +2,7 @@ import React from "react";
 import { useState } from "react";
 import { triggerPipeline } from "./api/client";
 
+const isDev = import.meta.env.DEV;
 const BLOB_SAMPLE_SOURCE_PATH = "opsight-raw/csv/opsight_sample_sales.csv";
 const LOCAL_SAMPLE_SOURCE_PATH = "data/opsight_sample_sales.csv";
 const CLOUD_PROXY_BASE_URL = "/api-cloud";
@@ -155,24 +156,26 @@ export default function UploadTab() {
             Use Blob Sample
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setSourcePath(LOCAL_SAMPLE_SOURCE_PATH);
-              setTargetEnvironment("local");
-            }}
-            disabled={loading}
-            style={{
-              width: "fit-content",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontWeight: 600,
-            }}
-          >
-            Use Local Sample
-          </button>
+          {isDev && (
+            <button
+              type="button"
+              onClick={() => {
+                setSourcePath(LOCAL_SAMPLE_SOURCE_PATH);
+                setTargetEnvironment("local");
+              }}
+              disabled={loading}
+              style={{
+                width: "fit-content",
+                padding: "0.75rem 1rem",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Use Local Sample
+            </button>
+          )}
         </div>
 
         <p style={{ marginTop: "0.25rem", opacity: 0.85 }}>
