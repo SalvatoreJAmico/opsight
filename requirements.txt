@@ -9,3 +9,4 @@ streamlit>=1.43.0
 pytest>=8.0.0
 azure-storage-blob>=12.20.0
 azure-identity>=1.14.0
+matplotlib>=3.8.0

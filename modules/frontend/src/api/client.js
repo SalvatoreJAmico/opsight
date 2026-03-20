@@ -1,8 +1,29 @@
 import { API_BASE_URL } from "../config/env";
 import { ENDPOINTS } from "./endpoints";
 
+
+function normalizeBaseUrl(baseUrlOverride = null) {
+  return (baseUrlOverride || API_BASE_URL).replace(/\/+$/, "");
+}
+
+
+export function resolveApiAssetUrl(assetPath, baseUrlOverride = null) {
+  if (!assetPath) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(assetPath)) {
+    return assetPath;
+  }
+
+  const requestBaseUrl = normalizeBaseUrl(baseUrlOverride);
+  const normalizedAssetPath = assetPath.startsWith("/") ? assetPath : `/${assetPath}`;
+
+  return `${requestBaseUrl}${normalizedAssetPath}`;
+}
+
 async function request(path, options = {}, baseUrlOverride = null) {
-  const requestBaseUrl = (baseUrlOverride || API_BASE_URL).replace(/\/+$/, "");
+  const requestBaseUrl = normalizeBaseUrl(baseUrlOverride);
   const url = `${requestBaseUrl}${path}`;
 
   try {
@@ -51,6 +72,12 @@ export async function getHealth() {
   return request(ENDPOINTS.HEALTH, {
     method: "GET",
   });
+}
+
+export async function getHistogram(config = {}) {
+  return request(ENDPOINTS.CHARTS_HISTOGRAM, {
+    method: "GET",
+  }, config.baseUrl);
 }
 
 export async function triggerPipeline(payload, config = {}) {

@@ -1,5 +1,7 @@
 import logging
 import time
+import pandas as pd
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi import Request
@@ -7,6 +9,9 @@ from fastapi import Request
 from modules.config.logging_config import setup_logging
 from modules.config.runtime_config import load_runtime_config
 from modules.api.errors import register_error_handlers
+from modules.visualization.plots import create_histogram
+from modules.persistence.persistence_manager import PersistenceManager
+from fastapi.staticfiles import StaticFiles
 
 setup_logging(service_name="opsight.api")
 logger = logging.getLogger("opsight.api")
@@ -50,8 +55,13 @@ from .routes.ingest import router as ingest_router
 from .routes.entities import router as entities_router
 from .routes.status import router as status_router
 
+# Setup static files directory
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+STATIC_DIR = PROJECT_ROOT / "static"
+STATIC_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(title="Opsight API", version=runtime_config.app_version)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(ingest_router)
 app.include_router(entities_router)
 app.include_router(status_router)
@@ -95,7 +105,21 @@ async def log_requests(request: Request, call_next):
     )
     return response
 
+@app.get("/charts/histogram")
+def histogram():
+    try:
+        manager = PersistenceManager(runtime_config)
+        records = manager.retrieve_all()
 
+        if not records:
+            return {"error": "No records available for visualization"}
+
+        df = pd.DataFrame(records)
+        path = create_histogram(df)
+        return {"image": path}
+    except Exception as exc:
+        logger.error(f"Histogram generation failed: {str(exc)}")
+        return {"error": str(exc)}
 
 
 @app.get("/health")

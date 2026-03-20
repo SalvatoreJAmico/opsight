@@ -11,3 +11,6 @@ class PersistenceManager:
 
     def persist_records(self, records):
         self.storage.save_records(records)
+
+    def retrieve_all(self):
+        return self.storage.load_records()
