@@ -2,7 +2,7 @@ import requests
 import streamlit as st
 from pathlib import Path
 
-from modules.ui.views._config import API_BASE_URL
+from modules.streamlit_ui.views._config import API_BASE_URL
 
 
 def render_upload_view():

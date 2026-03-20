@@ -33,7 +33,7 @@ def _import_ui_module(module_name):
 
 class TestUiViews(unittest.TestCase):
     def test_upload_view_posts_to_data_endpoint(self):
-        upload_module = _import_ui_module("modules.ui.views.upload")
+        upload_module = _import_ui_module("modules.streamlit_ui.views.upload")
 
         uploaded_file = MagicMock()
         uploaded_file.name = "phase6_upload.csv"
@@ -45,7 +45,7 @@ class TestUiViews(unittest.TestCase):
         upload_module.requests = MagicMock()
         upload_module.requests.post.return_value = _FakeResponse(status_code=200, payload={"status": "processed"})
 
-        with patch("modules.ui.views.upload.open", mock_open()):
+        with patch("modules.streamlit_ui.views.upload.open", mock_open()):
             upload_module.render_upload_view()
 
         upload_module.requests.post.assert_called_once()
@@ -56,7 +56,7 @@ class TestUiViews(unittest.TestCase):
         self.assertTrue(post_json["source_path"].endswith("phase6_upload.csv"))
 
     def test_metrics_view_renders_pipeline_summary(self):
-        metrics_module = _import_ui_module("modules.ui.views.metrics")
+        metrics_module = _import_ui_module("modules.streamlit_ui.views.metrics")
 
         metrics_module.st = MagicMock()
         metric_columns = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
@@ -81,7 +81,7 @@ class TestUiViews(unittest.TestCase):
         self.assertTrue(metric_columns[3].metric.called)
 
     def test_entity_explorer_loads_records(self):
-        entity_module = _import_ui_module("modules.ui.views.entity_explorer")
+        entity_module = _import_ui_module("modules.streamlit_ui.views.entity_explorer")
 
         entity_module.st = MagicMock()
         entity_module.st.text_input.return_value = "101"
@@ -106,7 +106,7 @@ class TestUiViews(unittest.TestCase):
         self.assertTrue(entity_module.st.dataframe.called)
 
     def test_validation_errors_view_handles_zero_invalid(self):
-        validation_module = _import_ui_module("modules.ui.views.validation_errors")
+        validation_module = _import_ui_module("modules.streamlit_ui.views.validation_errors")
 
         validation_module.st = MagicMock()
         validation_module.requests = MagicMock()
@@ -118,7 +118,7 @@ class TestUiViews(unittest.TestCase):
         validation_module.st.success.assert_called_once()
 
     def test_validation_errors_view_renders_error_breakdown(self):
-        validation_module = _import_ui_module("modules.ui.views.validation_errors")
+        validation_module = _import_ui_module("modules.streamlit_ui.views.validation_errors")
 
         validation_module.st = MagicMock()
         validation_module.requests = MagicMock()
@@ -130,7 +130,7 @@ class TestUiViews(unittest.TestCase):
         self.assertTrue(validation_module.st.bar_chart.called)
 
     def test_anomalies_view_reads_records_and_renders(self):
-        anomalies_module = _import_ui_module("modules.ui.views.anomalies")
+        anomalies_module = _import_ui_module("modules.streamlit_ui.views.anomalies")
 
         anomalies_module.st = MagicMock()
         anomalies_module.st.selectbox.return_value = "order_amount"

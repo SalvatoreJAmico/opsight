@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from modules.ui.views._config import STORAGE_PATH
+from modules.streamlit_ui.views._config import STORAGE_PATH
 
 
 def render_anomalies_view():

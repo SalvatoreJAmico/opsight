@@ -451,7 +451,12 @@ opsight/
 ├── models/             future model artifacts
 ├── modules/
 │   ├── adapter/        source-to-canonical mapping
+│   ├── api/            FastAPI service and routes
+│   ├── config/         runtime and storage configuration
+│   ├── frontend/       React + Vite frontend
 │   ├── ingestion/      source loading and format detection
+│   ├── intelligence/   scoring and anomaly logic
+│   ├── streamlit_ui/   legacy Streamlit dashboard
 │   ├── persistence/    storage backends and factory
 │   └── validation/     validation and quality checks
 ├── notebooks/          exploratory notebooks

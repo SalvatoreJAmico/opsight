@@ -6,12 +6,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import streamlit as st
-from modules.ui.views.upload import render_upload_view
-from modules.ui.views.metrics import render_metrics_view
-from modules.ui.views.entity_explorer import render_entity_explorer
-from modules.ui.views.validation_errors import render_validation_errors
-from modules.ui.views.anomalies import render_anomalies_view
-from modules.ui.views._config import PIPELINE_SUMMARY_PATH, STORAGE_PATH
+from modules.streamlit_ui.views.upload import render_upload_view
+from modules.streamlit_ui.views.metrics import render_metrics_view
+from modules.streamlit_ui.views.entity_explorer import render_entity_explorer
+from modules.streamlit_ui.views.validation_errors import render_validation_errors
+from modules.streamlit_ui.views.anomalies import render_anomalies_view
+from modules.streamlit_ui.views._config import PIPELINE_SUMMARY_PATH, STORAGE_PATH
 
 
 st.set_page_config(page_title="Opsight UI", layout="wide")
