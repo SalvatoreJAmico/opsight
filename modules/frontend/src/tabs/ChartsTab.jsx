@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { getHistogram, resolveApiAssetUrl } from "../api/client";
+import { chartCatalog } from "../modules/visualization/chartCatalog";
+
 
 const SAMPLE_DATA = [
   { entity_id: "A", metric_value: 10, category: "X" },
@@ -65,6 +67,24 @@ export default function ChartsTab() {
       <p>Max: {max}</p>
       <p>Mean: {mean}</p>
       <p>Count: {values.length}</p>
+
+      <h3>Available Charts</h3>
+        {chartCatalog.map((chart) => (
+        <div key={chart.id} style={{ marginBottom: "1rem" }}>
+            <strong>{chart.title}</strong>
+            <p>{chart.purpose}</p>
+            <p><em>{chart.whenToUse}</em></p>
+            <p>
+            Recommended for current dataset:{" "}
+            <strong>{chart.recommended ? "Yes" : "No"}</strong>
+            </p>
+            <p style={{ opacity: 0.8 }}>{chart.recommendationReason}</p>
+        </div>
+        ))}
+
+        <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
+        Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.
+        </p>
 
       <h3>Charts</h3>
       <button
