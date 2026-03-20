@@ -18,37 +18,44 @@ export default function ChartsTab() {
   const max = Math.max(...values);
   const mean = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
 
-  const [showHistogram, setShowHistogram] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
+  const [activeChart, setActiveChart] = useState("");
+  const [chartImages, setChartImages] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const loadHistogram = async () => {
-    setLoading(true);
+  const handleChartSelect = async (chartId) => {
     setError("");
+    setActiveChart(chartId);
 
-    const response = await getHistogram({ baseUrl: LOCAL_PROXY_BASE_URL });
+    if (chartId === "histogram") {
+      setLoading(true);
 
-    setLoading(false);
+      const response = await getHistogram({ baseUrl: LOCAL_PROXY_BASE_URL });
 
-    if (!response.ok) {
-      setShowHistogram(false);
-      setImageUrl("");
-      setError(response.error || "Histogram request failed.");
-      return;
+      setLoading(false);
+
+      if (!response.ok) {
+        setActiveChart("");
+        setError(response.error || "Histogram request failed.");
+        return;
+      }
+
+      const resolvedImageUrl = resolveApiAssetUrl(
+        response.data?.image,
+        LOCAL_PROXY_BASE_URL
+      );
+
+      if (!resolvedImageUrl) {
+        setActiveChart("");
+        setError("Histogram response did not include an image path.");
+        return;
+      }
+
+      setChartImages((prev) => ({
+        ...prev,
+        histogram: resolvedImageUrl,
+      }));
     }
-
-    const resolvedImageUrl = resolveApiAssetUrl(response.data?.image, LOCAL_PROXY_BASE_URL);
-
-    if (!resolvedImageUrl) {
-      setShowHistogram(false);
-      setImageUrl("");
-      setError("Histogram response did not include an image path.");
-      return;
-    }
-
-    setImageUrl(resolvedImageUrl);
-    setShowHistogram(true);
   };
 
   return (
@@ -66,40 +73,59 @@ export default function ChartsTab() {
       <p>Max: {max}</p>
       <p>Mean: {mean}</p>
       <p>Count: {values.length}</p>
-    <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
-    Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.
-    </p>
+
+      <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
+        Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.
+      </p>
+
       <h3>Available Charts</h3>
       {chartCatalog.map((chart) => (
         <div key={chart.id} style={{ marginBottom: "1rem" }}>
-          <strong>{chart.title}</strong>
+          <label
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 600 }}
+          >
+            <input
+              type="radio"
+              name="chart-selection"
+              checked={activeChart === chart.id}
+              onChange={() => handleChartSelect(chart.id)}
+            />
+            {chart.title}
+          </label>
+
           <p>{chart.purpose}</p>
-          <p><em>{chart.whenToUse}</em></p>
+          <p>
+            <em>{chart.whenToUse}</em>
+          </p>
           <p>
             Recommended for current dataset:{" "}
             <strong>{chart.recommended ? "Yes" : "No"}</strong>
           </p>
           <p style={{ opacity: 0.8 }}>{chart.recommendationReason}</p>
+
+          {loading && activeChart === chart.id ? (
+            <p style={{ marginTop: "0.75rem" }}>Loading chart...</p>
+          ) : null}
+
+          {chart.id === "histogram" &&
+          activeChart === "histogram" &&
+          chartImages.histogram ? (
+            <div style={{ marginTop: "0.75rem" }}>
+              <img
+                src={chartImages.histogram}
+                alt="Histogram of metric values"
+                style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
+              />
+            </div>
+          ) : null}
+
+          {chart.id !== "histogram" && activeChart === chart.id ? (
+            <p style={{ marginTop: "0.75rem", opacity: 0.75 }}>
+              This chart will be connected in PS-124.
+            </p>
+          ) : null}
         </div>
       ))}
-
-      
-
-      <h3>Charts</h3>
-      <button
-        type="button"
-        onClick={loadHistogram}
-        disabled={loading}
-        style={{
-          padding: "0.75rem 1rem",
-          borderRadius: "8px",
-          border: "1px solid #ccc",
-          cursor: loading ? "not-allowed" : "pointer",
-          fontWeight: 600,
-        }}
-      >
-        {loading ? "Loading..." : "Show Histogram"}
-      </button>
 
       {error ? (
         <div
@@ -114,16 +140,6 @@ export default function ChartsTab() {
           <p style={{ marginTop: "0.5rem" }}>{error}</p>
         </div>
       ) : null}
-
-      {showHistogram && imageUrl && (
-        <div style={{ marginTop: "1rem" }}>
-          <img
-            src={imageUrl}
-            alt="Histogram of metric values"
-            style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
-          />
-        </div>
-      )}
     </div>
   );
 }
