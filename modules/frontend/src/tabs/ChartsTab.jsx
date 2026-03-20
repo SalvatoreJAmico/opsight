@@ -66,7 +66,9 @@ export default function ChartsTab() {
       <p>Max: {max}</p>
       <p>Mean: {mean}</p>
       <p>Count: {values.length}</p>
-
+    <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
+    Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.
+    </p>
       <h3>Available Charts</h3>
       {chartCatalog.map((chart) => (
         <div key={chart.id} style={{ marginBottom: "1rem" }}>
@@ -81,9 +83,7 @@ export default function ChartsTab() {
         </div>
       ))}
 
-      <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
-        Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.
-      </p>
+      
 
       <h3>Charts</h3>
       <button
