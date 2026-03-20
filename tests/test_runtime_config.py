@@ -1,6 +1,10 @@
 import os
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+import modules.config.runtime_config as runtime_config_module
 from modules.config.runtime_config import load_runtime_config
 
 
@@ -99,6 +103,51 @@ class TestRuntimeConfigModes(unittest.TestCase):
         self.assertEqual(config.blob_account, "acc")
         self.assertEqual(config.blob_container, "container")
         self.assertEqual(config.blob_path, "incoming/data.csv")
+
+    def test_local_env_file_sets_missing_values_only(self):
+        for key in self.required_env_keys:
+            os.environ.pop(key, None)
+        os.environ["APP_VERSION"] = "2.0.0"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            env_path = Path(tmp_dir) / ".env"
+            env_path.write_text(
+                "APP_ENV=dev\n"
+                "APP_VERSION=1.0.0\n"
+                "PORT=8000\n"
+                "UPLOAD_ACCESS_CODE=local-dev-access-code\n"
+                "PERSISTENCE_MODE=json\n"
+                "STORAGE_PATH=data/from-dotenv.json\n"
+                "LOG_LEVEL=INFO\n"
+                "ALLOW_LOCAL_FALLBACK=true\n"
+                "API_BASE_URL=http://127.0.0.1:8000\n"
+                "ENABLE_PIPELINE=true\n"
+                "INPUT_SOURCE_PATH=data/opsight_sample_sales.csv\n"
+                "PIPELINE_SUMMARY_PATH=reports/from-dotenv.json\n",
+                encoding="utf-8",
+            )
+
+            with patch.object(runtime_config_module, "LOCAL_ENV_PATH", env_path):
+                config = load_runtime_config()
+
+        self.assertEqual(config.app_env, "dev")
+        self.assertEqual(config.app_version, "2.0.0")
+        self.assertEqual(config.storage_path, "data/from-dotenv.json")
+        self.assertEqual(config.pipeline_summary_path, "reports/from-dotenv.json")
+
+    def test_missing_required_value_mentions_local_env_file(self):
+        for key in self.required_env_keys:
+            os.environ.pop(key, None)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            env_path = Path(tmp_dir) / ".env"
+
+            with patch.object(runtime_config_module, "LOCAL_ENV_PATH", env_path):
+                with self.assertRaises(RuntimeError) as context:
+                    load_runtime_config()
+
+        self.assertIn("Missing required environment variable: APP_ENV", str(context.exception))
+        self.assertIn(".env", str(context.exception))
 
 
 if __name__ == "__main__":

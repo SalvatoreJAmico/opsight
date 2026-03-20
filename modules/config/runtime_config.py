@@ -1,10 +1,13 @@
 import os
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 
 logger = logging.getLogger("opsight.config")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+LOCAL_ENV_PATH = PROJECT_ROOT / ".env"
 
 
 def _raise_runtime_config_error(message: str, *, cause: Optional[Exception] = None) -> None:
@@ -19,6 +22,24 @@ def _raise_runtime_config_error(message: str, *, cause: Optional[Exception] = No
     if cause:
         raise RuntimeError(message) from cause
     raise RuntimeError(message)
+
+
+def load_local_env_file(env_path: Optional[Path] = None) -> None:
+    resolved_env_path = env_path or LOCAL_ENV_PATH
+    if not resolved_env_path.exists():
+        return
+
+    for raw_line in resolved_env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        name, value = line.split("=", 1)
+        name = name.strip()
+        value = value.strip().strip('"').strip("'")
+
+        if name and os.getenv(name) is None:
+            os.environ[name] = value
 
 
 @dataclass(frozen=True)
@@ -44,7 +65,10 @@ class RuntimeConfig:
 def get_env(name: str, required: bool = True, default: Optional[str] = None) -> Optional[str]:
     value = os.getenv(name, default)
     if required and (value is None or str(value).strip() == ""):
-        _raise_runtime_config_error(f"Missing required environment variable: {name}")
+        _raise_runtime_config_error(
+            f"Missing required environment variable: {name}. "
+            f"Set it in the environment or add it to {LOCAL_ENV_PATH.name} at the repository root."
+        )
     return value
 
 
@@ -55,6 +79,8 @@ def _to_bool(value: Optional[str], default: bool = False) -> bool:
 
 
 def load_runtime_config() -> RuntimeConfig:
+    load_local_env_file()
+
     app_env = get_env("APP_ENV")
     if app_env not in {"dev", "prod"}:
         _raise_runtime_config_error("APP_ENV must be one of: dev, prod")

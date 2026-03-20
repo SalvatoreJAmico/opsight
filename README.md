@@ -251,6 +251,8 @@ Optional Azure settings:
 From repository root:
 
 ```bash
+# Create a local .env file first if you do not already have one.
+# PowerShell: Copy-Item .env.example .env
 uvicorn modules.api.app:app --host 0.0.0.0 --port 8000
 ```
 
@@ -263,7 +265,7 @@ curl http://localhost:8000/health
 Expected response:
 
 ```json
-{"status":"ok"}
+{"status":"ok","version":"1.0.0"}
 ```
 
 ### Run Streamlit UI Locally

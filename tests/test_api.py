@@ -23,6 +23,7 @@ os.environ.setdefault("INPUT_SOURCE_PATH", "data/opsight_sample_sales.csv")
 os.environ.setdefault("PIPELINE_SUMMARY_PATH", "reports/pipeline_run_summary.json")
 
 import modules.api.app as api_app_module
+import app as root_app_module
 from modules.persistence.local_storage import LocalStorage
 import modules.api.routes.entities as entities_route
 import modules.api.routes.status as status_route
@@ -43,6 +44,9 @@ class TestApiLayer(unittest.TestCase):
             response.json(),
             {"status": "ok", "version": os.environ["APP_VERSION"]},
         )
+
+    def test_root_asgi_entrypoint_exposes_the_api_app(self):
+        self.assertIs(root_app_module.app, api_app_module.app)
 
     def test_ingestion_endpoint_runs_pipeline_runner(self):
         mocked_summary = {
