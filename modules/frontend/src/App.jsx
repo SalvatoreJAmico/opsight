@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getHealth } from "./api/client";
 import UploadTab from "./tabs/UploadTab";
+import MetricsTab from "./tabs/MetricsTab";
 
 const tabs = [
   { id: "upload", label: "Upload" },
@@ -14,6 +15,7 @@ export default function App() {
   const [healthStatus, setHealthStatus] = useState("Checking API...");
   const [healthError, setHealthError] = useState("");
   const [apiVersion, setApiVersion] = useState("");
+  const [pipelineResult, setPipelineResult] = useState(null);
 
   useEffect(() => {
     async function checkApi() {
@@ -35,15 +37,9 @@ export default function App() {
   const renderPanel = () => {
     switch (activeTab) {
       case "upload":
-        return <UploadTab />;
+        return <UploadTab onPipelineComplete={setPipelineResult} />;
       case "metrics":
-        return (
-          <>
-            <h2>Metrics</h2>
-            <p>Summary metrics and KPI views will appear here.</p>
-            <p>Connected metrics UI will be added in PS-120.</p>
-          </>
-        );
+        return <MetricsTab pipelineResult={pipelineResult} />;
       case "charts":
         return (
           <>
