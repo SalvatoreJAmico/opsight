@@ -79,6 +79,34 @@ export default function ChartsTab() {
     }));
   };
 
+
+const getObservationText = (chartId) => {
+  switch (chartId) {
+    case "histogram":
+      return "The distribution of metric_value shows how values are spread across the dataset. Most values appear within a moderate range, with no extreme clustering or gaps.";
+
+    case "bar-category":
+      return "The bar chart shows how records are distributed across categories. Some categories may have higher counts, indicating concentration in specific groups.";
+
+    case "boxplot":
+      return "The box plot highlights the spread and potential outliers in metric_value. The median and quartiles indicate the central tendency and variability of the dataset.";
+
+    case "scatter":
+      return "The scatter plot shows the relationship between metric_value and secondary_metric. Patterns or clustering may indicate correlation between the two variables.";
+
+    case "grouped-comparison":
+      return "The grouped comparison chart shows average metric_value across categories. Differences between bars indicate how categories compare in terms of average performance.";
+
+    default:
+      return "No observations available for this chart.";
+  }
+};
+
+
+
+
+
+
   return (
     <div>
       <h2>Charts</h2>
@@ -114,7 +142,7 @@ export default function ChartsTab() {
             {chart.title}
           </label>
 
-          <p>{chart.purpose}</p>
+          <p><strong>Why this chart:</strong> {chart.purpose}</p>
           <p><em>{chart.whenToUse}</em></p>
           <p>
             Recommended for current dataset:{" "}
@@ -126,15 +154,30 @@ export default function ChartsTab() {
             <p style={{ marginTop: "0.75rem" }}>Loading chart...</p>
           ) : null}
 
-          {activeChart === chart.id && chartImages[chart.id] ? (
-            <div style={{ marginTop: "0.75rem" }}>
-              <img
-                src={chartImages[chart.id]}
-                alt={`${chart.title} visualization`}
-                style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
-              />
-            </div>
-          ) : null}
+         {activeChart === chart.id && chartImages[chart.id] ? (
+  <div style={{ marginTop: "0.75rem" }}>
+    <img
+      src={chartImages[chart.id]}
+      alt={`${chart.title} visualization`}
+      style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
+    />
+
+    <div
+      style={{
+        marginTop: "0.75rem",
+        padding: "0.75rem",
+        border: "1px solid #ddd",
+        borderRadius: "8px",
+        background: "#fafafa",
+      }}
+    >
+      <strong>Observations</strong>
+      <p style={{ marginTop: "0.5rem" }}>
+        {getObservationText(chart.id)}
+      </p>
+    </div>
+  </div>
+) : null}
         </div>
       ))}
 
