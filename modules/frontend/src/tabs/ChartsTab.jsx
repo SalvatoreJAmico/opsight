@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { getHistogram, resolveApiAssetUrl } from "../api/client";
+
 const SAMPLE_DATA = [
   { entity_id: "A", metric_value: 10, category: "X" },
   { entity_id: "B", metric_value: 20, category: "Y" },
@@ -5,30 +8,103 @@ const SAMPLE_DATA = [
   { entity_id: "D", metric_value: 30, category: "Z" },
 ];
 
+const LOCAL_PROXY_BASE_URL = "/api-local";
+
 export default function ChartsTab() {
+  const data = SAMPLE_DATA;
+  const values = data.map((d) => d.metric_value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const mean = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
 
-    const data = SAMPLE_DATA;
-    const values = data.map((d) => d.metric_value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const mean = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
+  const [showHistogram, setShowHistogram] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
+  const loadHistogram = async () => {
+    setLoading(true);
+    setError("");
 
+    const response = await getHistogram({ baseUrl: LOCAL_PROXY_BASE_URL });
 
-    return (
-        <div>
-            <h2>Charts</h2>
-            <h3>Dataset Overview</h3>
-            <p>Source: Sample Dataset</p>
-            <p>Rows: {data.length}</p>
-            <p>Variables: {Object.keys(data[0]).length}</p>
-            <p>Fields: {Object.keys(data[0]).join(", ")}</p>
-            {/* overview */}
-            {/* summary stats */}
-            {/* cleaning results */}
-            {/* controls */}
-            {/* charts */}
-            {/* observations */}
+    setLoading(false);
+
+    if (!response.ok) {
+      setShowHistogram(false);
+      setImageUrl("");
+      setError(response.error || "Histogram request failed.");
+      return;
+    }
+
+    const resolvedImageUrl = resolveApiAssetUrl(response.data?.image, LOCAL_PROXY_BASE_URL);
+
+    if (!resolvedImageUrl) {
+      setShowHistogram(false);
+      setImageUrl("");
+      setError("Histogram response did not include an image path.");
+      return;
+    }
+
+    setImageUrl(resolvedImageUrl);
+    setShowHistogram(true);
+  };
+
+  return (
+    <div>
+      <h2>Charts</h2>
+
+      <h3>Dataset Overview</h3>
+      <p>Source: Sample Dataset</p>
+      <p>Rows: {data.length}</p>
+      <p>Variables: {Object.keys(data[0]).length}</p>
+      <p>Fields: {Object.keys(data[0]).join(", ")}</p>
+
+      <h3>Summary Statistics</h3>
+      <p>Min: {min}</p>
+      <p>Max: {max}</p>
+      <p>Mean: {mean}</p>
+      <p>Count: {values.length}</p>
+
+      <h3>Charts</h3>
+      <button
+        type="button"
+        onClick={loadHistogram}
+        disabled={loading}
+        style={{
+          padding: "0.75rem 1rem",
+          borderRadius: "8px",
+          border: "1px solid #ccc",
+          cursor: loading ? "not-allowed" : "pointer",
+          fontWeight: 600,
+        }}
+      >
+        {loading ? "Loading..." : "Show Histogram"}
+      </button>
+
+      {error ? (
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "1rem",
+            border: "1px solid #d88",
+            borderRadius: "10px",
+          }}
+        >
+          <strong>Error</strong>
+          <p style={{ marginTop: "0.5rem" }}>{error}</p>
         </div>
-    );
+      ) : null}
+
+      {showHistogram && imageUrl && (
+        <div style={{ marginTop: "1rem" }}>
+          <img
+            src={imageUrl}
+            alt="Histogram of metric values"
+            style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
+          />
+        </div>
+      )}
+    </div>
+  );
 }

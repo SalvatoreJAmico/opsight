@@ -9,8 +9,11 @@ class StorageFactory:
 
     @staticmethod
     def create_storage(config):
-        backend = config.backend
+        backend = getattr(config, "persistence_mode", None) or getattr(config, "backend", None)
         storage_path = config.storage_path
+
+        if not backend:
+            raise ValueError("Storage configuration must define persistence_mode or backend")
 
         if backend == "json":
             return LocalStorage(storage_path=storage_path)
