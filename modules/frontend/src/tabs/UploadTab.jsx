@@ -8,7 +8,7 @@ const LOCAL_SAMPLE_SOURCE_PATH = "data/opsight_sample_sales.csv";
 const CLOUD_PROXY_BASE_URL = "/api-cloud";
 const LOCAL_PROXY_BASE_URL = "/api-local";
 
-export default function UploadTab() {
+export default function UploadTab({ onPipelineComplete }) {
   const [accessCode, setAccessCode] = useState("demo-code");
   const [sourcePath, setSourcePath] = useState(BLOB_SAMPLE_SOURCE_PATH);
   const [targetEnvironment, setTargetEnvironment] = useState("cloud");
@@ -52,8 +52,7 @@ export default function UploadTab() {
       baseUrl: requestBaseUrl,
     });
 
-    setLoading(false);
-
+    setLoading(false); 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
         setError("Invalid or missing access code.");
@@ -71,6 +70,9 @@ export default function UploadTab() {
       targetEnvironment === "local" ? "local API" : "deployed API";
     setSuccessMessage(`Pipeline triggered successfully on ${destinationLabel}.`);
     setResult(response.data);
+    if (onPipelineComplete) {
+      onPipelineComplete(response.data);
+    }
   }
 
   return (
