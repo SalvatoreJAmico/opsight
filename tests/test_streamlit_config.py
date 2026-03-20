@@ -48,13 +48,13 @@ class TestStreamlitConfig(unittest.TestCase):
             streamlit_config.get_config_value(
                 "STORAGE_PATH",
                 default=str(streamlit_config.PROJECT_ROOT / "data" / "records.json"),
-            ).endswith("data\\records.json")
+            ).replace("\\", "/").endswith("data/records.json")
         )
         self.assertTrue(
             streamlit_config.get_config_value(
                 "PIPELINE_SUMMARY_PATH",
                 default=str(streamlit_config.PROJECT_ROOT / "reports" / "pipeline_run_summary.json"),
-            ).endswith("reports\\pipeline_run_summary.json")
+            ).replace("\\", "/").endswith("reports/pipeline_run_summary.json")
         )
 
     def test_local_env_file_sets_missing_values_only(self):
