@@ -266,6 +266,24 @@ Expected response:
 {"status":"ok"}
 ```
 
+### Run Streamlit UI Locally
+
+From repository root:
+
+```bash
+streamlit run modules/streamlit_ui/app.py
+```
+
+Configuration resolution order for the Streamlit UI:
+
+- existing environment variables
+- repo-root `.env` file, if present
+- local defaults for `API_BASE_URL`, `STORAGE_PATH`, and `PIPELINE_SUMMARY_PATH`
+
+Local default for `API_BASE_URL` is `http://127.0.0.1:8000`.
+
+If you want to override local defaults without exporting shell variables, copy `.env.example` to `.env` at the repository root and update the values there.
+
 ### Build And Run Docker Image
 
 Build image:

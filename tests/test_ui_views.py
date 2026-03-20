@@ -24,11 +24,25 @@ class _FakeResponse:
 def _import_ui_module(module_name):
     fake_streamlit = types.SimpleNamespace()
     fake_requests = types.SimpleNamespace(get=lambda *args, **kwargs: None, post=lambda *args, **kwargs: None)
+    saved_streamlit = sys.modules.get("streamlit")
+    saved_requests = sys.modules.get("requests")
 
-    with patch.dict(sys.modules, {"streamlit": fake_streamlit, "requests": fake_requests}):
-        if module_name in sys.modules:
-            del sys.modules[module_name]
+    try:
+        sys.modules["streamlit"] = fake_streamlit
+        sys.modules["requests"] = fake_requests
+        sys.modules.pop("modules.streamlit_ui.views._config", None)
+        sys.modules.pop(module_name, None)
         return importlib.import_module(module_name)
+    finally:
+        if saved_streamlit is None:
+            sys.modules.pop("streamlit", None)
+        else:
+            sys.modules["streamlit"] = saved_streamlit
+
+        if saved_requests is None:
+            sys.modules.pop("requests", None)
+        else:
+            sys.modules["requests"] = saved_requests
 
 
 class TestUiViews(unittest.TestCase):
