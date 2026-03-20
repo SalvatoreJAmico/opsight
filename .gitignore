@@ -14,6 +14,8 @@ Thumbs.db
 
 # runtime artifacts
 logs/
+reports/pipeline_run_summary.json
+reports/pipeline_failure_summary.json
 
 # frontend generated artifacts (top-level Vite app)
 ui/node_modules/
