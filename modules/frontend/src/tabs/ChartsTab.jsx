@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getHistogram, resolveApiAssetUrl } from "../api/client";
-import { chartCatalog } from "../modules/visualization/chartCatalog";
+import { chartCatalog } from "../catalog/chartCatalog";
 
 
 const SAMPLE_DATA = [
