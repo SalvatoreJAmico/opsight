@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getHealth } from "./api/client";
-import UploadTab from "./UploadTab";
+import UploadTab from "./tabs/UploadTab";
 
 const tabs = [
   { id: "upload", label: "Upload" },

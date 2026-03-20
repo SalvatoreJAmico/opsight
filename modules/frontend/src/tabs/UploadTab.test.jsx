@@ -1,9 +1,9 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import UploadTab from "./UploadTab";
-import { triggerPipeline } from "./api/client";
+import { triggerPipeline } from "../api/client";
 
-vi.mock("./api/client", () => ({
+vi.mock("../api/client", () => ({
   triggerPipeline: vi.fn(),
 }));
 

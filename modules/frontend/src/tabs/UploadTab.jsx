@@ -1,6 +1,6 @@
 import React from "react";
 import { useState } from "react";
-import { triggerPipeline } from "./api/client";
+import { triggerPipeline } from "../api/client";
 
 const isDev = import.meta.env.DEV;
 const BLOB_SAMPLE_SOURCE_PATH = "opsight-raw/csv/opsight_sample_sales.csv";
