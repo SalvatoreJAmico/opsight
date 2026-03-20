@@ -37,19 +37,19 @@ export const chartCatalog = [
     purpose: "Shows the relationship between two numeric variables.",
     whenToUse:
       "Use when you want to inspect correlation or patterns between variables.",
-    recommended: false,
+    recommended: true,
     recommendationReason:
-      "Not currently recommended because the dataset only contains one numeric variable.",
+      "Recommended because metric_value and secondary_metric are both available for relationship analysis.",
     endpoint: "/charts/scatter",
   },
   {
-    id: "line-trend",
-    title: "Line / Trend Chart",
-    purpose: "Shows change over time or ordered progression.",
-    whenToUse: "Use when the dataset includes a time field or meaningful sequence.",
-    recommended: false,
+    id: "grouped-comparison",
+    title: "Grouped Comparison",
+    purpose: "Compares average metric values across categories.",
+    whenToUse: "Use when you want to compare aggregated values between groups.",
+    recommended: true,
     recommendationReason:
-      "Not currently recommended because the dataset does not include a time or sequence field.",
-    endpoint: "/charts/line-trend",
+      "Recommended because category and metric_value support grouped mean comparison.",
+    endpoint: "/charts/grouped-comparison",
   },
 ];
