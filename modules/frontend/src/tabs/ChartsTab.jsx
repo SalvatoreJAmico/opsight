@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getHistogram, resolveApiAssetUrl } from "../api/client";
+import { chartCatalog } from "../catalog/chartCatalog";
 
 const SAMPLE_DATA = [
   { entity_id: "A", metric_value: 10, category: "X" },
@@ -81,6 +82,51 @@ export default function ChartsTab() {
       >
         {loading ? "Loading..." : "Show Histogram"}
       </button>
+
+      <h3 style={{ marginTop: "1.25rem" }}>Chart Catalog</h3>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: "0.75rem",
+          marginTop: "0.75rem",
+        }}
+      >
+        {chartCatalog.map((chart) => (
+          <div
+            key={chart.id}
+            style={{
+              border: "1px solid #ddd",
+              borderRadius: "10px",
+              padding: "0.75rem",
+              background: chart.recommended ? "#f6fbf6" : "#fafafa",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem" }}>
+              <strong>{chart.title}</strong>
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: chart.recommended ? "#1f6f2e" : "#666",
+                }}
+              >
+                {chart.recommended ? "Recommended" : "Optional"}
+              </span>
+            </div>
+            <p style={{ marginTop: "0.5rem" }}>{chart.purpose}</p>
+            <p style={{ marginTop: "0.5rem", opacity: 0.9 }}>
+              <strong>When to use:</strong> {chart.whenToUse}
+            </p>
+            <p style={{ marginTop: "0.5rem", opacity: 0.9 }}>
+              <strong>Why:</strong> {chart.recommendationReason}
+            </p>
+            <p style={{ marginTop: "0.5rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+              Endpoint: {chart.endpoint}
+            </p>
+          </div>
+        ))}
+      </div>
 
       {error ? (
         <div
