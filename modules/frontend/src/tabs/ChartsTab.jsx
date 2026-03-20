@@ -1,12 +1,19 @@
 import { useState } from "react";
-import { getHistogram, resolveApiAssetUrl } from "../api/client";
+import {
+  getHistogram,
+  getBarCategory,
+  getBoxplot,
+  getScatter,
+  getGroupedComparison,
+  resolveApiAssetUrl,
+} from "../api/client";
 import { chartCatalog } from "../catalog/chartCatalog";
 
 const SAMPLE_DATA = [
-  { entity_id: "A", metric_value: 10, category: "X" },
-  { entity_id: "B", metric_value: 20, category: "Y" },
-  { entity_id: "C", metric_value: 15, category: "X" },
-  { entity_id: "D", metric_value: 30, category: "Z" },
+  { entity_id: "A", metric_value: 10, secondary_metric: 8, category: "X" },
+  { entity_id: "B", metric_value: 20, secondary_metric: 18, category: "Y" },
+  { entity_id: "C", metric_value: 15, secondary_metric: 12, category: "X" },
+  { entity_id: "D", metric_value: 30, secondary_metric: 25, category: "Z" },
 ];
 
 const LOCAL_PROXY_BASE_URL = "/api-local";
@@ -23,39 +30,53 @@ export default function ChartsTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const loadChartById = async (chartId) => {
+    switch (chartId) {
+      case "histogram":
+        return getHistogram({ baseUrl: LOCAL_PROXY_BASE_URL });
+      case "bar-category":
+        return getBarCategory({ baseUrl: LOCAL_PROXY_BASE_URL });
+      case "boxplot":
+        return getBoxplot({ baseUrl: LOCAL_PROXY_BASE_URL });
+      case "scatter":
+        return getScatter({ baseUrl: LOCAL_PROXY_BASE_URL });
+      case "grouped-comparison":
+        return getGroupedComparison({ baseUrl: LOCAL_PROXY_BASE_URL });
+      default:
+        return { ok: false, error: "Unsupported chart selection." };
+    }
+  };
+
   const handleChartSelect = async (chartId) => {
     setError("");
     setActiveChart(chartId);
+    setLoading(true);
 
-    if (chartId === "histogram") {
-      setLoading(true);
+    const response = await loadChartById(chartId);
 
-      const response = await getHistogram({ baseUrl: LOCAL_PROXY_BASE_URL });
+    setLoading(false);
 
-      setLoading(false);
-
-      if (!response.ok) {
-        setActiveChart("");
-        setError(response.error || "Histogram request failed.");
-        return;
-      }
-
-      const resolvedImageUrl = resolveApiAssetUrl(
-        response.data?.image,
-        LOCAL_PROXY_BASE_URL
-      );
-
-      if (!resolvedImageUrl) {
-        setActiveChart("");
-        setError("Histogram response did not include an image path.");
-        return;
-      }
-
-      setChartImages((prev) => ({
-        ...prev,
-        histogram: resolvedImageUrl,
-      }));
+    if (!response.ok) {
+      setActiveChart("");
+      setError(response.error || "Chart request failed.");
+      return;
     }
+
+    const resolvedImageUrl = resolveApiAssetUrl(
+      response.data?.image,
+      LOCAL_PROXY_BASE_URL
+    );
+
+    if (!resolvedImageUrl) {
+      setActiveChart("");
+      setError("Chart response did not include an image path.");
+      return;
+    }
+
+    setChartImages((prev) => ({
+      ...prev,
+      [chartId]: resolvedImageUrl,
+    }));
   };
 
   return (
@@ -94,9 +115,7 @@ export default function ChartsTab() {
           </label>
 
           <p>{chart.purpose}</p>
-          <p>
-            <em>{chart.whenToUse}</em>
-          </p>
+          <p><em>{chart.whenToUse}</em></p>
           <p>
             Recommended for current dataset:{" "}
             <strong>{chart.recommended ? "Yes" : "No"}</strong>
@@ -107,22 +126,14 @@ export default function ChartsTab() {
             <p style={{ marginTop: "0.75rem" }}>Loading chart...</p>
           ) : null}
 
-          {chart.id === "histogram" &&
-          activeChart === "histogram" &&
-          chartImages.histogram ? (
+          {activeChart === chart.id && chartImages[chart.id] ? (
             <div style={{ marginTop: "0.75rem" }}>
               <img
-                src={chartImages.histogram}
-                alt="Histogram of metric values"
+                src={chartImages[chart.id]}
+                alt={`${chart.title} visualization`}
                 style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
               />
             </div>
-          ) : null}
-
-          {chart.id !== "histogram" && activeChart === chart.id ? (
-            <p style={{ marginTop: "0.75rem", opacity: 0.75 }}>
-              This chart will be connected in PS-124.
-            </p>
           ) : null}
         </div>
       ))}

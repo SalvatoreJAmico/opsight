@@ -4,14 +4,30 @@ import pandas as pd
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi import Request
 
 from modules.config.logging_config import setup_logging
 from modules.config.runtime_config import load_runtime_config
 from modules.api.errors import register_error_handlers
-from modules.visualization.plots import create_histogram
 from modules.persistence.persistence_manager import PersistenceManager
 from fastapi.staticfiles import StaticFiles
+from modules.visualization.plots import (
+    create_histogram,
+    create_bar_category_chart,
+    create_boxplot,
+    create_scatter_plot,
+    create_grouped_comparison_chart,
+)
+
+def get_chart_dataframe():
+    return pd.DataFrame([
+        {"entity_id": "A", "metric_value": 10, "secondary_metric": 8, "category": "X"},
+        {"entity_id": "B", "metric_value": 20, "secondary_metric": 18, "category": "Y"},
+        {"entity_id": "C", "metric_value": 15, "secondary_metric": 12, "category": "X"},
+        {"entity_id": "D", "metric_value": 30, "secondary_metric": 25, "category": "Z"},
+    ])
+
 
 setup_logging(service_name="opsight.api")
 logger = logging.getLogger("opsight.api")
@@ -108,18 +124,56 @@ async def log_requests(request: Request, call_next):
 @app.get("/charts/histogram")
 def histogram():
     try:
-        manager = PersistenceManager(runtime_config)
-        records = manager.retrieve_all()
-
-        if not records:
-            return {"error": "No records available for visualization"}
-
-        df = pd.DataFrame(records)
+        df = get_chart_dataframe()
         path = create_histogram(df)
         return {"image": path}
     except Exception as exc:
         logger.error(f"Histogram generation failed: {str(exc)}")
-        return {"error": str(exc)}
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/charts/bar-category")
+def bar_category():
+    try:
+        df = get_chart_dataframe()
+        path = create_bar_category_chart(df)
+        return {"image": path}
+    except Exception as exc:
+        logger.error(f"Bar chart generation failed: {str(exc)}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/charts/boxplot")
+def boxplot():
+    try:
+        df = get_chart_dataframe()
+        path = create_boxplot(df)
+        return {"image": path}
+    except Exception as exc:
+        logger.error(f"Box plot generation failed: {str(exc)}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/charts/scatter")
+def scatter():
+    try:
+        df = get_chart_dataframe()
+        path = create_scatter_plot(df)
+        return {"image": path}
+    except Exception as exc:
+        logger.error(f"Scatter plot generation failed: {str(exc)}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/charts/grouped-comparison")
+def grouped_comparison():
+    try:
+        df = get_chart_dataframe()
+        path = create_grouped_comparison_chart(df)
+        return {"image": path}
+    except Exception as exc:
+        logger.error(f"Grouped comparison chart generation failed: {str(exc)}")
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.get("/health")

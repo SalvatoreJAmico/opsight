@@ -67,17 +67,29 @@ async function request(path, options = {}, baseUrlOverride = null) {
     };
   }
 }
+export async function getHistogram({ baseUrl } = {}) {
+  return request("/charts/histogram", { method: "GET" }, baseUrl);
+}
 
+export async function getBarCategory({ baseUrl } = {}) {
+  return request("/charts/bar-category", { method: "GET" }, baseUrl);
+}
+
+export async function getBoxplot({ baseUrl } = {}) {
+  return request("/charts/boxplot", { method: "GET" }, baseUrl);
+}
+
+export async function getScatter({ baseUrl } = {}) {
+  return request("/charts/scatter", { method: "GET" }, baseUrl);
+}
+
+export async function getGroupedComparison({ baseUrl } = {}) {
+  return request("/charts/grouped-comparison", { method: "GET" }, baseUrl);
+}
 export async function getHealth() {
   return request(ENDPOINTS.HEALTH, {
     method: "GET",
   });
-}
-
-export async function getHistogram(config = {}) {
-  return request(ENDPOINTS.CHARTS_HISTOGRAM, {
-    method: "GET",
-  }, config.baseUrl);
 }
 
 export async function triggerPipeline(payload, config = {}) {
