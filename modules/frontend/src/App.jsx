@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getHealth } from "./api/client";
 import UploadTab from "./tabs/UploadTab";
 import MetricsTab from "./tabs/MetricsTab";
+import ChartsTab from "./tabs/ChartsTab";
 
 const tabs = [
   { id: "upload", label: "Upload" },
@@ -41,13 +42,7 @@ export default function App() {
       case "metrics":
         return <MetricsTab pipelineResult={pipelineResult} />;
       case "charts":
-        return (
-          <>
-            <h2>Charts</h2>
-            <p>Dataset visualizations will appear here.</p>
-            <p>Chart rendering will be added in PS-114.</p>
-          </>
-        );
+         return <ChartsTab />;
       case "ml":
         return (
           <>
