@@ -18,8 +18,9 @@ class DatasetBuildResult(BaseModel):
 class PredictionRecord(BaseModel):
     entity_id: str
     timestamp: str
-    value: float | None
+    value: Optional[float]
     is_anomaly: bool
+    anomaly_score: Optional[float] = None
 
 
 class PredictionResult(BaseModel):
