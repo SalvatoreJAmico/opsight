@@ -4,13 +4,14 @@ import UploadTab from "./tabs/UploadTab";
 import MetricsTab from "./tabs/MetricsTab";
 import ChartsTab from "./tabs/ChartsTab";
 import MlTab from "./tabs/MlTab";
-
+import PredictionTab from "./tabs/PredictionTab";
 
 const tabs = [
   { id: "upload", label: "Upload" },
   { id: "metrics", label: "Metrics" },
   { id: "charts", label: "Charts" },
   { id: "ml", label: "ML" },
+  { id: "prediction", label: "Prediction" },
 ];
 
 export default function App() {
@@ -44,9 +45,11 @@ export default function App() {
       case "metrics":
         return <MetricsTab pipelineResult={pipelineResult} />;
       case "charts":
-         return <ChartsTab />;
+        return <ChartsTab />;
       case "ml":
-         return <MlTab />;
+        return <MlTab />;
+      case "prediction":
+        return <PredictionTab />;
       default:
         return null;
     }
