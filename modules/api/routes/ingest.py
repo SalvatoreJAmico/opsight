@@ -22,13 +22,17 @@ def _normalize_source_path(source_path: str) -> str:
     return normalized_source_path
 
 
-def _run_pipeline_for_payload(payload: dict):
+def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False):
     source_path = payload.get("source_path")
 
-    if not source_path:
+    # If use_default_source is True, let ingest_data() choose the default based on env
+    if use_default_source:
+        source_path = None
+
+    if not use_default_source and not source_path:
         raise HTTPException(status_code=422, detail="source_path is required")
 
-    normalized_source_path = _normalize_source_path(source_path)
+    normalized_source_path = _normalize_source_path(source_path) if source_path else None
 
     try:
         summary = run_pipeline(normalized_source_path)
@@ -64,5 +68,6 @@ async def ingest_data_endpoint(payload: dict, request: Request):
 
 @router.post("/pipeline/trigger")
 async def trigger_pipeline_endpoint(payload: dict, request: Request):
-    await require_upload_access_code(request=request, payload=payload)
-    return _run_pipeline_for_payload(payload)
+    # Phase 14: /pipeline/trigger no longer requires access code.
+    # Frontend sends empty payload; backend uses default dataset per environment.
+    return _run_pipeline_for_payload(payload, use_default_source=True)

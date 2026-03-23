@@ -14,32 +14,6 @@ describe("UploadTab", () => {
     vi.clearAllMocks();
   });
 
-  it("validates blank access code before submit", async () => {
-    render(<UploadTab />);
-
-    fireEvent.change(screen.getByLabelText("Access Code"), {
-      target: { value: "   " },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Run Pipeline" }));
-
-    expect(await screen.findByText("Access code is required.")).toBeInTheDocument();
-    expect(triggerPipeline).not.toHaveBeenCalled();
-  });
-
-  it("validates blank source path before submit", async () => {
-    render(<UploadTab />);
-
-    fireEvent.change(screen.getByLabelText("Source Path"), {
-      target: { value: "" },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Run Pipeline" }));
-
-    expect(await screen.findByText("Source path is required.")).toBeInTheDocument();
-    expect(triggerPipeline).not.toHaveBeenCalled();
-  });
-
   it("shows loading state while request is in progress", async () => {
     triggerPipeline.mockImplementation(
       () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, data: { status: "processed" } }), 20)),
@@ -47,9 +21,8 @@ describe("UploadTab", () => {
 
     render(<UploadTab />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Run Pipeline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
-    expect(await screen.findByText("Submitting pipeline request...")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Running..." })).toBeDisabled();
 
     await waitFor(() => {
@@ -57,19 +30,19 @@ describe("UploadTab", () => {
     });
   });
 
-  it("handles invalid access code response", async () => {
+  it("handles API error response", async () => {
     triggerPipeline.mockResolvedValue({
       ok: false,
-      status: 403,
-      error: "Invalid or missing upload access code",
+      status: 500,
+      error: "Internal server error",
       data: null,
     });
 
     render(<UploadTab />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Run Pipeline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
-    expect(await screen.findByText("Invalid or missing access code.")).toBeInTheDocument();
+    expect(await screen.findByText("Internal server error")).toBeInTheDocument();
   });
 
   it("renders success and response payload when trigger succeeds", async () => {
@@ -85,20 +58,18 @@ describe("UploadTab", () => {
 
     render(<UploadTab />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Run Pipeline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
     expect(await screen.findByText(/Pipeline triggered successfully/)).toBeInTheDocument();
     expect(screen.getByText("Response")).toBeInTheDocument();
     expect(screen.getByText(/records_ingested/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      expect.objectContaining({
-        access_code: "demo-code",
-      }),
+      {},
       expect.objectContaining({ baseUrl: expectedDefaultBaseUrl }),
     );
   });
 
-  it("switches to local target when local sample is selected", async () => {
+  it("switches to local target when Local button is clicked", async () => {
     triggerPipeline.mockResolvedValue({
       ok: false,
       status: 0,
@@ -108,37 +79,33 @@ describe("UploadTab", () => {
 
     render(<UploadTab />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use Local Sample" }));
-    fireEvent.click(screen.getByRole("button", { name: "Run Pipeline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Local" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
     expect(await screen.findByText(/Local API is unavailable/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      expect.objectContaining({
-        source_path: "data/opsight_sample_sales.csv",
-      }),
+      {},
       expect.objectContaining({ baseUrl: "/api-local" }),
     );
   });
 
-  it("uses local target for blob sample in dev", async () => {
+  it("switches to cloud target when Cloud button is clicked", async () => {
     triggerPipeline.mockResolvedValue({
-      ok: false,
-      status: 0,
-      error: "Network error",
-      data: null,
+      ok: true,
+      status: 200,
+      error: null,
+      data: { status: "processed" },
     });
 
     render(<UploadTab />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use Blob Sample" }));
-    fireEvent.click(screen.getByRole("button", { name: "Run Pipeline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cloud" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
-    expect(await screen.findByText(/Local API is unavailable/)).toBeInTheDocument();
+    expect(await screen.findByText(/Pipeline triggered successfully on deployed API/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      expect.objectContaining({
-        source_path: "opsight-raw/csv/opsight_sample_sales.csv",
-      }),
-      expect.objectContaining({ baseUrl: "/api-local" }),
+      {},
+      expect.objectContaining({ baseUrl: "/api-cloud" }),
     );
   });
 });

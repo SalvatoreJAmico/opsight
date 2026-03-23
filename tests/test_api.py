@@ -158,7 +158,8 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(body["error"], "Request failed")
         self.assertEqual(body["detail"], "Invalid or missing upload access code")
 
-    def test_pipeline_trigger_endpoint_accepts_correct_access_code(self):
+    def test_pipeline_trigger_endpoint_accepts_empty_payload(self):
+        """Phase 14: /pipeline/trigger no longer requires access code or source_path."""
         mocked_summary = {
             "status": "SUCCESS",
             "failed_stage": None,
@@ -170,10 +171,10 @@ class TestApiLayer(unittest.TestCase):
         }
 
         with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary):
+            # Send empty payload, no access code required
             response = self.client.post(
                 "/pipeline/trigger",
-                json={"source_path": "data/opsight_sample_sales.csv"},
-                headers=self.valid_headers,
+                json={},
             )
 
         self.assertEqual(response.status_code, 200)

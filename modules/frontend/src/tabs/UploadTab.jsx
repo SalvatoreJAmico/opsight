@@ -1,54 +1,18 @@
 import React from "react";
 import { useState } from "react";
-import { useEffect } from "react";
 import { triggerPipeline } from "../api/client";
 import { resolveBaseUrl } from "../config/env";
 
 const isDev = import.meta.env.DEV;
-const BLOB_SAMPLE_SOURCE_PATH = "opsight-raw/csv/opsight_sample_sales.csv";
-const LOCAL_SAMPLE_SOURCE_PATH = "data/opsight_sample_sales.csv";
-const DEFAULT_TARGET_ENVIRONMENT = isDev ? "local" : "cloud";
-const DEFAULT_SOURCE_PATH = isDev
-  ? LOCAL_SAMPLE_SOURCE_PATH
-  : BLOB_SAMPLE_SOURCE_PATH;
 
 export default function UploadTab({ onPipelineComplete }) {
-  const [accessCode, setAccessCode] = useState("demo-code");
-  const [sourcePath, setSourcePath] = useState(DEFAULT_SOURCE_PATH);
-  const [targetEnvironment, setTargetEnvironment] = useState(DEFAULT_TARGET_ENVIRONMENT);
+  const [targetEnvironment, setTargetEnvironment] = useState(isDev ? "local" : "cloud");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [result, setResult] = useState(null);
 
-  useEffect(() => {
-    // Fast refresh can preserve older state values; normalize dev defaults on mount.
-    if (isDev) {
-      setTargetEnvironment("local");
-      setSourcePath((currentPath) =>
-        currentPath === BLOB_SAMPLE_SOURCE_PATH ? LOCAL_SAMPLE_SOURCE_PATH : currentPath,
-      );
-    }
-  }, []);
-
   async function handleTrigger() {
-    const trimmedAccessCode = accessCode.trim();
-    const trimmedSourcePath = sourcePath.trim();
-
-    if (!trimmedAccessCode) {
-      setError("Access code is required.");
-      setSuccessMessage("");
-      setResult(null);
-      return;
-    }
-
-    if (!trimmedSourcePath) {
-      setError("Source path is required.");
-      setSuccessMessage("");
-      setResult(null);
-      return;
-    }
-
     setLoading(true);
     setError("");
     setSuccessMessage("");
@@ -56,20 +20,13 @@ export default function UploadTab({ onPipelineComplete }) {
 
     const requestBaseUrl = resolveBaseUrl(targetEnvironment);
 
-    const response = await triggerPipeline({
-      access_code: trimmedAccessCode,
-      source_path: trimmedSourcePath,
-    }, {
+    const response = await triggerPipeline({}, {
       baseUrl: requestBaseUrl,
     });
 
-    setLoading(false); 
+    setLoading(false);
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        setError("Invalid or missing access code.");
-      } else if (response.status === 400) {
-        setError(response.error || "Invalid request.");
-      } else if (response.status === 0 && targetEnvironment === "local") {
+      if (response.status === 0 && targetEnvironment === "local") {
         setError("Local API is unavailable. Start the API on http://127.0.0.1:8000 and try again.");
       } else {
         setError(response.error || "Pipeline trigger failed.");
@@ -89,55 +46,10 @@ export default function UploadTab({ onPipelineComplete }) {
   return (
     <div>
       <h2>Upload</h2>
-      <p>Trigger the protected pipeline using an access code and source path.</p>
+      <p>Run the pipeline using the default dataset.</p>
 
-      <div style={{ display: "grid", gap: "1rem", maxWidth: "560px", marginTop: "1.25rem" }}>
-        <div>
-          <label htmlFor="access-code" style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>
-            Access Code
-          </label>
-          <input
-            id="access-code"
-            type="password"
-            value={accessCode}
-            onChange={(event) => setAccessCode(event.target.value)}
-            placeholder="Enter upload access code"
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="source-path" style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>
-            Source Path
-          </label>
-          <input
-            id="source-path"
-            type="text"
-            value={sourcePath}
-            onChange={(event) => setSourcePath(event.target.value)}
-            placeholder={
-              targetEnvironment === "local"
-                ? "data/opsight_sample_sales.csv"
-                : "opsight-raw/csv/opsight_sample_sales.csv"
-            }
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <p style={{ marginTop: "0.5rem", opacity: 0.85 }}>
-            Use <strong>container/path</strong> format for Blob paths.
-          </p>
-        </div>
-
-        <div style={{ marginBottom: "0.75rem" }}>
+      <div style={{ marginTop: "1.5rem", maxWidth: "560px" }}>
+        <div style={{ marginBottom: "1rem" }}>
           <span style={{ fontWeight: 600, marginRight: "0.75rem" }}>API Target:</span>
           <button
             type="button"
@@ -172,70 +84,26 @@ export default function UploadTab({ onPipelineComplete }) {
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={handleTrigger}
-            disabled={loading}
-            style={{
-              width: "fit-content",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontWeight: 600,
-            }}
-          >
-            {loading ? "Running..." : "Run Pipeline"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSourcePath(BLOB_SAMPLE_SOURCE_PATH);
-              setTargetEnvironment(isDev ? "local" : "cloud");
-            }}
-            disabled={loading}
-            style={{
-              width: "fit-content",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontWeight: 600,
-            }}
-          >
-            Use Blob Sample
-          </button>
-
-          {isDev && (
-            <button
-              type="button"
-              onClick={() => {
-                setSourcePath(LOCAL_SAMPLE_SOURCE_PATH);
-                setTargetEnvironment("local");
-              }}
-              disabled={loading}
-              style={{
-                width: "fit-content",
-                padding: "0.75rem 1rem",
-                borderRadius: "8px",
-                border: "1px solid #ccc",
-                cursor: loading ? "not-allowed" : "pointer",
-                fontWeight: 600,
-              }}
-            >
-              Use Local Sample
-            </button>
-          )}
-        </div>
-
-        <p style={{ marginTop: "0.25rem", opacity: 0.85 }}>
+        <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
           Target: <strong>{targetEnvironment === "local" ? "Local API (this computer)" : "Deployed API (cloud)"}</strong>
         </p>
-      </div>
 
-      {loading ? <p style={{ marginTop: "1rem" }}>Submitting pipeline request...</p> : null}
+        <button
+          type="button"
+          onClick={handleTrigger}
+          disabled={loading}
+          style={{
+            padding: "0.75rem 1.5rem",
+            borderRadius: "8px",
+            border: "1px solid #ccc",
+            cursor: loading ? "not-allowed" : "pointer",
+            fontWeight: 600,
+            fontSize: "1rem",
+          }}
+        >
+          {loading ? "Running..." : "Run"}
+        </button>
+      </div>
 
       {error ? (
         <div
