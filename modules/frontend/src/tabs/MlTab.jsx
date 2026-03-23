@@ -48,33 +48,54 @@ export default function MlTab() {
   const [resultsByModel, setResultsByModel] = useState({});
 
   const loadModelResults = async (modelKey) => {
+    console.log(`[MlTab] Starting load for ${modelKey}`);
+    
     setResultsByModel((prev) => ({
       ...prev,
       [modelKey]: { loading: true, error: "", data: null },
     }));
 
-    const response = await MODEL_RUNNERS[modelKey]();
+    try {
+      const response = await MODEL_RUNNERS[modelKey]();
+      console.log(`[MlTab] Response for ${modelKey}:`, response);
 
-    if (!response.ok) {
+      if (!response || !response.ok) {
+        const errorMsg = response?.error || "Failed to load results";
+        console.error(`[MlTab] Error for ${modelKey}:`, errorMsg);
+        
+        setResultsByModel((prev) => ({
+          ...prev,
+          [modelKey]: {
+            loading: false,
+            error: errorMsg,
+            data: null,
+          },
+        }));
+        return;
+      }
+
+      console.log(`[MlTab] Success for ${modelKey}, data:`, response.data);
+      
       setResultsByModel((prev) => ({
         ...prev,
         [modelKey]: {
           loading: false,
-          error: response.error || "Failed to load results",
+          error: "",
+          data: response.data,
+        },
+      }));
+    } catch (err) {
+      console.error(`[MlTab] Exception for ${modelKey}:`, err);
+      
+      setResultsByModel((prev) => ({
+        ...prev,
+        [modelKey]: {
+          loading: false,
+          error: err.message || "Network error",
           data: null,
         },
       }));
-      return;
     }
-
-    setResultsByModel((prev) => ({
-      ...prev,
-      [modelKey]: {
-        loading: false,
-        error: "",
-        data: response.data,
-      },
-    }));
   };
 
   const toggleModel = (key) => {
