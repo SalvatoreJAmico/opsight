@@ -1,4 +1,4 @@
-export default function ModelCard({ model, checked, onToggle, result }) {
+export default function ModelCard({ model, checked, onToggle, loading = false, error = "", result = null }) {
   return (
     <div
       style={{
@@ -32,17 +32,21 @@ export default function ModelCard({ model, checked, onToggle, result }) {
             }}
           >
             <strong>Results:</strong>
-            <div style={{ marginTop: "0.5rem" }}>
-              <p style={{ margin: "0 0 0.35rem 0" }}>
-                <strong>Status:</strong> {result.status}
-              </p>
-              <p style={{ margin: "0 0 0.35rem 0" }}>
-                <strong>Summary:</strong> {result.summary}
-              </p>
-              <p style={{ margin: 0 }}>
-                <strong>Notes:</strong> {result.notes}
-              </p>
-            </div>
+            {loading && <p style={{ marginTop: "0.5rem", margin: "0.5rem 0 0 0" }}>Loading...</p>}
+            {error && <p style={{ marginTop: "0.5rem", color: "#d32f2f", margin: "0.5rem 0 0 0" }}>{error}</p>}
+            {!loading && !error && result && (
+              <div style={{ marginTop: "0.5rem" }}>
+                <p style={{ margin: "0 0 0.35rem 0" }}>
+                  <strong>Status:</strong> {result.status}
+                </p>
+                <p style={{ margin: "0 0 0.35rem 0" }}>
+                  <strong>Summary:</strong> {result.summary}
+                </p>
+                <p style={{ margin: 0 }}>
+                  <strong>Notes:</strong> {result.notes}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

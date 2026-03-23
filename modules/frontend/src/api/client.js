@@ -99,6 +99,52 @@ export async function triggerPipeline(payload, config = {}) {
   }, config.baseUrl);
 }
 
+export async function runZscoreAnomaly(records, config = {}) {
+  return request(
+    ENDPOINTS.ML_ANOMALY_ZSCORE,
+    {
+      method: "POST",
+      body: JSON.stringify(records),
+    },
+    config.baseUrl,
+  );
+}
+
+export async function runIsolationForestAnomaly(records, config = {}) {
+  return request(
+    ENDPOINTS.ML_ANOMALY_ISOLATION_FOREST,
+    {
+      method: "POST",
+      body: JSON.stringify(records),
+    },
+    config.baseUrl,
+  );
+}
+
+export async function runRegressionPrediction(records, stepsAhead = 2, config = {}) {
+  const path = `${ENDPOINTS.ML_PREDICTION_REGRESSION}?steps_ahead=${encodeURIComponent(stepsAhead)}`;
+  return request(
+    path,
+    {
+      method: "POST",
+      body: JSON.stringify(records),
+    },
+    config.baseUrl,
+  );
+}
+
+export async function runMovingAveragePrediction(records, stepsAhead = 2, config = {}) {
+  const path = `${ENDPOINTS.ML_PREDICTION_MOVING_AVERAGE}?steps_ahead=${encodeURIComponent(stepsAhead)}`;
+  return request(
+    path,
+    {
+      method: "POST",
+      body: JSON.stringify(records),
+    },
+    config.baseUrl,
+  );
+}
+
 // Backward-compatible alias for older callers.
 export async function runPipeline(payload) {
   return triggerPipeline(payload);
