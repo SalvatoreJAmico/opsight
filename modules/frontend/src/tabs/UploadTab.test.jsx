@@ -64,7 +64,7 @@ describe("UploadTab", () => {
     expect(screen.getByText("Response")).toBeInTheDocument();
     expect(screen.getByText(/records_ingested/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      {},
+      expect.objectContaining({ target: expectedDefaultBaseUrl === "/api-local" ? "local" : "cloud" }),
       expect.objectContaining({ baseUrl: expectedDefaultBaseUrl }),
     );
   });
@@ -84,7 +84,7 @@ describe("UploadTab", () => {
 
     expect(await screen.findByText(/Local API is unavailable/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      {},
+      expect.objectContaining({ target: "local" }),
       expect.objectContaining({ baseUrl: "/api-local" }),
     );
   });
@@ -104,7 +104,7 @@ describe("UploadTab", () => {
 
     expect(await screen.findByText(/Pipeline triggered successfully on deployed API/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      {},
+      expect.objectContaining({ target: "cloud" }),
       expect.objectContaining({ baseUrl: "/api-cloud" }),
     );
   });

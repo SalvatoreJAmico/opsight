@@ -20,7 +20,9 @@ export default function UploadTab({ onPipelineComplete }) {
 
     const requestBaseUrl = resolveBaseUrl(targetEnvironment);
 
-    const response = await triggerPipeline({}, {
+    const response = await triggerPipeline({
+      target: targetEnvironment,
+    }, {
       baseUrl: requestBaseUrl,
     });
 

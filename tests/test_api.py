@@ -70,7 +70,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.json()["status"], "processed")
         self.assertEqual(response.json()["records_ingested"], 3)
         expected_path = str((Path(__file__).resolve().parents[1] / "data" / "opsight_sample_sales.csv").resolve())
-        mocked_runner.assert_called_once_with(expected_path)
+        mocked_runner.assert_called_once_with(expected_path, source_mode=None)
 
     def test_ingestion_endpoint_returns_500_when_pipeline_runner_fails(self):
         failed_summary = {
@@ -120,7 +120,7 @@ class TestApiLayer(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "processed")
-        mocked_runner.assert_called_once_with(blob_source_path)
+        mocked_runner.assert_called_once_with(blob_source_path, source_mode=None)
 
     def test_ingestion_endpoint_requires_source_path(self):
         response = self.client.post("/data", json={}, headers=self.valid_headers)
@@ -159,7 +159,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(body["detail"], "Invalid or missing upload access code")
 
     def test_pipeline_trigger_endpoint_accepts_empty_payload(self):
-        """Phase 14: /pipeline/trigger no longer requires access code or source_path."""
+        """Phase 14: /pipeline/trigger respects target parameter for dataset selection."""
         mocked_summary = {
             "status": "SUCCESS",
             "failed_stage": None,
@@ -171,10 +171,10 @@ class TestApiLayer(unittest.TestCase):
         }
 
         with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary):
-            # Send empty payload, no access code required
+            # Send payload with target to control dataset selection
             response = self.client.post(
                 "/pipeline/trigger",
-                json={},
+                json={"target": "local"},
             )
 
         self.assertEqual(response.status_code, 200)

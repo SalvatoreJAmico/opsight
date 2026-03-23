@@ -162,37 +162,87 @@ def _load_from_blob(
     return blob_result["rows"]
 
 
-def ingest_data(source_path: str = None) -> pd.DataFrame:
+def ingest_data(source_path: str = None, source_mode: str = None) -> pd.DataFrame:
     """
-    Ingest data based on runtime configuration.
+    Ingest data based on runtime configuration and source mode.
 
-    PS-094 routing rules:
+    PS-094 routing rules with source_mode enforcement:
     
-    PRODUCTION MODE (APP_ENV=prod):
-      - Blob Storage is mandatory ingestion source
-      - No local file fallback, ever
-      - Auth/network errors fail immediately
+    EXPLICIT SOURCE_MODE (from frontend target selection):
+      - source_mode="local": Use local file only, no blob fallback
+      - source_mode="cloud": Use blob only, no local file
+      - No cross-mode fallback allowed
     
-    DEVELOPMENT MODE (APP_ENV=dev):
-      - Local INPUT_SOURCE_PATH preferred (if configured)
-      - Blob as fallback if explicitly enabled
-      - Easy local testing remains intact
+    FALLBACK (source_mode=None, for backward compatibility):
+      PRODUCTION MODE (APP_ENV=prod):
+        - Blob Storage is mandatory ingestion source
+        - No local file fallback, ever
+        - Auth/network errors fail immediately
+      
+      DEVELOPMENT MODE (APP_ENV=dev):
+        - Local INPUT_SOURCE_PATH preferred (if configured)
+        - Blob as fallback if explicitly enabled
+        - Easy local testing remains intact
 
     Args:
         source_path: Optional override path (for testing/explicit calls).
                     If provided, takes precedence over config.
+        source_mode: Optional mode selection ("local" or "cloud") from frontend target.
+                    If set, enforces strict behavior without fallback.
 
     Returns:
         pandas.DataFrame with ingested data
 
     Raises:
         ValueError: If no valid source configured
-        FileNotFoundError: If local file not found (dev mode)
+        FileNotFoundError: If local file not found (dev mode or local mode)
         BlobAuthenticationError: If Blob auth fails (prod or blob-sourced)
         BlobNotFoundError: If Blob resource not found (prod or blob-sourced)
         BlobNetworkError: If Blob network error occurs (prod or blob-sourced)
     """
     config = _get_runtime_config()
+
+    # ===== STRICT SOURCE_MODE: No fallback =====
+    if source_mode == "local":
+        logger.info("Source mode: local (strict, no blob fallback)")
+
+        # Try explicit source_path first if provided
+        if source_path:
+            logger.info(f"Using explicit source path: {source_path}")
+            return _load_local_file(source_path)
+
+        # Use configured INPUT_SOURCE_PATH
+        if config.input_source_path and config.input_source_path.strip():
+            logger.debug(f"Attempting local file from config: {config.input_source_path}")
+            return _load_local_file(config.input_source_path)
+
+        # No local source available
+        raise ValueError(
+            "Local mode requested but no local source configured. "
+            "Set INPUT_SOURCE_PATH environment variable."
+        )
+
+    if source_mode == "cloud":
+        logger.info("Source mode: cloud (strict, blob only)")
+
+        # Cloud mode requires blob configuration
+        if not config.blob_account or not config.blob_container or not config.blob_path:
+            raise ValueError(
+                "Cloud mode requested but Blob Storage not fully configured. "
+                "Set BLOB_ACCOUNT, BLOB_CONTAINER, and BLOB_PATH."
+            )
+
+        # Use configured blob path
+        try:
+            return _load_from_blob(
+                blob_account=config.blob_account,
+                blob_container=config.blob_container,
+                blob_path=config.blob_path,
+                connection_string=config.azure_storage_connection_string,
+            )
+        except (BlobAuthenticationError, BlobNotFoundError, BlobNetworkError):
+            # Blob errors fail immediately in cloud mode
+            raise
 
     if source_path:
         logger.info(f"Using explicit source path: {source_path}")

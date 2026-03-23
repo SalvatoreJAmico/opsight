@@ -22,10 +22,10 @@ def _normalize_source_path(source_path: str) -> str:
     return normalized_source_path
 
 
-def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False):
+def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False, source_mode: str = None):
     source_path = payload.get("source_path")
 
-    # If use_default_source is True, let ingest_data() choose the default based on env
+    # If use_default_source is True, let ingest_data() choose the default based on env or source_mode
     if use_default_source:
         source_path = None
 
@@ -35,7 +35,7 @@ def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False):
     normalized_source_path = _normalize_source_path(source_path) if source_path else None
 
     try:
-        summary = run_pipeline(normalized_source_path)
+        summary = run_pipeline(normalized_source_path, source_mode=source_mode)
 
         if summary.get("status") == "FAILED":
             failed_stage = summary.get("failed_stage") or "unknown"
@@ -69,5 +69,8 @@ async def ingest_data_endpoint(payload: dict, request: Request):
 @router.post("/pipeline/trigger")
 async def trigger_pipeline_endpoint(payload: dict, request: Request):
     # Phase 14: /pipeline/trigger no longer requires access code.
-    # Frontend sends empty payload; backend uses default dataset per environment.
-    return _run_pipeline_for_payload(payload, use_default_source=True)
+    # Frontend sends { "target": "local" | "cloud" }; backend respects this choice.
+    target = payload.get("target", "local")
+    if target not in ("local", "cloud"):
+        raise HTTPException(status_code=400, detail="target must be 'local' or 'cloud'")
+    return _run_pipeline_for_payload(payload, use_default_source=True, source_mode=target)
