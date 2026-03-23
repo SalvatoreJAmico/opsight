@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import UploadTab from "./UploadTab";
 import { triggerPipeline } from "../api/client";
 
+const expectedDefaultBaseUrl = import.meta.env.DEV ? "/api-local" : "/api-cloud";
+
 vi.mock("../api/client", () => ({
   triggerPipeline: vi.fn(),
 }));
@@ -92,7 +94,7 @@ describe("UploadTab", () => {
       expect.objectContaining({
         access_code: "demo-code",
       }),
-      expect.objectContaining({ baseUrl: "/api-cloud" }),
+      expect.objectContaining({ baseUrl: expectedDefaultBaseUrl }),
     );
   });
 

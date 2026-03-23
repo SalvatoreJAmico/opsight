@@ -7,11 +7,15 @@ const BLOB_SAMPLE_SOURCE_PATH = "opsight-raw/csv/opsight_sample_sales.csv";
 const LOCAL_SAMPLE_SOURCE_PATH = "data/opsight_sample_sales.csv";
 const CLOUD_PROXY_BASE_URL = "/api-cloud";
 const LOCAL_PROXY_BASE_URL = "/api-local";
+const DEFAULT_TARGET_ENVIRONMENT = isDev ? "local" : "cloud";
+const DEFAULT_SOURCE_PATH = isDev
+  ? LOCAL_SAMPLE_SOURCE_PATH
+  : BLOB_SAMPLE_SOURCE_PATH;
 
 export default function UploadTab({ onPipelineComplete }) {
   const [accessCode, setAccessCode] = useState("demo-code");
-  const [sourcePath, setSourcePath] = useState(BLOB_SAMPLE_SOURCE_PATH);
-  const [targetEnvironment, setTargetEnvironment] = useState("cloud");
+  const [sourcePath, setSourcePath] = useState(DEFAULT_SOURCE_PATH);
+  const [targetEnvironment, setTargetEnvironment] = useState(DEFAULT_TARGET_ENVIRONMENT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -109,7 +113,11 @@ export default function UploadTab({ onPipelineComplete }) {
             type="text"
             value={sourcePath}
             onChange={(event) => setSourcePath(event.target.value)}
-            placeholder="opsight-raw/csv/opsight_sample_sales.csv"
+            placeholder={
+              targetEnvironment === "local"
+                ? "data/opsight_sample_sales.csv"
+                : "opsight-raw/csv/opsight_sample_sales.csv"
+            }
             style={{
               width: "100%",
               padding: "0.75rem",
