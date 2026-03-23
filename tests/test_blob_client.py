@@ -59,13 +59,24 @@ class TestBlobClientInitialization:
         assert client.connection_string == "DefaultEndpointsProtocol=https;..."
 
     def test_init_empty_account_raises_error(self):
-        """Should raise ValueError if blob_account is empty."""
-        with pytest.raises(ValueError, match="blob_account cannot be empty"):
+        """Should raise ValueError if blob_account is empty without connection string."""
+        with pytest.raises(ValueError, match="blob_account cannot be empty when connection_string is not provided"):
             BlobClient(
                 blob_account="",
                 blob_container="mycontainer",
                 blob_path="file.csv",
             )
+
+    def test_init_empty_account_with_connection_string_is_allowed(self):
+        """Should allow empty blob_account when connection string is provided."""
+        client = BlobClient(
+            blob_account="",
+            blob_container="mycontainer",
+            blob_path="file.csv",
+            connection_string="DefaultEndpointsProtocol=https;...",
+        )
+        assert client.blob_account == ""
+        assert client._auth_method == "connection_string"
 
     def test_init_empty_container_raises_error(self):
         """Should raise ValueError if blob_container is empty."""

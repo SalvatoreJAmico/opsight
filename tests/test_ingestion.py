@@ -45,6 +45,28 @@ class TestIngestionRouting(unittest.TestCase):
         )
         mocked_local_loader.assert_not_called()
 
+    def test_explicit_blob_style_source_path_routes_to_blob_loader_with_connection_string_only(self):
+        runtime_config = SimpleNamespace(
+            blob_account=None,
+            azure_storage_connection_string="UseDevelopmentStorage=true",
+        )
+        expected_df = MagicMock(name="blob_dataframe")
+
+        with patch("modules.ingestion.ingestion._get_runtime_config", return_value=runtime_config), \
+            patch("modules.ingestion.ingestion._load_from_blob", return_value=expected_df) as mocked_blob_loader, \
+            patch("modules.ingestion.ingestion._load_local_file") as mocked_local_loader:
+
+            result = ingest_data(source_path="opsight-raw/csv/opsight_sample_sales.csv")
+
+        self.assertIs(result, expected_df)
+        mocked_blob_loader.assert_called_once_with(
+            blob_account=None,
+            blob_container="opsight-raw",
+            blob_path="csv/opsight_sample_sales.csv",
+            connection_string="UseDevelopmentStorage=true",
+        )
+        mocked_local_loader.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

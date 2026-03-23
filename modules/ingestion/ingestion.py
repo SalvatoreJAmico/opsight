@@ -214,7 +214,7 @@ def ingest_data(source_path: str = None) -> pd.DataFrame:
         # explicit local path forms (absolute path, ./relative, ../relative).
         if (
             "/" in source_path
-            and config.blob_account
+            and (config.blob_account or config.azure_storage_connection_string)
             and not local_path.is_absolute()
             and not source_path.startswith(("./", "../", "/"))
             and not local_path.exists()

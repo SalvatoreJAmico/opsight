@@ -119,4 +119,26 @@ describe("UploadTab", () => {
       expect.objectContaining({ baseUrl: "/api-local" }),
     );
   });
+
+  it("uses local target for blob sample in dev", async () => {
+    triggerPipeline.mockResolvedValue({
+      ok: false,
+      status: 0,
+      error: "Network error",
+      data: null,
+    });
+
+    render(<UploadTab />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use Blob Sample" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run Pipeline" }));
+
+    expect(await screen.findByText(/Local API is unavailable/)).toBeInTheDocument();
+    expect(triggerPipeline).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source_path: "opsight-raw/csv/opsight_sample_sales.csv",
+      }),
+      expect.objectContaining({ baseUrl: "/api-local" }),
+    );
+  });
 });

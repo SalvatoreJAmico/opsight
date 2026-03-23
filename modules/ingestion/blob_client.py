@@ -83,7 +83,7 @@ class BlobClient:
 
     def __init__(
         self,
-        blob_account: str,
+        blob_account: Optional[str],
         blob_container: str,
         blob_path: str,
         connection_string: Optional[str] = None,
@@ -101,14 +101,14 @@ class BlobClient:
         Raises:
             ValueError: If required parameters are missing or invalid.
         """
-        if not blob_account or not blob_account.strip():
-            raise ValueError("blob_account cannot be empty")
+        if (not blob_account or not str(blob_account).strip()) and not connection_string:
+            raise ValueError("blob_account cannot be empty when connection_string is not provided")
         if not blob_container or not blob_container.strip():
             raise ValueError("blob_container cannot be empty")
         if not blob_path or not blob_path.strip():
             raise ValueError("blob_path cannot be empty")
 
-        self.blob_account = blob_account.strip()
+        self.blob_account = (blob_account or "").strip()
         self.blob_container = blob_container.strip()
         self.blob_path = blob_path.strip()
         self.connection_string = connection_string
@@ -306,7 +306,7 @@ class BlobClient:
 
 
 def read_blob_csv(
-    blob_account: str,
+    blob_account: Optional[str],
     blob_container: str,
     blob_path: str,
     connection_string: Optional[str] = None,

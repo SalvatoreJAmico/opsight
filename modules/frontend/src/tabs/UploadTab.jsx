@@ -1,5 +1,6 @@
 import React from "react";
 import { useState } from "react";
+import { useEffect } from "react";
 import { triggerPipeline } from "../api/client";
 
 const isDev = import.meta.env.DEV;
@@ -20,6 +21,16 @@ export default function UploadTab({ onPipelineComplete }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    // Fast refresh can preserve older state values; normalize dev defaults on mount.
+    if (isDev) {
+      setTargetEnvironment("local");
+      setSourcePath((currentPath) =>
+        currentPath === BLOB_SAMPLE_SOURCE_PATH ? LOCAL_SAMPLE_SOURCE_PATH : currentPath,
+      );
+    }
+  }, []);
 
   async function handleTrigger() {
     const trimmedAccessCode = accessCode.trim();
@@ -151,7 +162,7 @@ export default function UploadTab({ onPipelineComplete }) {
             type="button"
             onClick={() => {
               setSourcePath(BLOB_SAMPLE_SOURCE_PATH);
-              setTargetEnvironment("cloud");
+              setTargetEnvironment(isDev ? "local" : "cloud");
             }}
             disabled={loading}
             style={{

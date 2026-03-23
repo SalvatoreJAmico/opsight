@@ -1,4 +1,4 @@
-const DEV_DEFAULT_API_BASE_URL = "/api";
+const DEV_DEFAULT_API_BASE_URL = "/api-local";
 const PROD_DEFAULT_API_BASE_URL =
   "https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io";
 
