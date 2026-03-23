@@ -34,7 +34,12 @@ def _run_pipeline_for_payload(payload: dict):
         summary = run_pipeline(normalized_source_path)
 
         if summary.get("status") == "FAILED":
-            raise HTTPException(status_code=500, detail=f"Pipeline failure at stage: {summary.get('failed_stage')}")
+            failed_stage = summary.get("failed_stage") or "unknown"
+            pipeline_error = summary.get("error_message")
+            detail = f"Pipeline failure at stage: {failed_stage}"
+            if pipeline_error:
+                detail = f"{detail}. {pipeline_error}"
+            raise HTTPException(status_code=500, detail=detail)
 
         return {
             "status": "processed",

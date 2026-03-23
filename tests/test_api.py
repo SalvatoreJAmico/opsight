@@ -76,6 +76,8 @@ class TestApiLayer(unittest.TestCase):
         failed_summary = {
             "status": "FAILED",
             "failed_stage": "ingestion",
+            "error_type": "blob_not_found_error",
+            "error_message": "Ingestion failed - Blob not found: Blob 'csv/missing.csv' not found",
             "records_ingested": 0,
             "records_valid": 0,
             "records_invalid": 0,
@@ -94,6 +96,7 @@ class TestApiLayer(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["error"], "Request failed")
         self.assertIn("Pipeline failure at stage: ingestion", body["detail"])
+        self.assertIn("Blob not found", body["detail"])
 
     def test_ingestion_endpoint_keeps_blob_style_source_path_unmodified(self):
         mocked_summary = {

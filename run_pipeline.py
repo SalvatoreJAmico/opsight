@@ -347,6 +347,8 @@ def run_pipeline(input_data=None):
     summary = {
         "status": status,
         "failed_stage": failed_stage,
+        "error_type": pipeline_error_type,
+        "error_message": pipeline_error_message,
         "records_ingested": len(raw_data) if raw_data is not None else 0,
         "records_valid": len(valid_records),
         "records_invalid": len(invalid_records),

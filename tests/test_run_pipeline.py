@@ -53,6 +53,8 @@ class TestRunPipeline(unittest.TestCase):
 
             self.assertEqual(summary["status"], "SUCCESS")
             self.assertIsNone(summary["failed_stage"])
+            self.assertIsNone(summary["error_type"])
+            self.assertIsNone(summary["error_message"])
             self.assertEqual(summary["records_ingested"], 2)
             self.assertEqual(summary["records_valid"], 1)
             self.assertEqual(summary["records_invalid"], 1)
@@ -84,6 +86,8 @@ class TestRunPipeline(unittest.TestCase):
 
             self.assertEqual(summary["status"], "FAILED")
             self.assertEqual(summary["failed_stage"], "ingestion")
+            self.assertEqual(summary["error_type"], "pipeline_execution_error")
+            self.assertIn("broken source", summary["error_message"])
             self.assertEqual(summary["records_ingested"], 0)
             self.assertEqual(summary["records_valid"], 0)
             self.assertEqual(summary["records_invalid"], 0)
