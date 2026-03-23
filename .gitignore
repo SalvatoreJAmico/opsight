@@ -34,3 +34,4 @@ id_rsa.pub
 # keep shareable templates/examples tracked
 !.env.example
 !configs/production.env
+reports/pipeline_run_summary.json
