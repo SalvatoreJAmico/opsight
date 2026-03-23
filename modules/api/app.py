@@ -82,7 +82,9 @@ app.include_router(ingest_router)
 app.include_router(entities_router)
 app.include_router(status_router)
 register_error_handlers(app)
+from modules.api.routes.ml import router as ml_router
 
+app.include_router(ml_router)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
