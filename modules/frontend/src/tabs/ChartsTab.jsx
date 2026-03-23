@@ -8,6 +8,7 @@ import {
   resolveApiAssetUrl,
 } from "../api/client";
 import { chartCatalog } from "../catalog/chartCatalog";
+import { resolveBaseUrl } from "../config/env";
 
 const SAMPLE_DATA = [
   { entity_id: "A", metric_value: 10, secondary_metric: 8, category: "X" },
@@ -16,8 +17,6 @@ const SAMPLE_DATA = [
   { entity_id: "D", metric_value: 30, secondary_metric: 25, category: "Z" },
 ];
 
-const LOCAL_PROXY_BASE_URL = "/api-local";
-
 export default function ChartsTab() {
   const data = SAMPLE_DATA;
   const values = data.map((d) => d.metric_value);
@@ -25,23 +24,26 @@ export default function ChartsTab() {
   const max = Math.max(...values);
   const mean = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
 
+  const isDev = import.meta.env.DEV;
+  const [target, setTarget] = useState(isDev ? "local" : "cloud");
   const [activeChart, setActiveChart] = useState("");
   const [chartImages, setChartImages] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const loadChartById = async (chartId) => {
+    const baseUrl = resolveBaseUrl(target);
     switch (chartId) {
       case "histogram":
-        return getHistogram({ baseUrl: LOCAL_PROXY_BASE_URL });
+        return getHistogram({ baseUrl });
       case "bar-category":
-        return getBarCategory({ baseUrl: LOCAL_PROXY_BASE_URL });
+        return getBarCategory({ baseUrl });
       case "boxplot":
-        return getBoxplot({ baseUrl: LOCAL_PROXY_BASE_URL });
+        return getBoxplot({ baseUrl });
       case "scatter":
-        return getScatter({ baseUrl: LOCAL_PROXY_BASE_URL });
+        return getScatter({ baseUrl });
       case "grouped-comparison":
-        return getGroupedComparison({ baseUrl: LOCAL_PROXY_BASE_URL });
+        return getGroupedComparison({ baseUrl });
       default:
         return { ok: false, error: "Unsupported chart selection." };
     }
@@ -64,7 +66,7 @@ export default function ChartsTab() {
 
     const resolvedImageUrl = resolveApiAssetUrl(
       response.data?.image,
-      LOCAL_PROXY_BASE_URL
+      resolveBaseUrl(target)
     );
 
     if (!resolvedImageUrl) {
@@ -126,6 +128,42 @@ const getObservationText = (chartId) => {
       <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
         Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.
       </p>
+
+      <div style={{ marginBottom: "1.25rem" }}>
+        <span style={{ fontWeight: 600, marginRight: "0.75rem" }}>API Target:</span>
+        <button
+          type="button"
+          onClick={() => setTarget("local")}
+          style={{
+            marginRight: "0.5rem",
+            padding: "0.4rem 0.9rem",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            fontWeight: target === "local" ? 700 : 400,
+            background: target === "local" ? "#e8f0fe" : "transparent",
+            cursor: "pointer",
+          }}
+        >
+          Local
+        </button>
+        <button
+          type="button"
+          onClick={() => setTarget("cloud")}
+          style={{
+            padding: "0.4rem 0.9rem",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            fontWeight: target === "cloud" ? 700 : 400,
+            background: target === "cloud" ? "#e8f0fe" : "transparent",
+            cursor: "pointer",
+          }}
+        >
+          Cloud
+        </button>
+        <p style={{ marginTop: "0.25rem", opacity: 0.85 }}>
+          Target: <strong>{target === "local" ? "Local API (this computer)" : "Deployed API (cloud)"}</strong>
+        </p>
+      </div>
 
       <h3>Available Charts</h3>
       {chartCatalog.map((chart) => (

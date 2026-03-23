@@ -2,12 +2,11 @@ import React from "react";
 import { useState } from "react";
 import { useEffect } from "react";
 import { triggerPipeline } from "../api/client";
+import { resolveBaseUrl } from "../config/env";
 
 const isDev = import.meta.env.DEV;
 const BLOB_SAMPLE_SOURCE_PATH = "opsight-raw/csv/opsight_sample_sales.csv";
 const LOCAL_SAMPLE_SOURCE_PATH = "data/opsight_sample_sales.csv";
-const CLOUD_PROXY_BASE_URL = "/api-cloud";
-const LOCAL_PROXY_BASE_URL = "/api-local";
 const DEFAULT_TARGET_ENVIRONMENT = isDev ? "local" : "cloud";
 const DEFAULT_SOURCE_PATH = isDev
   ? LOCAL_SAMPLE_SOURCE_PATH
@@ -55,10 +54,7 @@ export default function UploadTab({ onPipelineComplete }) {
     setSuccessMessage("");
     setResult(null);
 
-    const requestBaseUrl =
-      targetEnvironment === "local"
-        ? LOCAL_PROXY_BASE_URL
-        : CLOUD_PROXY_BASE_URL;
+    const requestBaseUrl = resolveBaseUrl(targetEnvironment);
 
     const response = await triggerPipeline({
       access_code: trimmedAccessCode,
@@ -139,6 +135,41 @@ export default function UploadTab({ onPipelineComplete }) {
           <p style={{ marginTop: "0.5rem", opacity: 0.85 }}>
             Use <strong>container/path</strong> format for Blob paths.
           </p>
+        </div>
+
+        <div style={{ marginBottom: "0.75rem" }}>
+          <span style={{ fontWeight: 600, marginRight: "0.75rem" }}>API Target:</span>
+          <button
+            type="button"
+            onClick={() => setTargetEnvironment("local")}
+            disabled={loading}
+            style={{
+              marginRight: "0.5rem",
+              padding: "0.4rem 0.9rem",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+              fontWeight: targetEnvironment === "local" ? 700 : 400,
+              background: targetEnvironment === "local" ? "#e8f0fe" : "transparent",
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+          >
+            Local
+          </button>
+          <button
+            type="button"
+            onClick={() => setTargetEnvironment("cloud")}
+            disabled={loading}
+            style={{
+              padding: "0.4rem 0.9rem",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+              fontWeight: targetEnvironment === "cloud" ? 700 : 400,
+              background: targetEnvironment === "cloud" ? "#e8f0fe" : "transparent",
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+          >
+            Cloud
+          </button>
         </div>
 
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
