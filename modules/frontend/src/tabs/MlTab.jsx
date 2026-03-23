@@ -1,39 +1,68 @@
+import { useState } from "react";
+import ModelCard from "./ModelCard";
+
+const anomalyModels = [
+  {
+    key: "threshold",
+    name: "Threshold",
+    education: "Flags values above a fixed threshold.",
+    recommendation: "Use for simple rule-based anomaly detection.",
+  },
+  {
+    key: "zscore",
+    name: "Z-Score",
+    education: "Detects values far from the mean using standard deviation.",
+    recommendation: "Good baseline, explainable model.",
+  },
+  {
+    key: "isolation_forest",
+    name: "Isolation Forest",
+    education: "Uses tree-based isolation to detect anomalies.",
+    recommendation: "Best for complex, less obvious anomalies.",
+  },
+];
+
+const anomalyResults = {
+  threshold: {
+    status: "Ready",
+    summary: "Threshold-based anomaly detection available.",
+    notes: "Best for simple rule-based checks and demos.",
+  },
+  zscore: {
+    status: "Ready",
+    summary: "Z-Score baseline available for explainable anomaly detection.",
+    notes: "Useful when you want a statistical baseline.",
+  },
+  isolation_forest: {
+    status: "Ready",
+    summary: "Isolation Forest available for more complex anomaly patterns.",
+    notes: "Good for less obvious outliers in operational data.",
+  },
+};
+
 export default function MlTab() {
+  const [selectedModels, setSelectedModels] = useState({});
+
+  const toggleModel = (key) => {
+    setSelectedModels((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   return (
     <div>
-      <h2>ML</h2>
-      <p>Operational anomaly detection views for Opsight.</p>
+      <h2>ML — Anomaly Detection</h2>
 
-      <h3>Algorithm</h3>
-      <p>
-        Isolation Forest is planned as the primary anomaly detection algorithm.
-        It works by isolating unusual observations that require fewer random splits
-        than normal data points.
-      </p>
-
-      <h3>Model Control</h3>
-      <button
-        type="button"
-        disabled
-        style={{
-          padding: "0.75rem 1rem",
-          borderRadius: "8px",
-          border: "1px solid #ccc",
-          cursor: "not-allowed",
-          fontWeight: 600,
-        }}
-      >
-        Run Model
-      </button>
-      <p style={{ marginTop: "0.5rem", opacity: 0.8 }}>
-        Model execution will be added in a later ML phase.
-      </p>
-
-      <h3>Results</h3>
-      <p>No anomaly detection results yet.</p>
-
-      <h3>Evaluation Metrics</h3>
-      <p>Precision, recall, F1-score, and ROC-AUC will appear here in a later phase.</p>
+      {anomalyModels.map((model) => (
+        <ModelCard
+          key={model.key}
+          model={model}
+          checked={!!selectedModels[model.key]}
+          onToggle={() => toggleModel(model.key)}
+          result={anomalyResults[model.key]}
+        />
+      ))}
     </div>
   );
 }
