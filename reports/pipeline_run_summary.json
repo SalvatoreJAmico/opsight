@@ -1,11 +1,11 @@
 {
-    "status": "FAILED",
-    "failed_stage": "ingestion",
-    "error_type": "pipeline_execution_error",
-    "error_message": "Cloud mode requested but Blob Storage not fully configured. Set BLOB_ACCOUNT, BLOB_CONTAINER, and BLOB_PATH.",
-    "records_ingested": 0,
-    "records_valid": 0,
+    "status": "SUCCESS",
+    "failed_stage": null,
+    "error_type": null,
+    "error_message": null,
+    "records_ingested": 4,
+    "records_valid": 4,
     "records_invalid": 0,
-    "records_persisted": 0,
-    "runtime_seconds": 0.003084
+    "records_persisted": 4,
+    "runtime_seconds": 0.676075
 }
