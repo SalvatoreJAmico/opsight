@@ -3,7 +3,7 @@ export default function MetricsTab({ pipelineResult }) {
     return (
       <div>
         <h2>Pipeline Metrics</h2>
-        <p>No data yet. Run the pipeline from the Upload tab.</p>
+        <p>No data yet. Run the pipeline from the Dataset tab.</p>
       </div>
     );
   }

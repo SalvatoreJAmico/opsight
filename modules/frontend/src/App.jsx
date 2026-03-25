@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { getHealth } from "./api/client";
-import UploadTab from "./tabs/UploadTab";
+import DatasetTab from "./tabs/UploadTab";
 import MetricsTab from "./tabs/MetricsTab";
 import ChartsTab from "./tabs/ChartsTab";
 import MlTab from "./tabs/MlTab";
 import PredictionTab from "./tabs/PredictionTab";
 
 const tabs = [
-  { id: "upload", label: "Upload" },
+  { id: "dataset", label: "Dataset" },
   { id: "metrics", label: "Metrics" },
   { id: "charts", label: "Charts" },
   { id: "ml", label: "ML" },
@@ -15,7 +15,7 @@ const tabs = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("upload");
+  const [activeTab, setActiveTab] = useState("dataset");
   const [healthStatus, setHealthStatus] = useState("Checking API...");
   const [healthError, setHealthError] = useState("");
   const [apiVersion, setApiVersion] = useState("");
@@ -40,8 +40,8 @@ export default function App() {
 
   const renderPanel = () => {
     switch (activeTab) {
-      case "upload":
-        return <UploadTab onPipelineComplete={setPipelineResult} />;
+      case "dataset":
+        return <DatasetTab onPipelineComplete={setPipelineResult} />;
       case "metrics":
         return <MetricsTab pipelineResult={pipelineResult} />;
       case "charts":

@@ -30,7 +30,6 @@ from modules.config.runtime_config import load_runtime_config
 # TODO:
 # Move stage logging into a reusable pipeline logger utility later.
 PROJECT_ROOT = Path(__file__).resolve().parent
-
 REPORTS_DIR = PROJECT_ROOT / "reports"
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 

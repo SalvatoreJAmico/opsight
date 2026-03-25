@@ -174,11 +174,31 @@ class TestApiLayer(unittest.TestCase):
             # Send payload with target to control dataset selection
             response = self.client.post(
                 "/pipeline/trigger",
-                json={"target": "local"},
+                json={"target": "local", "dataset_id": "sales_csv"},
             )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "processed")
+
+    def test_pipeline_trigger_rejects_unknown_dataset_id(self):
+        response = self.client.post(
+            "/pipeline/trigger",
+            json={"target": "local", "dataset_id": "does_not_exist"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        body = response.json()
+        self.assertEqual(body["detail"], "Unknown dataset_id")
+
+    def test_pipeline_trigger_sql_dataset_not_wired(self):
+        response = self.client.post(
+            "/pipeline/trigger",
+            json={"target": "local", "dataset_id": "sales_sql"},
+        )
+
+        self.assertEqual(response.status_code, 501)
+        body = response.json()
+        self.assertEqual(body["detail"], "SQL dataset execution not wired yet")
 
     def test_protected_attempt_logging_excludes_secret(self):
         with patch("modules.api.access_control.logger.info") as mocked_info, patch(
