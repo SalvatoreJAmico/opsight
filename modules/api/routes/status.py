@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 from fastapi import APIRouter
+from modules.api.session_state import get_session_state
 
 router = APIRouter()
 
@@ -22,3 +23,8 @@ def get_pipeline_status():
         summary = json.load(f)
 
     return summary
+
+
+@router.get("/session/state")
+def get_session_state_endpoint():
+    return get_session_state()
