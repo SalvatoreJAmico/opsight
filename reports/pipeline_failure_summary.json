@@ -1,11 +1,11 @@
 {
     "status": "FAILED",
     "failed_stage": "ingestion",
-    "error_type": "blob_authentication_error",
-    "error_message": "Blob authentication failed: Authentication/authorization failed for account=stopsightdev, container=opsight-raw (DefaultAzureCredential failed to retrieve a token from the included credentials.\nAttempted credentials:\n\tEnvironmentCredential: EnvironmentCredential authentication unavailable. Environment variables are not fully configured.\nVisit https://aka.ms/azsdk/python/identity/environmentcredential/troubleshoot to troubleshoot this issue.\n\tWorkloadIdentityCredential: WorkloadIdentityCredential authentication unavailable. The workload options are not fully configured. See the troubleshooting guide for more information: https://aka.ms/azsdk/python/identity/workloadidentitycredential/troubleshoot. Missing required arguments: 'tenant_id', 'client_id', 'token_file_path'.\n\tManagedIdentityCredential: ManagedIdentityCredential authentication unavailable, no response from the IMDS endpoint.\n\tSharedTokenCacheCredential: SharedTokenCacheCredential authentication unavailable. No accounts were found in the cache.\n\tVisualStudioCodeCredential: VisualStudioCodeCredential requires the 'azure-identity-broker' package to be installed. You must also ensure you have the Azure Resources extension installed and have signed in to Azure via Visual Studio Code.\n\tAzureCliCredential: Azure CLI not found on path\n\tAzurePowerShellCredential: Az.Account module >= 2.2.0 is not installed\n\tAzureDeveloperCliCredential: Azure Developer CLI could not be found. Please visit https://aka.ms/azure-dev for installation instructions and then,once installed, authenticate to your Azure account using 'azd auth login'.\n\tBrokerCredential: InteractiveBrowserBrokerCredential unavailable. The 'azure-identity-broker' package is required to use brokered authentication.\nTo mitigate this issue, please refer to the troubleshooting guidelines here at https://aka.ms/azsdk/python/identity/defaultazurecredential/troubleshoot.)",
+    "error_type": "pipeline_execution_error",
+    "error_message": "[Errno 2] No such file or directory: 'opsight-raw/csv/Sample - Superstore.csv'",
     "records_ingested": 0,
     "records_valid": 0,
     "records_invalid": 0,
     "records_persisted": 0,
-    "runtime_seconds": 88.295422
+    "runtime_seconds": 0.003561
 }

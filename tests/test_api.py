@@ -27,6 +27,7 @@ import app as root_app_module
 from modules.persistence.local_storage import LocalStorage
 import modules.api.routes.entities as entities_route
 import modules.api.routes.status as status_route
+import modules.api.session_state as session_state
 
 
 class TestApiLayer(unittest.TestCase):
@@ -35,6 +36,9 @@ class TestApiLayer(unittest.TestCase):
         cls.client = TestClient(api_app_module.app)
         cls.access_code = os.environ["UPLOAD_ACCESS_CODE"]
         cls.valid_headers = {"X-Upload-Access-Code": cls.access_code}
+
+    def setUp(self):
+        session_state.reset_session_state()
 
     def test_service_starts_and_health_endpoint_is_available(self):
         response = self.client.get("/health")
@@ -180,6 +184,52 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "processed")
 
+    def test_pipeline_trigger_success_updates_session_pipeline_status_completed(self):
+        mocked_summary = {
+            "status": "SUCCESS",
+            "failed_stage": None,
+            "records_ingested": 2,
+            "records_valid": 2,
+            "records_invalid": 0,
+            "records_persisted": 2,
+            "runtime_seconds": 0.1,
+        }
+
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary):
+            response = self.client.post(
+                "/pipeline/trigger",
+                json={"target": "local", "dataset_id": "sales_csv"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        state = session_state.get_session_state()
+        self.assertEqual(state["active_dataset"], "sales_csv")
+        self.assertEqual(state["pipeline_status"], "completed")
+
+    def test_pipeline_trigger_failure_updates_session_pipeline_status_failed(self):
+        failed_summary = {
+            "status": "FAILED",
+            "failed_stage": "validation",
+            "error_type": "validation_error",
+            "error_message": "Validation failed",
+            "records_ingested": 5,
+            "records_valid": 0,
+            "records_invalid": 5,
+            "records_persisted": 0,
+            "runtime_seconds": 0.1,
+        }
+
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=failed_summary):
+            response = self.client.post(
+                "/pipeline/trigger",
+                json={"target": "local", "dataset_id": "sales_csv"},
+            )
+
+        self.assertEqual(response.status_code, 500)
+        state = session_state.get_session_state()
+        self.assertEqual(state["active_dataset"], "sales_csv")
+        self.assertEqual(state["pipeline_status"], "failed")
+
     def test_pipeline_trigger_rejects_unknown_dataset_id(self):
         response = self.client.post(
             "/pipeline/trigger",
@@ -191,6 +241,9 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(body["detail"], "Unknown dataset_id")
 
     def test_pipeline_trigger_sql_dataset_not_wired(self):
+        session_state.set_active_dataset("sales_csv")
+        session_state.set_pipeline_status("completed")
+
         response = self.client.post(
             "/pipeline/trigger",
             json={"target": "local", "dataset_id": "sales_sql"},
@@ -199,6 +252,28 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 501)
         body = response.json()
         self.assertEqual(body["detail"], "SQL dataset execution not wired yet")
+        state = session_state.get_session_state()
+        self.assertEqual(state["active_dataset"], "sales_sql")
+        self.assertEqual(state["pipeline_status"], "not_run")
+
+    def test_session_state_endpoint_returns_current_state(self):
+        session_state.set_active_dataset("transactions_json")
+        session_state.set_pipeline_status("running")
+        session_state.set_anomaly_status("completed")
+        session_state.set_prediction_status("running")
+
+        response = self.client.get("/session/state")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "active_dataset": "transactions_json",
+                "pipeline_status": "running",
+                "anomaly_status": "completed",
+                "prediction_status": "running",
+            },
+        )
 
     def test_protected_attempt_logging_excludes_secret(self):
         with patch("modules.api.access_control.logger.info") as mocked_info, patch(

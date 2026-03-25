@@ -5,6 +5,11 @@ from pydantic import BaseModel
 from run_pipeline import run_pipeline
 from modules.api.access_control import require_upload_access_code
 from modules.api.dataset_config import DATASET_MAP
+from modules.api.session_state import (
+    get_session_state,
+    set_active_dataset,
+    set_pipeline_status,
+)
 
 router = APIRouter()
 
@@ -85,6 +90,10 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
     if not dataset:
         raise HTTPException(status_code=400, detail="Unknown dataset_id")
 
+    current_state = get_session_state()
+    if current_state["active_dataset"] != payload.dataset_id:
+        set_active_dataset(payload.dataset_id)
+
     source_type = dataset.get("source_type")
 
     if source_type == "blob":
@@ -96,11 +105,17 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
         if not selected_source["path"]:
             raise HTTPException(status_code=400, detail="Dataset path is not configured")
 
-        response = _run_pipeline_for_payload(
-            {"source_path": selected_source["path"]},
-            use_default_source=False,
-            source_mode=target,
-        )
+        set_pipeline_status("running")
+        try:
+            response = _run_pipeline_for_payload(
+                {"source_path": selected_source["path"]},
+                use_default_source=False,
+                source_mode=target,
+            )
+            set_pipeline_status("completed")
+        except Exception:
+            set_pipeline_status("failed")
+            raise
         response["dataset_id"] = payload.dataset_id
         response["dataset_source_type"] = selected_source["source_type"]
         response["dataset_path"] = selected_source["path"]

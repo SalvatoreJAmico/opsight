@@ -9,6 +9,7 @@ from fastapi import Request
 
 from modules.config.logging_config import setup_logging
 from modules.config.runtime_config import load_runtime_config
+from modules.api.session_state import reset_session_state
 from modules.api.errors import register_error_handlers
 from modules.persistence.persistence_manager import PersistenceManager
 from fastapi.staticfiles import StaticFiles
@@ -85,6 +86,11 @@ register_error_handlers(app)
 from modules.api.routes.ml import router as ml_router
 
 app.include_router(ml_router)
+
+
+@app.on_event("startup")
+def reset_in_memory_session_state() -> None:
+    reset_session_state()
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
