@@ -56,6 +56,9 @@ describe("DatasetTab", () => {
       error: null,
       data: {
         status: "processed",
+        dataset_id: "sales_csv",
+        dataset_source_type: "blob",
+        dataset_path: "opsight-raw/csv/Sample - Superstore.csv",
         records_ingested: 3,
       },
     });
@@ -68,6 +71,10 @@ describe("DatasetTab", () => {
 
     expect(await screen.findByText(/Dataset run triggered successfully/)).toBeInTheDocument();
     expect(screen.getByText("Response")).toBeInTheDocument();
+    expect(screen.getByText("Dataset Execution")).toBeInTheDocument();
+    expect(screen.getByText("Dataset: Sales CSV")).toBeInTheDocument();
+    expect(screen.getByText("Source: Blob Storage")).toBeInTheDocument();
+    expect(screen.getByText("File: Sample - Superstore.csv")).toBeInTheDocument();
     expect(screen.getByText(/records_ingested/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
       expect.objectContaining({

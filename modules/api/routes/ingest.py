@@ -110,7 +110,7 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
             response = _run_pipeline_for_payload(
                 {"source_path": selected_source["path"]},
                 use_default_source=False,
-                source_mode=target,
+                source_mode=None,
             )
             set_pipeline_status("completed")
         except Exception:

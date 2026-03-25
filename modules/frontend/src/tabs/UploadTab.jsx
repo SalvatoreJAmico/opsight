@@ -5,6 +5,24 @@ import { resolveBaseUrl } from "../config/env";
 import { DATASETS } from "../config/datasets";
 const isDev = import.meta.env.DEV;
 
+function getDatasetSourceLabel(sourceType) {
+  if (sourceType === "blob") {
+    return "Blob Storage";
+  }
+  if (sourceType === "sql") {
+    return "SQL";
+  }
+  return sourceType || "Unknown";
+}
+
+function getFilename(path) {
+  if (!path) {
+    return "";
+  }
+  const segments = path.split("/");
+  return segments[segments.length - 1] || path;
+}
+
 export default function DatasetTab({ onPipelineComplete }) {
   const [targetEnvironment, setTargetEnvironment] = useState(isDev ? "local" : "cloud");
   const [loading, setLoading] = useState(false);
@@ -13,6 +31,7 @@ export default function DatasetTab({ onPipelineComplete }) {
   const [result, setResult] = useState(null);
   const [activeDataset, setActiveDataset] = useState(null);
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
+  const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
 
 
   async function handleTrigger() {
@@ -75,9 +94,10 @@ export default function DatasetTab({ onPipelineComplete }) {
               marginRight: "0.5rem",
               padding: "0.4rem 0.9rem",
               borderRadius: "6px",
-              border: "1px solid #ccc",
+              border: targetEnvironment === "local" ? "1px solid #a78bfa" : "1px solid #4b5563",
               fontWeight: targetEnvironment === "local" ? 700 : 400,
-              background: targetEnvironment === "local" ? "#e8f0fe" : "transparent",
+              background: targetEnvironment === "local" ? "#e9d5ff" : "#1f2937",
+              color: targetEnvironment === "local" ? "#111827" : "#f3f4f6",
               cursor: loading ? "not-allowed" : "pointer",
             }}
           >
@@ -90,9 +110,10 @@ export default function DatasetTab({ onPipelineComplete }) {
             style={{
               padding: "0.4rem 0.9rem",
               borderRadius: "6px",
-              border: "1px solid #ccc",
+              border: targetEnvironment === "cloud" ? "1px solid #a78bfa" : "1px solid #4b5563",
               fontWeight: targetEnvironment === "cloud" ? 700 : 400,
-              background: targetEnvironment === "cloud" ? "#e8f0fe" : "transparent",
+              background: targetEnvironment === "cloud" ? "#e9d5ff" : "#1f2937",
+              color: targetEnvironment === "cloud" ? "#111827" : "#f3f4f6",
               cursor: loading ? "not-allowed" : "pointer",
             }}
           >
@@ -100,7 +121,7 @@ export default function DatasetTab({ onPipelineComplete }) {
           </button>
         </div>
 
-        <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
+        <p style={{ marginBottom: "1rem", color: "#d1d5db" }}>
           Target: <strong>{targetEnvironment === "local" ? "Local API (this computer)" : "Deployed API (cloud)"}</strong>
         </p>
 
@@ -114,8 +135,9 @@ export default function DatasetTab({ onPipelineComplete }) {
             marginBottom: "0.75rem",
             padding: "0.55rem 0.7rem",
             borderRadius: "8px",
-            border: "1px solid #ccc",
-            background: "#fff",
+            border: "1px solid #4b5563",
+            background: "#111827",
+            color: "#f9fafb",
           }}
           value={activeDataset || ""}
           onChange={(e) => {
@@ -198,14 +220,18 @@ export default function DatasetTab({ onPipelineComplete }) {
                 padding: "0.75rem",
                 border: "1px solid #ddd",
                 borderRadius: "8px",
-                background: "#fafafa",
+                background: "#111827",
               }}
             >
               <strong>Dataset Execution</strong>
-              <p style={{ marginTop: "0.45rem", marginBottom: "0.25rem" }}>dataset_id: {result.dataset_id}</p>
-              <p style={{ marginTop: 0, marginBottom: "0.25rem" }}>dataset_source_type: {result.dataset_source_type}</p>
+              <p style={{ marginTop: "0.45rem", marginBottom: "0.25rem", color: "#f3f4f6" }}>
+                Dataset: {datasetSummaryLabel}
+              </p>
+              <p style={{ marginTop: 0, marginBottom: "0.25rem", color: "#d1d5db" }}>
+                Source: {getDatasetSourceLabel(result.dataset_source_type)}
+              </p>
               {result.dataset_source_type === "blob" && result.dataset_path ? (
-                <p style={{ marginTop: 0 }}>dataset_path: {result.dataset_path}</p>
+                <p style={{ marginTop: 0, color: "#d1d5db" }}>File: {getFilename(result.dataset_path)}</p>
               ) : null}
             </div>
           ) : null}

@@ -24,6 +24,7 @@ os.environ.setdefault("PIPELINE_SUMMARY_PATH", "reports/pipeline_run_summary.jso
 
 import modules.api.app as api_app_module
 import app as root_app_module
+from modules.api.dataset_config import DATASET_MAP
 from modules.persistence.local_storage import LocalStorage
 import modules.api.routes.entities as entities_route
 import modules.api.routes.status as status_route
@@ -183,6 +184,52 @@ class TestApiLayer(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "processed")
+
+    def test_pipeline_trigger_uses_selected_blob_dataset_path(self):
+        mocked_summary = {
+            "status": "SUCCESS",
+            "failed_stage": None,
+            "records_ingested": 2,
+            "records_valid": 2,
+            "records_invalid": 0,
+            "records_persisted": 2,
+            "runtime_seconds": 0.1,
+        }
+
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary) as mocked_runner:
+            response = self.client.post(
+                "/pipeline/trigger",
+                json={"target": "cloud", "dataset_id": "transactions_json"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        mocked_runner.assert_called_once_with(
+            DATASET_MAP["transactions_json"]["path"],
+            source_mode=None,
+        )
+
+    def test_pipeline_trigger_does_not_use_old_sample_blob_path(self):
+        mocked_summary = {
+            "status": "SUCCESS",
+            "failed_stage": None,
+            "records_ingested": 2,
+            "records_valid": 2,
+            "records_invalid": 0,
+            "records_persisted": 2,
+            "runtime_seconds": 0.1,
+        }
+
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary) as mocked_runner:
+            response = self.client.post(
+                "/pipeline/trigger",
+                json={"target": "local", "dataset_id": "sales_csv"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        called_source_path = mocked_runner.call_args.args[0]
+        self.assertEqual(called_source_path, DATASET_MAP["sales_csv"]["path"])
+        self.assertNotEqual(called_source_path, "opsight-raw/csv/opsight_sample_sales.csv")
+        self.assertNotEqual(called_source_path, "csv/opsight_sample_sales.csv")
 
     def test_pipeline_trigger_success_updates_session_pipeline_status_completed(self):
         mocked_summary = {
