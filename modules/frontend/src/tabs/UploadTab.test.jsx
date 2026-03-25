@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import UploadTab from "./UploadTab";
+import DatasetTab from "./UploadTab";
 import { triggerPipeline } from "../api/client";
 
 const expectedDefaultBaseUrl = import.meta.env.DEV ? "/api-local" : "/api-cloud";
@@ -9,7 +9,7 @@ vi.mock("../api/client", () => ({
   triggerPipeline: vi.fn(),
 }));
 
-describe("UploadTab", () => {
+describe("DatasetTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -19,14 +19,16 @@ describe("UploadTab", () => {
       () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, data: { status: "processed" } }), 20)),
     );
 
-    render(<UploadTab />);
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_csv" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
     expect(screen.getByRole("button", { name: "Running..." })).toBeDisabled();
 
     await waitFor(() => {
-      expect(screen.getByText(/Pipeline triggered successfully/)).toBeInTheDocument();
+      expect(screen.getByText(/Dataset run triggered successfully/)).toBeInTheDocument();
     });
   });
 
@@ -38,7 +40,9 @@ describe("UploadTab", () => {
       data: null,
     });
 
-    render(<UploadTab />);
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_csv" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
@@ -56,15 +60,20 @@ describe("UploadTab", () => {
       },
     });
 
-    render(<UploadTab />);
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_csv" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
-    expect(await screen.findByText(/Pipeline triggered successfully/)).toBeInTheDocument();
+    expect(await screen.findByText(/Dataset run triggered successfully/)).toBeInTheDocument();
     expect(screen.getByText("Response")).toBeInTheDocument();
     expect(screen.getByText(/records_ingested/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      expect.objectContaining({ target: expectedDefaultBaseUrl === "/api-local" ? "local" : "cloud" }),
+      expect.objectContaining({
+        target: expectedDefaultBaseUrl === "/api-local" ? "local" : "cloud",
+        dataset_id: "sales_csv",
+      }),
       expect.objectContaining({ baseUrl: expectedDefaultBaseUrl }),
     );
   });
@@ -77,14 +86,16 @@ describe("UploadTab", () => {
       data: null,
     });
 
-    render(<UploadTab />);
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_csv" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Local" }));
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
     expect(await screen.findByText(/Local API is unavailable/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      expect.objectContaining({ target: "local" }),
+      expect.objectContaining({ target: "local", dataset_id: "sales_csv" }),
       expect.objectContaining({ baseUrl: "/api-local" }),
     );
   });
@@ -97,15 +108,33 @@ describe("UploadTab", () => {
       data: { status: "processed" },
     });
 
-    render(<UploadTab />);
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_csv" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Cloud" }));
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
-    expect(await screen.findByText(/Pipeline triggered successfully on deployed API/)).toBeInTheDocument();
+    expect(await screen.findByText(/Dataset run triggered successfully on deployed API/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
-      expect.objectContaining({ target: "cloud" }),
+      expect.objectContaining({ target: "cloud", dataset_id: "sales_csv" }),
       expect.objectContaining({ baseUrl: "/api-cloud" }),
     );
+  });
+
+  it("shows SQL not wired message for 501 responses on SQL datasets", async () => {
+    triggerPipeline.mockResolvedValue({
+      ok: false,
+      status: 501,
+      error: "SQL dataset execution not wired yet",
+      data: null,
+    });
+
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_sql" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
+
+    expect(await screen.findByText("SQL dataset execution is not wired yet.")).toBeInTheDocument();
   });
 });

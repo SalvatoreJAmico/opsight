@@ -1,11 +1,17 @@
 # modules/api/routes/ingest.py
 from pathlib import Path
-
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 from run_pipeline import run_pipeline
 from modules.api.access_control import require_upload_access_code
+from modules.api.dataset_config import DATASET_MAP
 
 router = APIRouter()
+
+
+class PipelineTriggerRequest(BaseModel):
+    target: str = "local"
+    dataset_id: str
 
 
 def _normalize_source_path(source_path: str) -> str:
@@ -67,10 +73,48 @@ async def ingest_data_endpoint(payload: dict, request: Request):
 
 
 @router.post("/pipeline/trigger")
-async def trigger_pipeline_endpoint(payload: dict, request: Request):
+async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Request):
     # Phase 14: /pipeline/trigger no longer requires access code.
     # Frontend sends { "target": "local" | "cloud" }; backend respects this choice.
-    target = payload.get("target", "local")
+    payload_dict = payload.model_dump()
+    target = payload_dict.get("target", "local")
     if target not in ("local", "cloud"):
         raise HTTPException(status_code=400, detail="target must be 'local' or 'cloud'")
-    return _run_pipeline_for_payload(payload, use_default_source=True, source_mode=target)
+
+    dataset = DATASET_MAP.get(payload.dataset_id)
+    if not dataset:
+        raise HTTPException(status_code=400, detail="Unknown dataset_id")
+
+    source_type = dataset.get("source_type")
+
+    if source_type == "blob":
+        selected_source = {
+            "source_type": "blob",
+            "format": dataset.get("format"),
+            "path": dataset.get("path"),
+        }
+        if not selected_source["path"]:
+            raise HTTPException(status_code=400, detail="Dataset path is not configured")
+
+        response = _run_pipeline_for_payload(
+            {"source_path": selected_source["path"]},
+            use_default_source=False,
+            source_mode=target,
+        )
+        response["dataset_id"] = payload.dataset_id
+        response["dataset_source_type"] = selected_source["source_type"]
+        response["dataset_path"] = selected_source["path"]
+        return response
+
+    if source_type == "sql":
+        selected_source = {
+            "source_type": "sql",
+            "database": dataset.get("database"),
+            "schema": dataset.get("schema"),
+            "table": dataset.get("table"),
+        }
+        if not selected_source["schema"] or not selected_source["table"]:
+            raise HTTPException(status_code=400, detail="SQL dataset is not configured correctly")
+        raise HTTPException(status_code=501, detail="SQL dataset execution not wired yet")
+
+    raise HTTPException(status_code=400, detail="Unsupported dataset source_type")
