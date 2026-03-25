@@ -35,7 +35,7 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 logger = logging.getLogger("opsight.pipeline")
 
-def run_pipeline(input_data=None, source_mode: str = None):
+def run_pipeline(input_data=None, source_mode: str = None, data_format: str = None):
     setup_logging(service_name="opsight.pipeline")
     try:
         runtime_config = load_runtime_config()
@@ -98,7 +98,7 @@ def run_pipeline(input_data=None, source_mode: str = None):
             # PS-094: Config-driven ingestion routing
             # Calls ingest_data() with optional source_path override for testing
             # Config determines: Blob in prod, Local/Blob fallback in dev
-            raw_data = ingest_data(source_path=input_data, source_mode=source_mode)
+            raw_data = ingest_data(source_path=input_data, source_mode=source_mode, data_format=data_format)
             
             logger.info(
                 "Stage completed",

@@ -33,7 +33,7 @@ def _normalize_source_path(source_path: str) -> str:
     return normalized_source_path
 
 
-def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False, source_mode: str = None):
+def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False, source_mode: str = None, data_format: str = None):
     source_path = payload.get("source_path")
 
     # If use_default_source is True, let ingest_data() choose the default based on env or source_mode
@@ -46,7 +46,7 @@ def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False, s
     normalized_source_path = _normalize_source_path(source_path) if source_path else None
 
     try:
-        summary = run_pipeline(normalized_source_path, source_mode=source_mode)
+        summary = run_pipeline(normalized_source_path, source_mode=source_mode, data_format=data_format)
 
         if summary.get("status") == "FAILED":
             failed_stage = summary.get("failed_stage") or "unknown"
@@ -111,6 +111,7 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
                 {"source_path": selected_source["path"]},
                 use_default_source=False,
                 source_mode=None,
+                data_format=selected_source.get("format"),
             )
             set_pipeline_status("completed")
         except Exception:

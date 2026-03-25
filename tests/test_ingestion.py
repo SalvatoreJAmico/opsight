@@ -1,9 +1,12 @@
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -19,7 +22,70 @@ os.environ.setdefault("API_BASE_URL", "http://api-test.local:8000")
 os.environ.setdefault("INPUT_SOURCE_PATH", "data/opsight_sample_sales.csv")
 os.environ.setdefault("PIPELINE_SUMMARY_PATH", "reports/pipeline_run_summary.json")
 
-from modules.ingestion.ingestion import ingest_data
+from modules.ingestion.csv_reader import CsvDecodingError, read_csv_with_fallback
+from modules.ingestion.ingestion import ingest_data, load_source
+
+
+class TestCsvDecodingFallback(unittest.TestCase):
+    def test_read_csv_with_fallback_retries_cp1252_after_utf8_failure(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            csv_path = Path(tmp_dir) / "cp1252-data.csv"
+            csv_path.write_bytes("name\nA\xa0B\n".encode("cp1252"))
+
+            dataframe = read_csv_with_fallback(csv_path)
+
+        self.assertEqual(list(dataframe.columns), ["name"])
+        self.assertEqual(dataframe.iloc[0]["name"], "A\xa0B")
+
+    def test_read_csv_with_fallback_raises_clear_error_after_all_attempts(self):
+        decode_error = UnicodeDecodeError("utf-8", b"\xa0", 0, 1, "invalid start byte")
+
+        with patch("modules.ingestion.csv_reader.pd.read_csv", side_effect=[decode_error, decode_error, decode_error]):
+            with self.assertRaises(CsvDecodingError) as raised:
+                read_csv_with_fallback("broken.csv")
+
+        self.assertIn("utf-8, cp1252, latin-1", str(raised.exception))
+
+    def test_load_source_csv_uses_shared_csv_fallback(self):
+        expected = pd.DataFrame([{"value": 1}])
+
+        with patch("modules.ingestion.ingestion.read_csv_with_fallback", return_value=expected) as mocked_reader:
+            result = load_source("sample.csv", "csv")
+
+        pd.testing.assert_frame_equal(result, expected)
+        mocked_reader.assert_called_once_with("sample.csv")
+
+
+class TestSourceNormalization(unittest.TestCase):
+    def test_load_source_json_flattens_nested_transactions_payload(self):
+        source_path = (
+            Path(__file__).resolve().parents[1]
+            / "data"
+            / "for_azure_upload"
+            / "json"
+            / "mock-transactions.json"
+        )
+
+        dataframe = load_source(str(source_path), "json")
+
+        self.assertIn("id", dataframe.columns)
+        self.assertIn("date", dataframe.columns)
+        self.assertEqual(dataframe.iloc[0]["id"], "TXN-001")
+
+    def test_load_source_excel_promotes_embedded_header_row(self):
+        source_path = (
+            Path(__file__).resolve().parents[1]
+            / "data"
+            / "for_azure_upload"
+            / "xlsx"
+            / "Employee-Management-Sample-Data.xlsx"
+        )
+
+        dataframe = load_source(str(source_path), "excel")
+
+        self.assertEqual(list(dataframe.columns)[0], "Employee ID")
+        self.assertIn("Hire Date", dataframe.columns)
+        self.assertEqual(dataframe.iloc[0]["Employee ID"], "S1001")
 
 
 class TestIngestionRouting(unittest.TestCase):
@@ -42,6 +108,7 @@ class TestIngestionRouting(unittest.TestCase):
             blob_container="opsight-raw",
             blob_path="csv/opsight_sample_sales.csv",
             connection_string=None,
+            data_format=None,
         )
         mocked_local_loader.assert_not_called()
 
@@ -64,6 +131,7 @@ class TestIngestionRouting(unittest.TestCase):
             blob_container="opsight-raw",
             blob_path="csv/opsight_sample_sales.csv",
             connection_string="UseDevelopmentStorage=true",
+            data_format=None,
         )
         mocked_local_loader.assert_not_called()
 

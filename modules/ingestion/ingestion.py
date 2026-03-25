@@ -20,7 +20,10 @@ from pathlib import Path
 import pandas as pd
 
 from modules.config.runtime_config import load_runtime_config
+from modules.ingestion.csv_reader import read_csv_with_fallback
+from modules.ingestion.dataframe_normalizer import normalize_loaded_dataframe
 from modules.ingestion.blob_client import (
+    read_blob_data,
     read_blob_csv,
     BlobAuthenticationError,
     BlobNotFoundError,
@@ -89,15 +92,15 @@ def load_source(source_path: str, source_format: str):
     if source_format == "sql":
         return pd.DataFrame()
     if source_format == "csv":
-        return pd.read_csv(source_path)
+        return normalize_loaded_dataframe(read_csv_with_fallback(source_path))
     if source_format == "tsv":
-        return pd.read_csv(source_path, sep="\t")
+        return normalize_loaded_dataframe(pd.read_csv(source_path, sep="\t"))
     if source_format == "json":
-        return pd.read_json(source_path)
+        return normalize_loaded_dataframe(pd.read_json(source_path))
     if source_format == "parquet":
-        return pd.read_parquet(source_path)
+        return normalize_loaded_dataframe(pd.read_parquet(source_path))
     if source_format == "excel":
-        return pd.read_excel(source_path)
+        return normalize_loaded_dataframe(pd.read_excel(source_path))
 
     raise ValueError(f"Unsupported source format: {source_format}")
 
@@ -126,6 +129,7 @@ def _load_from_blob(
     blob_container: str,
     blob_path: str,
     connection_string: str = None,
+    data_format: str = None,
 ) -> pd.DataFrame:
     """
     Load data from Azure Blob Storage.
@@ -135,6 +139,8 @@ def _load_from_blob(
         blob_container: Container name
         blob_path: Path within container
         connection_string: Optional connection string for transitional auth
+        data_format: Optional format specification (json/csv/parquet/xlsx/etc)
+                     If not provided, format detection is attempted by file extension
 
     Returns:
         pandas.DataFrame with blob content
@@ -146,13 +152,14 @@ def _load_from_blob(
     """
     logger.debug(
         f"Loading data from Blob Storage: "
-        f"account={blob_account}, container={blob_container}, path={blob_path}"
+        f"account={blob_account}, container={blob_container}, path={blob_path}, format={data_format}"
     )
-    blob_result = read_blob_csv(
+    blob_result = read_blob_data(
         blob_account=blob_account,
         blob_container=blob_container,
         blob_path=blob_path,
         connection_string=connection_string,
+        data_format=data_format,
     )
     logger.debug(
         "Blob read completed with status=%s source=%s",
@@ -162,7 +169,7 @@ def _load_from_blob(
     return blob_result["rows"]
 
 
-def ingest_data(source_path: str = None, source_mode: str = None) -> pd.DataFrame:
+def ingest_data(source_path: str = None, source_mode: str = None, data_format: str = None) -> pd.DataFrame:
     """
     Ingest data based on runtime configuration and source mode.
 
@@ -239,6 +246,7 @@ def ingest_data(source_path: str = None, source_mode: str = None) -> pd.DataFram
                 blob_container=config.blob_container,
                 blob_path=config.blob_path,
                 connection_string=config.azure_storage_connection_string,
+                data_format=data_format,
             )
         except (BlobAuthenticationError, BlobNotFoundError, BlobNetworkError):
             # Blob errors fail immediately in cloud mode
@@ -281,6 +289,7 @@ def ingest_data(source_path: str = None, source_mode: str = None) -> pd.DataFram
                     blob_container=blob_container,
                     blob_path=blob_path,
                     connection_string=config.azure_storage_connection_string,
+                    data_format=data_format,
                 )
 
         return _load_local_file(source_path)
@@ -294,6 +303,7 @@ def ingest_data(source_path: str = None, source_mode: str = None) -> pd.DataFram
                 blob_container=config.blob_container,
                 blob_path=config.blob_path,
                 connection_string=config.azure_storage_connection_string,
+                data_format=data_format,
             )
         except (BlobAuthenticationError, BlobNotFoundError, BlobNetworkError):
             # Auth/network errors fail immediately in production
@@ -330,6 +340,7 @@ def ingest_data(source_path: str = None, source_mode: str = None) -> pd.DataFram
                     blob_container=config.blob_container,
                     blob_path=config.blob_path,
                     connection_string=config.azure_storage_connection_string,
+                    data_format=data_format,
                 )
             except (BlobAuthenticationError, BlobNotFoundError, BlobNetworkError) as e:
                 logger.warning(f"Blob fallback failed: {e}")

@@ -75,7 +75,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.json()["status"], "processed")
         self.assertEqual(response.json()["records_ingested"], 3)
         expected_path = str((Path(__file__).resolve().parents[1] / "data" / "opsight_sample_sales.csv").resolve())
-        mocked_runner.assert_called_once_with(expected_path, source_mode=None)
+        mocked_runner.assert_called_once_with(expected_path, source_mode=None, data_format=None)
 
     def test_ingestion_endpoint_returns_500_when_pipeline_runner_fails(self):
         failed_summary = {
@@ -125,7 +125,7 @@ class TestApiLayer(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "processed")
-        mocked_runner.assert_called_once_with(blob_source_path, source_mode=None)
+        mocked_runner.assert_called_once_with(blob_source_path, source_mode=None, data_format=None)
 
     def test_ingestion_endpoint_requires_source_path(self):
         response = self.client.post("/data", json={}, headers=self.valid_headers)
@@ -206,6 +206,7 @@ class TestApiLayer(unittest.TestCase):
         mocked_runner.assert_called_once_with(
             DATASET_MAP["transactions_json"]["path"],
             source_mode=None,
+            data_format="json",
         )
 
     def test_pipeline_trigger_does_not_use_old_sample_blob_path(self):

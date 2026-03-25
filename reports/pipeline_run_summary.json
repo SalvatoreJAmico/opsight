@@ -1,11 +1,11 @@
 {
-    "status": "FAILED",
-    "failed_stage": "ingestion",
-    "error_type": "blob_not_found_error",
-    "error_message": "Blob not found: Blob 'csv/opsight_sample_sales.csv' not found in container 'opsight-raw' (The specified blob does not exist.\nRequestId:bb82d9d6-f01e-00f5-528e-bc4338000000\nTime:2026-03-25T19:37:06.0957242Z\nErrorCode:BlobNotFound\nContent: <?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:bb82d9d6-f01e-00f5-528e-bc4338000000\nTime:2026-03-25T19:37:06.0957242Z</Message></Error>)",
-    "records_ingested": 0,
-    "records_valid": 0,
+    "status": "SUCCESS",
+    "failed_stage": null,
+    "error_type": null,
+    "error_message": null,
+    "records_ingested": 1000,
+    "records_valid": 1000,
     "records_invalid": 0,
-    "records_persisted": 0,
-    "runtime_seconds": 0.594911
+    "records_persisted": 1000,
+    "runtime_seconds": 0.935072
 }

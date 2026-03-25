@@ -28,6 +28,7 @@ from modules.ingestion.blob_client import (
     BlobAuthenticationError,
     BlobNotFoundError,
     BlobNetworkError,
+    CsvDecodingError,
     read_blob_csv,
 )
 
@@ -224,6 +225,65 @@ class TestBlobClientReadCSV:
         assert list(result["rows"].columns) == ["name", "age"]
         assert len(result["rows"]) == 2
         assert result["rows"].iloc[0]["name"] == "Alice"
+
+    @patch("modules.ingestion.blob_client.BlobServiceClient")
+    def test_read_blob_csv_uses_shared_csv_fallback(self, mock_blob_service_class):
+        mock_service = Mock()
+        mock_blob_service_class.return_value = mock_service
+
+        mock_container = Mock()
+        mock_service.get_container_client.return_value = mock_container
+
+        mock_blob = Mock()
+        mock_container.get_blob_client.return_value = mock_blob
+
+        mock_download = Mock()
+        mock_download.readall.return_value = b"name\nA\xa0B\n"
+        mock_blob.download_blob.return_value = mock_download
+
+        expected_df = pd.DataFrame([{"name": "A\xa0B"}])
+
+        with patch("modules.ingestion.blob_client.DefaultAzureCredential"), patch(
+            "modules.ingestion.blob_client.read_csv_with_fallback",
+            return_value=expected_df,
+        ) as mocked_reader:
+            client = BlobClient(
+                blob_account="myaccount",
+                blob_container="mycontainer",
+                blob_path="data.csv",
+            )
+            result = client.read_blob_csv()
+
+        assert result["rows"] is expected_df
+        mocked_reader.assert_called_once()
+
+    @patch("modules.ingestion.blob_client.BlobServiceClient")
+    def test_read_blob_csv_raises_clear_decoding_error(self, mock_blob_service_class):
+        mock_service = Mock()
+        mock_blob_service_class.return_value = mock_service
+
+        mock_container = Mock()
+        mock_service.get_container_client.return_value = mock_container
+
+        mock_blob = Mock()
+        mock_container.get_blob_client.return_value = mock_blob
+
+        mock_download = Mock()
+        mock_download.readall.return_value = b"broken"
+        mock_blob.download_blob.return_value = mock_download
+
+        with patch("modules.ingestion.blob_client.DefaultAzureCredential"), patch(
+            "modules.ingestion.blob_client.read_csv_with_fallback",
+            side_effect=CsvDecodingError("CSV decoding failed after trying encodings: utf-8, cp1252, latin-1"),
+        ):
+            client = BlobClient(
+                blob_account="myaccount",
+                blob_container="mycontainer",
+                blob_path="data.csv",
+            )
+
+            with pytest.raises(CsvDecodingError, match="utf-8, cp1252, latin-1"):
+                client.read_blob_csv()
 
     @patch("modules.ingestion.blob_client.BlobServiceClient")
     def test_read_blob_csv_authentication_error(self, mock_blob_service_class):

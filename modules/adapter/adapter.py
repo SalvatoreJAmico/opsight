@@ -41,15 +41,34 @@ def to_canonical_schema(record):
         timestamp
         features
         metadata
+    
+    Raises:
+        ValueError: If required entity_id or timestamp columns are missing
     """
+    # Validate that required columns exist
+    if not record["entity_id_cols"]:
+        available_cols = list(record["data"].columns)
+        raise ValueError(
+            f"No entity_id column found in data. "
+            f"Expected a column containing 'id'. "
+            f"Available columns: {available_cols}"
+        )
+    
+    if not record["timestamp_cols"]:
+        available_cols = list(record["data"].columns)
+        raise ValueError(
+            f"No timestamp column found in data. "
+            f"Expected a column containing 'time' or 'date'. "
+            f"Available columns: {available_cols}"
+        )
+    
     canonical = []
+    entity_col = record["entity_id_cols"][0]
+    timestamp_col = record["timestamp_cols"][0]
 
     for _, row in record["data"].iterrows():
-        entity = record["entity_id_cols"][0]
-        time = record["timestamp_cols"][0]
-
-        entity_id = row[entity]
-        timestamp = row[time]
+        entity_id = row[entity_col]
+        timestamp = row[timestamp_col]
 
         features = {}
         for col in record["feature_cols"]:

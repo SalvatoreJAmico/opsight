@@ -1,9 +1,28 @@
 import json
 import os
 from pathlib import Path
+from datetime import datetime, date
+
+import pandas as pd
 
 from modules.persistence.storage_interface import StorageInterface
 from modules.persistence.storage_error import StorageError
+
+
+class _JsonWithPandasEncoder(json.JSONEncoder):
+    """
+    Custom JSON encoder that handles pandas datetime types.
+    Converts pandas Timestamp, datetime, and date objects to ISO format strings.
+    """
+    def default(self, obj):
+        # Handle pandas Timestamp and datetime objects
+        if isinstance(obj, (pd.Timestamp, datetime)):
+            return obj.isoformat()
+        # Handle date objects
+        if isinstance(obj, date):
+            return obj.isoformat()
+        # Fall back to default encoder for other types
+        return super().default(obj)
 
 class LocalStorage(StorageInterface):
     """
@@ -29,7 +48,7 @@ class LocalStorage(StorageInterface):
     def save_records(self, records: list):
         try:
             with open(self.filepath, "w") as f:
-                json.dump(records, f, indent=2)
+                json.dump(records, f, indent=2, cls=_JsonWithPandasEncoder)
 
         except Exception as e:
             raise StorageError(f"Failed to save records: {e}")

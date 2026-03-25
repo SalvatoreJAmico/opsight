@@ -4,8 +4,11 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+from datetime import datetime, date
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import pandas as pd
 
 from modules.persistence.local_storage import LocalStorage
 from modules.persistence.persistence_manager import PersistenceManager
@@ -87,6 +90,51 @@ class TestPersistenceLayer(unittest.TestCase):
         self.assertEqual(metadata.record_count, 2)
         self.assertIs(metadata.last_updated, fixed_timestamp)
 
+    def test_local_storage_serializes_pandas_timestamp_to_iso_string(self):
+        """Verify that pandas Timestamp objects are converted to ISO strings for JSON serialization."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = LocalStorage(storage_dir=tmp_dir, filename="records.json")
 
-if __name__ == "__main__":
-    unittest.main()
+            # Create records with pandas Timestamp (simulating Parquet ingestion)
+            timestamp = pd.Timestamp("2026-03-15 12:30:45")
+            records = [
+                {
+                    "entity_id": "user-001",
+                    "timestamp": timestamp,  # pandas Timestamp, not string
+                    "features": {"amount": 100.0},
+                    "metadata": {"source": "parquet"},
+                }
+            ]
+
+            # Should not raise "Timestamp is not JSON serializable" error
+            storage.save_records(records)
+            loaded = storage.load_records()
+
+            # Verify the timestamp was converted to ISO string
+            self.assertTrue(Path(storage.filepath).exists())
+            self.assertEqual(len(loaded), 1)
+            self.assertEqual(loaded[0]["timestamp"], "2026-03-15T12:30:45")
+
+    def test_local_storage_serializes_datetime_objects(self):
+        """Verify that datetime.datetime objects are converted to ISO strings."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = LocalStorage(storage_dir=tmp_dir, filename="records.json")
+
+            # Create records with datetime
+            dt = datetime(2026, 3, 15, 12, 30, 45)
+            records = [
+                {
+                    "entity_id": "user-001",
+                    "timestamp": dt,
+                    "features": {"amount": 100.0},
+                    "metadata": {"created": date(2026, 3, 15)},
+                }
+            ]
+
+            storage.save_records(records)
+            loaded = storage.load_records()
+
+            self.assertEqual(len(loaded), 1)
+            self.assertEqual(loaded[0]["timestamp"], "2026-03-15T12:30:45")
+            self.assertEqual(loaded[0]["metadata"]["created"], "2026-03-15")
+
