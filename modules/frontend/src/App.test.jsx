@@ -204,7 +204,7 @@ describe("App dataset switching", () => {
     });
 
     expect(screen.getByRole("heading", { name: "Dataset" })).toBeInTheDocument();
-    expect(screen.getByText("No dataset loaded \u2014 upload data to get started")).toBeInTheDocument();
+    expect(screen.getByText("No dataset loaded — select a dataset to get started")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Metrics" }));
     expect(screen.getByText("No data yet. Run the pipeline from the Dataset tab.")).toBeInTheDocument();
