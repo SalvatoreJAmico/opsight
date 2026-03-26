@@ -3,7 +3,7 @@
 ## 🚀 Live Demo
 
 Frontend: https://agreeable-cliff-08bf3bd0f.2.azurestaticapps.net  
-Backend API: https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io
+Backend API: https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io/docs
 
 Opsight is a deployed full-stack ML system running on Azure.  
 It ingests real data from Blob Storage, processes it through a pipeline, and provides analytics, anomaly detection, and predictions through a live web interface.
