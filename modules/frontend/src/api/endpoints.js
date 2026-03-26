@@ -1,5 +1,6 @@
 export const ENDPOINTS = {
   HEALTH: "/health",
+  SESSION_STATE: "/session/state",
   CHARTS_HISTOGRAM: "/charts/histogram",
   PIPELINE_TRIGGER: "/pipeline/trigger",
   PIPELINE_RUN: "/pipeline/run",

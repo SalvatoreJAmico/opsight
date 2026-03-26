@@ -92,6 +92,12 @@ export async function getHealth() {
   });
 }
 
+export async function getSessionState() {
+  return request(ENDPOINTS.SESSION_STATE, {
+    method: "GET",
+  });
+}
+
 export async function triggerPipeline(payload, config = {}) {
   return request(ENDPOINTS.PIPELINE_TRIGGER, {
     method: "POST",

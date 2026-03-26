@@ -30,7 +30,7 @@ const MODEL_RUNNERS = {
   moving_average: () => runMovingAveragePrediction(DEMO_RECORDS, 3),
 };
 
-export default function PredictionTab() {
+export default function PredictionTab({ onAction }) {
   const [selectedModels, setSelectedModels] = useState({});
   const [resultsByModel, setResultsByModel] = useState({});
 
@@ -51,17 +51,17 @@ export default function PredictionTab() {
           data: null,
         },
       }));
-      return;
+    } else {
+      setResultsByModel((prev) => ({
+        ...prev,
+        [modelKey]: {
+          loading: false,
+          error: "",
+          data: response.data,
+        },
+      }));
     }
-
-    setResultsByModel((prev) => ({
-      ...prev,
-      [modelKey]: {
-        loading: false,
-        error: "",
-        data: response.data,
-      },
-    }));
+    onAction?.();
   };
 
   const toggleModel = (key) => {
