@@ -1,74 +1,43 @@
 # Opsight
 
-Opsight is a portfolio-ready operational analytics project that turns raw business datasets into a usable analysis workflow.
+## What Is Opsight?
 
-It combines a modular Python data pipeline, a FastAPI backend, a React frontend, chart generation, anomaly detection, and lightweight prediction tools. A user can select a dataset, run the pipeline, inspect summary metrics, explore charts, and execute anomaly detection or prediction models from one interface.
+Opsight is an end-to-end operational analytics project that takes raw business-style datasets and turns them into usable analysis outputs.
 
-## What Opsight Does
+It combines:
 
-Opsight is built for the common real-world problem of operational data arriving in inconsistent formats and needing to become usable quickly.
+- a modular Python data pipeline
+- a FastAPI backend
+- a React frontend
+- analytics, anomaly detection, and chart visualization
 
-At a high level, Opsight:
+In one flow, a user can load a dataset, run processing, review quality metrics, inspect charts, and run anomaly or prediction models.
 
-- ingests tabular source data such as CSV, JSON, Parquet, and Excel
-- maps source rows into a canonical record format
-- validates records before persistence
-- stores processed records for downstream analysis
-- exposes backend endpoints for charts, session state, anomaly detection, and prediction
-- provides a React UI with Dataset, Metrics, Charts, Anomaly Detection, and Prediction tabs
+## Problem It Solves
 
-## Why It Matters
+Many teams receive data that is inconsistent across files and systems. Before any useful analysis, that data must be standardized and validated.
 
-Opsight is designed to show more than isolated scripts or notebooks.
+Opsight demonstrates a practical solution:
 
-It demonstrates how to:
+- ingest heterogeneous tabular data
+- normalize records into one canonical structure
+- validate records before storage
+- expose analysis results through API endpoints and UI views
 
-- structure a data product as a modular pipeline
-- separate backend processing from frontend presentation
-- carry data from ingestion through validation to analysis
-- expose analytical capabilities through a usable UI
-- validate behavior with automated tests across backend and frontend layers
+## How It Works
 
-## Current Product Surface
+### Pipeline Path
 
-### Frontend UI
+1. Ingestion: load source data (CSV, JSON, Parquet, XLSX, and common URL sources)
+2. Normalization: map source rows to canonical records
+3. Validation: apply record checks and quality rules
+4. Storage: persist valid records (JSON or Parquet)
+5. Analytics Surface: serve metrics, charts, anomaly detection, and prediction through FastAPI + React
 
-The React frontend currently provides these tabs:
-
-- Dataset: choose a sample dataset, target local or deployed API, and trigger the pipeline
-- Metrics: review pipeline counts such as ingested, valid, invalid, and persisted records
-- Charts: load generated visualizations and dataset overview statistics
-- Anomaly Detection: run anomaly models such as Z-Score, Isolation Forest, and K-Means
-- Prediction: run forecasting-oriented models such as Linear Regression and Moving Average
-
-### Backend API
-
-The FastAPI service currently provides:
-
-- health and version reporting
-- pipeline trigger and session reset/state endpoints
-- chart generation and chart overview endpoints
-- anomaly detection endpoints
-- prediction endpoints
-- static asset serving for generated chart images
-
-**For a complete list of endpoints, parameters, and example requests/responses, see [API_DOCUMENTATION.md](API_DOCUMENTATION.md).**
-
-### Data Pipeline
-
-The Python pipeline currently handles:
-
-- dataset ingestion
-- schema normalization through adapter logic
-- canonical record creation
-- validation and duplicate checks
-- persistence to local storage
-- run summaries, failure summaries, and structured logs
-
-## High-Level Architecture
+### System Flow
 
 ```text
-Dataset Source
+Source Data
     |
     v
 Ingestion -> Adapter -> Canonical Records -> Validation -> Persistence
@@ -85,9 +54,9 @@ Ingestion -> Adapter -> Canonical Records -> Validation -> Persistence
                      React Frontend                                 Legacy Streamlit UI
 ```
 
-## Canonical Record Shape
+### Canonical Record Contract
 
-Opsight normalizes records into a consistent structure so the rest of the system can work against one contract.
+All datasets are normalized to the same record shape:
 
 ```python
 {
@@ -98,83 +67,76 @@ Opsight normalizes records into a consistent structure so the rest of the system
 }
 ```
 
-## Key Capabilities
+## Why It Matters
 
-### Dataset Handling
+Opsight is useful as a real engineering example because it shows how data work is delivered as a complete product path, not only isolated scripts.
 
-Opsight supports multiple source formats in the ingestion layer, including:
+Practical value demonstrated in this repository:
 
-- CSV and TSV
-- JSON
-- Parquet
-- Excel
-- HTTP and HTTPS file URLs for common tabular formats
+- modular pipeline design from ingestion to storage
+- structured data processing with explicit contracts
+- observable runs via summaries and logs
+- analytics and anomaly detection exposed in a user-facing interface
+- test coverage across backend and frontend behavior
 
-### Charts
+## What Is Implemented Today
 
-The charts workflow currently includes:
+### Frontend
 
-- histogram
-- category bar chart
-- box plot
-- scatter plot
-- grouped comparison chart
-- dataset overview statistics
+- Dataset tab to select and run datasets
+- Metrics tab for ingestion and validation counts
+- Charts tab for generated visualizations and dataset overview
+- Anomaly Detection tab (Z-Score, Isolation Forest, K-Means)
+- Prediction tab (Linear Regression, Moving Average)
 
-### Anomaly Detection
+### Backend API
 
-The anomaly detection workflow currently includes:
+- health and version endpoint
+- pipeline trigger and status endpoints
+- session state and reset endpoints
+- chart image and overview endpoints
+- anomaly and prediction endpoints
+- static chart asset serving
 
-- Z-Score baseline
-- Isolation Forest
-- K-Means clustering
-
-### Prediction
-
-The prediction workflow currently includes:
-
-- Linear Regression
-- Moving Average
+For endpoint details and examples, see [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
 
 ## Quick Start
 
-### Option 1: Windows One-Command Startup
+### Option 1: Windows one-command startup
 
-From the repository root:
+From repository root:
 
 ```bat
 start_opsight.bat
 ```
 
-This starts:
+Starts:
 
-- backend API on `http://localhost:8000`
-- frontend UI on `http://localhost:5173`
+- backend API at http://localhost:8000
+- frontend UI at http://localhost:5173
 
-To stop local processes:
+Stop services:
 
 ```bat
 stop_opsight.bat
 ```
 
-### Option 2: Manual Local Setup
+### Option 2: Manual startup
 
-#### 1. Create and activate a virtual environment
-
-PowerShell:
+1. Create and activate virtual environment
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-#### 2. Install Python dependencies
+2. Install backend dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-#### 3. Install frontend dependencies
+3. Install frontend dependencies
 
 ```bash
 cd modules/frontend
@@ -182,123 +144,46 @@ npm install
 cd ../..
 ```
 
-#### 4. Create local environment file
+4. Create local environment file
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Minimum local defaults already exist in `.env.example`. The most important value to review is:
-
-- `UPLOAD_ACCESS_CODE`
-
-#### 5. Start the backend API
-
-From repository root:
+5. Start backend API
 
 ```bash
 uvicorn modules.api.app:app --reload
 ```
 
-#### 6. Start the frontend UI
-
-In a second terminal:
+6. Start frontend UI (second terminal)
 
 ```bash
 cd modules/frontend
 npm run dev
 ```
 
-#### 7. Open the app
+7. Open:
 
-- Frontend UI: `http://localhost:5173`
-- Backend API: `http://localhost:8000`
-- Health endpoint: `http://localhost:8000/health`
+- UI: http://localhost:5173
+- API: http://localhost:8000
+- Health: http://localhost:8000/health
 
-## Using the App Locally
+## Typical Local Review Flow
 
-A typical local flow is:
+1. Open Dataset tab
+2. Run a dataset through the pipeline
+3. Check Metrics
+4. Inspect Charts
+5. Run Anomaly Detection
+6. Run Prediction
 
-1. Open the Dataset tab.
-2. Select a sample dataset.
-3. Run the pipeline against the local API.
-4. Review Metrics.
-5. Open Charts for visual analysis.
-6. Run Anomaly Detection models.
-7. Run Prediction models after the pipeline completes.
+## Deployment Notes
 
-## Deployed Usage
+Opsight supports split frontend and backend deployment.
 
-Opsight is structured to support a deployed frontend and API split.
-
-### Frontend API Targeting
-
-The frontend supports local and deployed API targets. Relevant frontend environment options are in [modules/frontend/.env.example](modules/frontend/.env.example).
-
-Important settings:
-
-- `VITE_API_BASE_URL`
-- `VITE_API_PROXY_TARGET`
-- `VITE_API_PROXY_TARGET_LOCAL`
-- `VITE_LOCAL_API_URL` (production build)
-- `VITE_CLOUD_API_URL` (production build)
-
-How it works:
-
-- `npm run dev`: frontend uses Vite proxy routes (`/api-local` and `/api-cloud`)
-- `npm run build`: frontend uses real URLs (`VITE_LOCAL_API_URL` and `VITE_CLOUD_API_URL`, or built-in defaults)
-
-### Backend Runtime Configuration
-
-Runtime settings are defined through environment variables. The local baseline is in [.env.example](.env.example), and production-oriented defaults are in [configs/production.env](configs/production.env).
-
-Important backend settings:
-
-- `APP_ENV`
-- `APP_VERSION`
-- `PORT`
-- `UPLOAD_ACCESS_CODE`
-- `PERSISTENCE_MODE`
-- `STORAGE_PATH`
-- `LOG_LEVEL`
-- `ALLOW_LOCAL_FALLBACK`
-- `PIPELINE_SUMMARY_PATH`
-
-Optional cloud-related settings include:
-
-- `BLOB_ACCOUNT`
-- `BLOB_CONTAINER`
-- `BLOB_PATH`
-- `API_BASE_URL`
-- `AZURE_STORAGE_CONNECTION_STRING`
-- `AZURE_STORAGE_CONTAINER`
-- `AZURE_KEY_VAULT_URL`
-- `AZURE_OPENAI_API_KEY`
-- `AZURE_OPENAI_ENDPOINT`
-
-Production-specific requirement:
-
-- if `APP_ENV=prod`, set `BLOB_ACCOUNT`, `BLOB_CONTAINER`, and `BLOB_PATH`
-
-### Docker
-
-Build the image:
-
-```bash
-docker build -t opsight:final .
-```
-
-Run the API container:
-
-```bash
-docker run --rm -p 8000:8000 --name opsight-api opsight:final
-```
-
-Or use Docker Compose:
-
-```bash
-docker compose up --build
-```
+- Frontend environment examples: [modules/frontend/.env.example](modules/frontend/.env.example)
+- Backend environment templates: [.env.example](.env.example), [configs/production.env](configs/production.env)
 
 ## Repository Map
 
@@ -328,22 +213,20 @@ opsight/
 
 ## Testing
 
-### Backend and pipeline tests
-
 From repository root:
 
 ```bash
 python -m pytest
 ```
 
-### Frontend tests
+Frontend tests:
 
 ```bash
 cd modules/frontend
 npm test
 ```
 
-### Frontend build
+Frontend build check:
 
 ```bash
 cd modules/frontend
@@ -352,30 +235,9 @@ npm run build
 
 ## Tech Stack
 
-### Backend
-
-- Python
-- FastAPI
-- Pandas
-- Pydantic
-- scikit-learn
-- Matplotlib
-
-### Frontend
-
-- React
-- Vite
-- Vitest
-
-### Data and Storage
-
-- JSON
-- Parquet
-- Azure Blob integration hooks
-
-## Status
-
-Opsight is actively developed, but it already works as an end-to-end demonstration of dataset ingestion, validation, persistence, charting, anomaly detection, and prediction through a combined backend and UI workflow.
+- Backend: Python, FastAPI, Pandas, scikit-learn, Matplotlib
+- Frontend: React, Vite, Vitest
+- Storage: JSON and Parquet backends, with cloud integration hooks
 
 ## License
 
