@@ -100,25 +100,55 @@ export default function ChartsTab({ activeDatasetId = null }) {
   };
 
 
-const getObservationText = (chartId) => {
+const getChartExplainability = (chartId) => {
   switch (chartId) {
     case "histogram":
-      return "The distribution of metric_value shows how values are spread across the dataset. Most values appear within a moderate range, with no extreme clustering or gaps.";
+      return {
+        what: "This chart shows how many records fall into each value range.",
+        time: "Time is not used. Values are compared across the full dataset.",
+        comparison: "It compares frequencies of value ranges.",
+        where: "The chart image above is the result.",
+      };
 
     case "bar-category":
-      return "The bar chart shows how records are distributed across categories. Some categories may have higher counts, indicating concentration in specific groups.";
+      return {
+        what: "This chart shows how records are distributed by group.",
+        time: "Time is not used. Groups are compared across the full dataset.",
+        comparison: "It compares record counts between groups.",
+        where: "The chart image above is the result.",
+      };
 
     case "boxplot":
-      return "The box plot highlights the spread and potential outliers in metric_value. The median and quartiles indicate the central tendency and variability of the dataset.";
+      return {
+        what: "This chart summarizes typical values and possible outliers.",
+        time: "Time is not used. Values are compared across the full dataset.",
+        comparison: "It compares median, spread, and outliers in the value field.",
+        where: "The chart image above is the result.",
+      };
 
     case "scatter":
-      return "The scatter plot shows the relationship between metric_value and secondary_metric. Patterns or clustering may indicate correlation between the two variables.";
+      return {
+        what: "This chart shows how one value field moves relative to another.",
+        time: "Time is not used. Pairs of values are compared across the full dataset.",
+        comparison: "It compares value-to-value pairs to show correlation patterns.",
+        where: "The chart image above is the result.",
+      };
 
     case "grouped-comparison":
-      return "The grouped comparison chart shows average metric_value across categories. Differences between bars indicate how categories compare in terms of average performance.";
+      return {
+        what: "This chart shows average values for each group.",
+        time: "Time is not used. Groups are compared across the full dataset.",
+        comparison: "It compares group-level average values.",
+        where: "The chart image above is the result.",
+      };
 
     default:
-      return "No observations available for this chart.";
+      return {
+        what: "No explanation is available for this chart yet.",
+        time: "",
+        comparison: "",
+        where: "",
+      };
   }
 };
 
@@ -257,10 +287,10 @@ const getChartContextEntries = (overview, chartId) => {
           background: "#fafafa",
         }}
       >
-        <strong>Dataset Context</strong>
+        <strong>Fields used</strong>
         {getChartContextEntries(overview, chart.id).map(([role, field]) => (
           <p key={`${chart.id}-${role}`} style={{ marginTop: "0.35rem" }}>
-            <strong>{role}:</strong> {field}
+            <strong>{role.replace(/_/g, " ")}:</strong> {field}
           </p>
         ))}
       </div>
@@ -275,9 +305,18 @@ const getChartContextEntries = (overview, chartId) => {
         background: "#fafafa",
       }}
     >
-      <strong>Observations</strong>
-      <p style={{ marginTop: "0.5rem" }}>
-        {getObservationText(chart.id)}
+      <strong>How to read this chart</strong>
+      <p style={{ marginTop: "0.5rem", marginBottom: "0.35rem" }}>
+        <strong>What this output shows:</strong> {getChartExplainability(chart.id).what}
+      </p>
+      <p style={{ marginTop: 0, marginBottom: "0.35rem" }}>
+        <strong>Time usage:</strong> {getChartExplainability(chart.id).time}
+      </p>
+      <p style={{ marginTop: 0, marginBottom: "0.35rem" }}>
+        <strong>Comparison:</strong> {getChartExplainability(chart.id).comparison}
+      </p>
+      <p style={{ marginTop: 0 }}>
+        <strong>Where to find it:</strong> {getChartExplainability(chart.id).where}
       </p>
     </div>
   </div>

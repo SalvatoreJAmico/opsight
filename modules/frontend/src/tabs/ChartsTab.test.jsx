@@ -96,29 +96,29 @@ describe("ChartsTab", () => {
     expect(screen.getByText("Dataset Overview")).toBeInTheDocument();
   });
 
-  it("renders observation text for each supported chart", async () => {
+  it("renders explainability text for each supported chart", async () => {
     render(<ChartsTab />);
 
     const scenarios = [
       {
         label: "Histogram",
-        expected: "The distribution of metric_value shows how values are spread across the dataset.",
+        expected: "This chart shows how many records fall into each value range.",
       },
       {
         label: "Category Bar Chart",
-        expected: "The bar chart shows how records are distributed across categories.",
+        expected: "This chart shows how records are distributed by group.",
       },
       {
         label: "Box Plot",
-        expected: "The box plot highlights the spread and potential outliers in metric_value.",
+        expected: "This chart summarizes typical values and possible outliers.",
       },
       {
         label: "Scatter Plot",
-        expected: "The scatter plot shows the relationship between metric_value and secondary_metric.",
+        expected: "This chart shows how one value field moves relative to another.",
       },
       {
         label: "Grouped Comparison",
-        expected: "The grouped comparison chart shows average metric_value across categories.",
+        expected: "This chart shows average values for each group.",
       },
     ];
 
@@ -126,7 +126,7 @@ describe("ChartsTab", () => {
       fireEvent.click(screen.getByRole("radio", { name: scenario.label }));
 
       await waitFor(() => {
-        expect(screen.getByText(/Observations/)).toBeInTheDocument();
+        expect(screen.getByText(/How to read this chart/)).toBeInTheDocument();
       });
 
       expect(screen.getByText(new RegExp(scenario.expected, "i"))).toBeInTheDocument();

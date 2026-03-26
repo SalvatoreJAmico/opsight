@@ -1,7 +1,9 @@
 import React from "react";
 
 export default function ModelCard({ model, checked, onToggle, disabled = false, loading = false, error = "", result = null }) {
+  const formatRoleLabel = (role) => role.replace(/_/g, " ");
   const datasetContextEntries = Object.entries(result?.datasetContext || {}).filter(([, value]) => Boolean(value));
+  const explanation = result?.explanation || null;
 
   return (
     <div
@@ -25,8 +27,8 @@ export default function ModelCard({ model, checked, onToggle, disabled = false, 
 
       {checked && (
         <div style={{ marginTop: "0.75rem" }}>
-          <p><strong>Education:</strong> {model.education}</p>
-          <p><strong>Recommendation:</strong> {model.recommendation}</p>
+          <p><strong>In plain English:</strong> {model.education}</p>
+          <p><strong>Best when:</strong> {model.recommendation}</p>
 
           <div
             style={{
@@ -45,11 +47,36 @@ export default function ModelCard({ model, checked, onToggle, disabled = false, 
                   <strong>Status:</strong> {result.status}
                 </p>
                 <p style={{ margin: "0 0 0.35rem 0" }}>
-                  <strong>Summary:</strong> {result.summary}
+                  <strong>What this output shows:</strong> {result.summary}
                 </p>
                 <p style={{ margin: 0 }}>
-                  <strong>Notes:</strong> {result.notes}
+                  <strong>What it means:</strong> {result.notes}
                 </p>
+                {explanation ? (
+                  <div
+                    style={{
+                      marginTop: "0.65rem",
+                      padding: "0.6rem",
+                      border: "1px solid #ddd",
+                      borderRadius: "6px",
+                      background: "#fff",
+                    }}
+                  >
+                    <strong>How to read this result</strong>
+                    {explanation.what ? (
+                      <p style={{ margin: "0.35rem 0 0 0" }}><strong>Output:</strong> {explanation.what}</p>
+                    ) : null}
+                    {explanation.time ? (
+                      <p style={{ margin: "0.35rem 0 0 0" }}><strong>Time usage:</strong> {explanation.time}</p>
+                    ) : null}
+                    {explanation.comparison ? (
+                      <p style={{ margin: "0.35rem 0 0 0" }}><strong>Comparison:</strong> {explanation.comparison}</p>
+                    ) : null}
+                    {explanation.where ? (
+                      <p style={{ margin: "0.35rem 0 0 0" }}><strong>Where to find it:</strong> {explanation.where}</p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {datasetContextEntries.length > 0 ? (
                   <div
                     style={{
@@ -60,10 +87,10 @@ export default function ModelCard({ model, checked, onToggle, disabled = false, 
                       background: "#fff",
                     }}
                   >
-                    <strong>Dataset Context</strong>
+                    <strong>Fields used</strong>
                     {datasetContextEntries.map(([role, field]) => (
                       <p key={role} style={{ margin: "0.35rem 0 0 0" }}>
-                        <strong>{role}:</strong> {field}
+                        <strong>{formatRoleLabel(role)}:</strong> {field}
                       </p>
                     ))}
                   </div>

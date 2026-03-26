@@ -6,16 +6,31 @@ const predictionModels = [
   {
     key: "linear_regression",
     name: "Linear Regression",
-    education: "Fits a straight-line trend through numeric values.",
-    recommendation: "Best for simple trend-based forecasting.",
+    education: "Projects a simple trend from past values into future values.",
+    recommendation: "Use for a quick trend-over-time estimate.",
   },
   {
     key: "moving_average",
     name: "Moving Average",
-    education: "Uses recent values to estimate future values.",
-    recommendation: "Best for simple smoothing and short-horizon forecasts.",
+    education: "Uses the most recent values to estimate the next values.",
+    recommendation: "Use for short-term, rolling forecasts.",
   },
 ];
+
+const PREDICTION_EXPLANATIONS = {
+  linear_regression: {
+    what: "Shows estimated future values based on the trend in earlier values.",
+    time: "Time is used. Values are ordered by timestamp before projecting forward.",
+    comparison: "Compares how value changes over time, then extends that trend.",
+    where: "This card summarizes returned predictions; predicted rows appear in the model output payload.",
+  },
+  moving_average: {
+    what: "Shows estimated future values based on recent value history.",
+    time: "Time is used. Values are ordered by timestamp before averaging recent points.",
+    comparison: "Compares each new step to prior recent values over time.",
+    where: "This card summarizes returned predictions; predicted rows appear in the model output payload.",
+  },
+};
 
 const MODEL_RUNNERS = {
   linear_regression: () => runRegressionPrediction(5),
@@ -94,11 +109,14 @@ export default function PredictionTab({ onAction, pipelineCompleted }) {
 
       {predictionModels.map((model) => {
         const state = resultsByModel[model.key] || {};
+        const predictionRows = state.data?.result || [];
+        const futureRows = predictionRows.filter((row) => String(row?.timestamp || "").startsWith("t+"));
         const result = state.data ? {
-          status: "Ready",
-          summary: `Generated ${state.data.result?.length || 0} prediction records.`,
-          notes: "Includes historical and future predictions from backend model.",
+          status: "Completed",
+          summary: `Returned ${predictionRows.length} rows, including ${futureRows.length} future estimates.`,
+          notes: "Future estimates are labeled with timestamps like t+1, t+2, and so on.",
           datasetContext: state.data?.dataset_context || null,
+          explanation: PREDICTION_EXPLANATIONS[model.key],
         } : null;
 
         return (
