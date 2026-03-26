@@ -1,4 +1,5 @@
 import os
+import json
 import sys
 import tempfile
 import unittest
@@ -58,30 +59,39 @@ class TestCsvDecodingFallback(unittest.TestCase):
 
 class TestSourceNormalization(unittest.TestCase):
     def test_load_source_json_flattens_nested_transactions_payload(self):
-        source_path = (
-            Path(__file__).resolve().parents[1]
-            / "data"
-            / "for_azure_upload"
-            / "json"
-            / "mock-transactions.json"
-        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            source_path = Path(tmp_dir) / "mock-transactions.json"
+            source_path.write_text(
+                json.dumps(
+                    {
+                        "transactions": [
+                            {"id": "TXN-001", "date": "2024-01-01", "amount": 25.0}
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
 
-        dataframe = load_source(str(source_path), "json")
+            dataframe = load_source(str(source_path), "json")
 
         self.assertIn("id", dataframe.columns)
         self.assertIn("date", dataframe.columns)
         self.assertEqual(dataframe.iloc[0]["id"], "TXN-001")
 
     def test_load_source_excel_promotes_embedded_header_row(self):
-        source_path = (
-            Path(__file__).resolve().parents[1]
-            / "data"
-            / "for_azure_upload"
-            / "xlsx"
-            / "Employee-Management-Sample-Data.xlsx"
-        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            source_path = Path(tmp_dir) / "Employee-Management-Sample-Data.xlsx"
 
-        dataframe = load_source(str(source_path), "excel")
+            pd.DataFrame(
+                {
+                    "Unnamed: 0": [None, None, None, None],
+                    "Unnamed: 1": ["Employee Management Data", None, "Employee ID", "S1001"],
+                    "Unnamed: 2": [None, None, "Full Name", "John Smith"],
+                    "Unnamed: 3": [None, None, "Hire Date", pd.Timestamp("2023-05-15")],
+                }
+            ).to_excel(source_path, index=False)
+
+            dataframe = load_source(str(source_path), "excel")
 
         self.assertEqual(list(dataframe.columns)[0], "Employee ID")
         self.assertIn("Hire Date", dataframe.columns)
