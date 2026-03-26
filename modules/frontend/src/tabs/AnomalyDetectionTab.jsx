@@ -11,28 +11,55 @@ const anomalyModels = [
   {
     key: "threshold",
     name: "Threshold",
-    education: "Flags values above a fixed threshold.",
-    recommendation: "Use for simple rule-based anomaly detection.",
+    education: "Marks records as unusual when values are far from the normal range.",
+    recommendation: "Use when you want a simple first-pass anomaly check.",
   },
   {
     key: "zscore",
     name: "Z-Score",
-    education: "Detects values far from the mean using standard deviation.",
-    recommendation: "Good baseline, explainable model.",
+    education: "Finds records with values far from the dataset average.",
+    recommendation: "Use when you want a clear baseline for unusual values.",
   },
   {
     key: "isolation_forest",
     name: "Isolation Forest",
-    education: "Uses tree-based isolation to detect anomalies.",
-    recommendation: "Best for complex, less obvious anomalies.",
+    education: "Finds records that are hard to group with the rest of the dataset.",
+    recommendation: "Use when unusual values are subtle or mixed.",
   },
   {
     key: "kmeans",
     name: "K-Means",
-    education: "Clusters records and flags points far from their assigned centroid.",
-    recommendation: "Useful classical baseline for unsupervised anomaly comparison.",
+    education: "Groups records and flags values that sit far from their group center.",
+    recommendation: "Use for cluster-based anomaly comparison.",
   },
 ];
+
+const ANOMALY_EXPLANATIONS = {
+  threshold: {
+    what: "Shows how many records were marked unusual by a threshold rule.",
+    time: "Time is not used. Records are compared across the dataset.",
+    comparison: "Each value is compared to a baseline range from dataset values.",
+    where: "The anomaly count and model summary are shown in this card.",
+  },
+  zscore: {
+    what: "Shows records with values far from the average value.",
+    time: "Time is not used. Records are compared across the dataset.",
+    comparison: "Each value is compared to the dataset mean and spread.",
+    where: "The anomaly count and model summary are shown in this card.",
+  },
+  isolation_forest: {
+    what: "Shows records that behave differently from most other records.",
+    time: "Time is not used. Records are compared across the dataset.",
+    comparison: "Each record is compared to overall value patterns in the dataset.",
+    where: "The anomaly count and model summary are shown in this card.",
+  },
+  kmeans: {
+    what: "Shows records that are far from the center of their value group.",
+    time: "Time is not used. Records are compared across the dataset.",
+    comparison: "Each value is compared to its cluster center distance.",
+    where: "The anomaly count and model summary are shown in this card.",
+  },
+};
 
 const MODEL_RUNNERS = {
   zscore: () => runZscoreAnomaly(),
@@ -134,10 +161,11 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
         const summary = state.data?.summary;
         const result = summary
           ? {
-              status: "Ready",
-              summary: `${summary.anomaly_count} anomalies detected out of ${summary.total_records} records`,
-              notes: state.data?.notes || "Backend-driven result from selected model.",
+              status: "Completed",
+              summary: `${summary.anomaly_count} records were flagged as unusual out of ${summary.total_records}.`,
+              notes: state.data?.notes || "This result highlights records that differ from typical values.",
               datasetContext: state.data?.dataset_context || null,
+              explanation: ANOMALY_EXPLANATIONS[model.key] || ANOMALY_EXPLANATIONS.zscore,
             }
           : null;
 

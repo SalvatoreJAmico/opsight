@@ -49,7 +49,7 @@ describe("AnomalyDetectionTab", () => {
     });
 
     expect(screen.queryByText("You must run a dataset first")).not.toBeInTheDocument();
-    expect(screen.getByText("2 anomalies detected out of 5 records")).toBeInTheDocument();
+    expect(screen.getByText("2 records were flagged as unusual out of 5.")).toBeInTheDocument();
   });
 
   it("runs K-Means when selected", async () => {
@@ -69,7 +69,7 @@ describe("AnomalyDetectionTab", () => {
       expect(runKmeansAnomaly).toHaveBeenCalledTimes(1);
     });
 
-    expect(screen.getByText("1 anomalies detected out of 10 records")).toBeInTheDocument();
+    expect(screen.getByText("1 records were flagged as unusual out of 10.")).toBeInTheDocument();
     expect(screen.getByText("K-Means clustering using distance from centroid.")).toBeInTheDocument();
   });
 });

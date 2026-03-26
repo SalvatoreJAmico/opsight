@@ -44,6 +44,6 @@ describe("PredictionTab", () => {
     });
 
     expect(screen.queryByText("Run the pipeline before prediction")).not.toBeInTheDocument();
-    expect(screen.getByText("Generated 3 prediction records.")).toBeInTheDocument();
+    expect(screen.getByText("Returned 3 rows, including 0 future estimates.")).toBeInTheDocument();
   });
 });
