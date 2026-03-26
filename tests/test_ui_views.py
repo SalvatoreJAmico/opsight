@@ -46,25 +46,25 @@ def _import_ui_module(module_name):
 
 
 class TestUiViews(unittest.TestCase):
-    def test_upload_view_posts_to_data_endpoint(self):
-        upload_module = _import_ui_module("modules.streamlit_ui.views.upload")
+    def test_dataset_view_posts_to_data_endpoint(self):
+        dataset_module = _import_ui_module("modules.streamlit_ui.views.dataset")
 
         uploaded_file = MagicMock()
         uploaded_file.name = "phase6_upload.csv"
         uploaded_file.getbuffer.return_value = b"entity_id,timestamp\n1,2026-03-15"
 
-        upload_module.st = MagicMock()
-        upload_module.st.file_uploader.return_value = uploaded_file
-        upload_module.st.button.return_value = True
-        upload_module.requests = MagicMock()
-        upload_module.requests.post.return_value = _FakeResponse(status_code=200, payload={"status": "processed"})
+        dataset_module.st = MagicMock()
+        dataset_module.st.file_uploader.return_value = uploaded_file
+        dataset_module.st.button.return_value = True
+        dataset_module.requests = MagicMock()
+        dataset_module.requests.post.return_value = _FakeResponse(status_code=200, payload={"status": "processed"})
 
-        with patch("modules.streamlit_ui.views.upload.open", mock_open()):
-            upload_module.render_upload_view()
+        with patch("modules.streamlit_ui.views.dataset.open", mock_open()):
+            dataset_module.render_dataset_view()
 
-        upload_module.requests.post.assert_called_once()
-        post_url = upload_module.requests.post.call_args[0][0]
-        post_json = upload_module.requests.post.call_args[1]["json"]
+        dataset_module.requests.post.assert_called_once()
+        post_url = dataset_module.requests.post.call_args[0][0]
+        post_json = dataset_module.requests.post.call_args[1]["json"]
 
         self.assertEqual(post_url, "http://ui-test.local:8000/data")
         self.assertTrue(post_json["source_path"].endswith("phase6_upload.csv"))

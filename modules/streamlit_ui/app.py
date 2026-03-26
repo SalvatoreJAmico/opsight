@@ -6,7 +6,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import streamlit as st
-from modules.streamlit_ui.views.upload import render_upload_view
+from modules.streamlit_ui.views.dataset import render_dataset_view
 from modules.streamlit_ui.views.metrics import render_metrics_view
 from modules.streamlit_ui.views.entity_explorer import render_entity_explorer
 from modules.streamlit_ui.views.validation_errors import render_validation_errors
@@ -29,7 +29,7 @@ st.write(f"Pipeline summary exists: {summary_path.exists()}")
 
 st.info("Placeholder UI loaded successfully. Dashboard views will be added next.")
 
-render_upload_view()
+render_dataset_view()
 render_metrics_view()
 render_entity_explorer()
 render_validation_errors()

@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { getHealth, getSessionState, resetSession } from "./api/client";
 import GlobalStatusBar from "./components/GlobalStatusBar";
-import DatasetTab from "./tabs/UploadTab";
+import DatasetTab from "./tabs/DatasetTab";
 import MetricsTab from "./tabs/MetricsTab";
 import ChartsTab from "./tabs/ChartsTab";
-import MlTab from "./tabs/MlTab";
+import AnomalyDetectionTab from "./tabs/AnomalyDetectionTab";
 import PredictionTab from "./tabs/PredictionTab";
 
 const RESET_SESSION_STATE = {
@@ -24,7 +24,7 @@ const tabs = [
   { id: "dataset", label: "Dataset" },
   { id: "metrics", label: "Metrics" },
   { id: "charts", label: "Charts" },
-  { id: "ml", label: "Anomaly Detection" },
+  { id: "anomaly-detection", label: "Anomaly Detection" },
   { id: "prediction", label: "Prediction" },
 ];
 
@@ -128,8 +128,8 @@ export default function App() {
         return <MetricsTab key={panelKey} pipelineResult={pipelineResult} />;
       case "charts":
         return <ChartsTab key={panelKey} activeDatasetId={activeDatasetIdentity} />;
-      case "ml":
-        return <MlTab key={panelKey} onAction={refreshSessionState} hasDataset={hasDataset} />;
+      case "anomaly-detection":
+        return <AnomalyDetectionTab key={panelKey} onAction={refreshSessionState} hasDataset={hasDataset} />;
       case "prediction":
         return <PredictionTab key={panelKey} onAction={refreshSessionState} pipelineCompleted={pipelineCompleted} />;
       default:

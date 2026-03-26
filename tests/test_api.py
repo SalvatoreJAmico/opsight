@@ -196,7 +196,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         body = response.json()
         self.assertEqual(body["error"], "Request failed")
-        self.assertEqual(body["detail"], "Invalid or missing upload access code")
+        self.assertEqual(body["detail"], "Invalid or missing dataset access code")
 
     def test_protected_endpoint_rejects_wrong_access_code(self):
         response = self.client.post(
@@ -208,7 +208,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         body = response.json()
         self.assertEqual(body["error"], "Request failed")
-        self.assertEqual(body["detail"], "Invalid or missing upload access code")
+        self.assertEqual(body["detail"], "Invalid or missing dataset access code")
 
     def test_pipeline_trigger_endpoint_accepts_empty_payload(self):
         """Phase 14: /pipeline/trigger respects target parameter for dataset selection."""
@@ -516,17 +516,17 @@ class TestApiLayer(unittest.TestCase):
     def test_kmeans_anomaly_endpoint_returns_422_when_no_dataset_loaded(self):
         with patch(
             "modules.api.routes.ml._load_ml_records",
-            side_effect=HTTPException(status_code=422, detail="No dataset loaded. Upload and run a dataset first."),
+            side_effect=HTTPException(status_code=422, detail="No dataset loaded. Select and run a dataset first."),
         ):
             response = self.client.get("/ml/anomaly/kmeans")
 
         self.assertEqual(response.status_code, 422)
         body = response.json()
         self.assertEqual(body["error"], "Request failed")
-        self.assertEqual(body["detail"], "No dataset loaded. Upload and run a dataset first.")
+        self.assertEqual(body["detail"], "No dataset loaded. Select and run a dataset first.")
 
-    def test_ml_endpoints_handle_nan_values_in_dataset(self):
-        """Test that ML endpoints handle NaN values in dataset and produce valid JSON output."""
+    def test_anomaly_detection_endpoints_handle_nan_values_in_dataset(self):
+        """Test that anomaly detection endpoints handle NaN values in dataset and produce valid JSON output."""
         import math
         with tempfile.TemporaryDirectory() as tmp_dir:
             storage_path = Path(tmp_dir) / "records.json"

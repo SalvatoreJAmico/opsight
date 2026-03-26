@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import DatasetTab from "./UploadTab";
+import DatasetTab from "./DatasetTab";
 import { triggerPipeline } from "../api/client";
 
 const expectedDefaultBaseUrl = import.meta.env.DEV ? "/api-local" : "/api-cloud";

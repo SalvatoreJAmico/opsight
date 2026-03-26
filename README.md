@@ -202,7 +202,7 @@ At minimum, set these for runtime:
 - `APP_ENV`
 - `APP_VERSION`
 - `PORT`
-- `UPLOAD_ACCESS_CODE`
+- `UPLOAD_ACCESS_CODE` (dataset access code)
 - `PERSISTENCE_MODE`
 - `STORAGE_PATH`
 - `LOG_LEVEL`

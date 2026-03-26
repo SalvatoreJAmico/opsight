@@ -59,15 +59,20 @@ describe("ChartsTab", () => {
   });
 
   it("shows loading state while waiting for the API", async () => {
+    let resolveHistogram;
     getHistogram.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve(SUCCESS_RESPONSE("/static/plots/hist_metric.png")), 25)),
+      () => new Promise((resolve) => {
+        resolveHistogram = () => resolve(SUCCESS_RESPONSE("/static/plots/hist_metric.png"));
+      }),
     );
 
     render(<ChartsTab />);
 
     fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
 
-    expect(await screen.findByText("Loading chart...")).toBeInTheDocument();
+    expect(screen.getByText("Loading chart...")).toBeInTheDocument();
+
+    resolveHistogram();
 
     await waitFor(() => {
       expect(screen.getByAltText("Histogram visualization")).toBeInTheDocument();

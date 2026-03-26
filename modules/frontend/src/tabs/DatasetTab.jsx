@@ -33,7 +33,6 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
   const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
 
-
   async function handleTrigger() {
     if (!activeDataset) {
       setError("Select a dataset before running.");
@@ -47,14 +46,15 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
 
     const requestBaseUrl = resolveBaseUrl(targetEnvironment);
 
-    const response = await triggerPipeline({
-      target: targetEnvironment,
-      dataset_id: activeDataset,
-    },
-    
-    {
-      baseUrl: requestBaseUrl,
-    });
+    const response = await triggerPipeline(
+      {
+        target: targetEnvironment,
+        dataset_id: activeDataset,
+      },
+      {
+        baseUrl: requestBaseUrl,
+      },
+    );
 
     setLoading(false);
     if (!response.ok) {
@@ -69,8 +69,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
       return;
     }
 
-    const destinationLabel =
-      targetEnvironment === "local" ? "local API" : "deployed API";
+    const destinationLabel = targetEnvironment === "local" ? "local API" : "deployed API";
     const datasetLabelSuffix = activeDatasetConfig ? ` for ${activeDatasetConfig.label}` : "";
     setSuccessMessage(`Dataset run triggered successfully on ${destinationLabel}${datasetLabelSuffix}.`);
     setResult(response.data);
@@ -164,9 +163,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
           ))}
         </select>
 
-        {activeDataset && (
-          <p style={{ marginBottom: "1rem" }}>Loaded: {activeDatasetConfig?.label}</p>
-        )}
+        {activeDataset && <p style={{ marginBottom: "1rem" }}>Loaded: {activeDatasetConfig?.label}</p>}
 
         <button
           type="button"
