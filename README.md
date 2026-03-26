@@ -4,15 +4,15 @@
 
 Frontend
 
-👉 https://agreeable-cliff-08bf3bd0f.2.azurestaticapps.net
+👉 <a href="https://agreeable-cliff-08bf3bd0f.2.azurestaticapps.net" target="_blank" rel="noopener noreferrer">https://agreeable-cliff-08bf3bd0f.2.azurestaticapps.net</a>
 
 API Docs (Swagger)
 
-👉 https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io/docs
+👉 <a href="https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io/docs" target="_blank" rel="noopener noreferrer">https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io/docs</a>
 
 Health Check
 
-👉 https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io/health
+👉 <a href="https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io/health" target="_blank" rel="noopener noreferrer">https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io/health</a>
 
 Opsight is a deployed full-stack ML system running on Azure.  
 It ingests real data from Blob Storage, processes it through a pipeline, and provides analytics, anomaly detection, and predictions through a live web interface.
