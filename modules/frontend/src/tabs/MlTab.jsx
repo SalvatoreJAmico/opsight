@@ -116,7 +116,7 @@ export default function MlTab({ onAction, hasDataset }) {
 
   return (
     <div>
-      <h2>ML — Anomaly Detection</h2>
+      <h2>Anomaly Detection</h2>
 
       {isBlocked ? (
         <div

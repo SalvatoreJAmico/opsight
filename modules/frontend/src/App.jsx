@@ -24,7 +24,7 @@ const tabs = [
   { id: "dataset", label: "Dataset" },
   { id: "metrics", label: "Metrics" },
   { id: "charts", label: "Charts" },
-  { id: "ml", label: "ML" },
+  { id: "ml", label: "Anomaly Detection" },
   { id: "prediction", label: "Prediction" },
 ];
 

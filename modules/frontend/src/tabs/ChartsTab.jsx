@@ -134,7 +134,7 @@ const getObservationText = (chartId) => {
       <h3>Dataset Overview</h3>
       {!activeDatasetId ? (
         <p style={{ opacity: 0.7 }}>
-          No dataset loaded — upload and run a dataset to view charts.
+          No dataset loaded — select and run a dataset to view charts.
         </p>
       ) : overviewLoading ? (
         <p>Loading dataset overview...</p>

@@ -45,7 +45,7 @@ export function resolveStatusMessage(sessionState) {
     return { text: "Prediction complete", type: "completed" };
   }
   if (s.active_dataset == null) {
-    return { text: "No dataset loaded \u2014 upload data to get started", type: "default" };
+    return { text: "No dataset loaded \u2014 select a dataset to get started", type: "default" };
   }
   return { text: `Dataset loaded: ${s.active_dataset}`, type: "default" };
 }

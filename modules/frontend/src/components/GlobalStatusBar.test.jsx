@@ -6,13 +6,13 @@ import GlobalStatusBar, { resolveStatusMessage } from "./GlobalStatusBar";
 describe("resolveStatusMessage", () => {
   it("returns no-dataset message when sessionState is null", () => {
     const msg = resolveStatusMessage(null);
-    expect(msg.text).toBe("No dataset loaded \u2014 upload data to get started");
+    expect(msg.text).toBe("No dataset loaded \u2014 select a dataset to get started");
     expect(msg.type).toBe("default");
   });
 
   it("returns no-dataset message when active_dataset is null", () => {
     const msg = resolveStatusMessage({ active_dataset: null });
-    expect(msg.text).toBe("No dataset loaded \u2014 upload data to get started");
+    expect(msg.text).toBe("No dataset loaded \u2014 select a dataset to get started");
     expect(msg.type).toBe("default");
   });
 
@@ -119,7 +119,7 @@ describe("GlobalStatusBar", () => {
   it("renders no-dataset message when sessionState is null", () => {
     render(<GlobalStatusBar sessionState={null} />);
     expect(
-      screen.getByText("No dataset loaded \u2014 upload data to get started"),
+      screen.getByText("No dataset loaded — select a dataset to get started"),
     ).toBeTruthy();
   });
 
