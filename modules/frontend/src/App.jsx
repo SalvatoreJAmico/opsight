@@ -38,6 +38,8 @@ export default function App() {
   const [pendingDatasetId, setPendingDatasetId] = useState(null);
 
   const activeDatasetIdentity = pendingDatasetId ?? sessionState?.active_dataset ?? null;
+  const hasDataset = activeDatasetIdentity != null;
+  const pipelineCompleted = sessionState?.pipeline_status === "completed";
 
   const refreshSessionState = useCallback(async () => {
     const result = await getSessionState();
@@ -102,9 +104,9 @@ export default function App() {
       case "charts":
         return <ChartsTab />;
       case "ml":
-        return <MlTab onAction={refreshSessionState} />;
+        return <MlTab onAction={refreshSessionState} hasDataset={hasDataset} />;
       case "prediction":
-        return <PredictionTab onAction={refreshSessionState} />;
+        return <PredictionTab onAction={refreshSessionState} pipelineCompleted={pipelineCompleted} />;
       default:
         return null;
     }

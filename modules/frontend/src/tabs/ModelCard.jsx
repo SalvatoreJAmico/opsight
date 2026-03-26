@@ -1,4 +1,6 @@
-export default function ModelCard({ model, checked, onToggle, loading = false, error = "", result = null }) {
+import React from "react";
+
+export default function ModelCard({ model, checked, onToggle, disabled = false, loading = false, error = "", result = null }) {
   return (
     <div
       style={{
@@ -13,6 +15,7 @@ export default function ModelCard({ model, checked, onToggle, loading = false, e
           type="checkbox"
           checked={checked}
           onChange={onToggle}
+          disabled={disabled}
           style={{ marginRight: "0.5rem" }}
         />
         {model.name}

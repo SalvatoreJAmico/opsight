@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import ModelCard from "./ModelCard";
 import { runRegressionPrediction, runMovingAveragePrediction } from "../api/client";
 
@@ -30,9 +30,10 @@ const MODEL_RUNNERS = {
   moving_average: () => runMovingAveragePrediction(DEMO_RECORDS, 3),
 };
 
-export default function PredictionTab({ onAction }) {
+export default function PredictionTab({ onAction, pipelineCompleted }) {
   const [selectedModels, setSelectedModels] = useState({});
   const [resultsByModel, setResultsByModel] = useState({});
+  const isBlocked = !pipelineCompleted;
 
   const loadModelResults = async (modelKey) => {
     setResultsByModel((prev) => ({
@@ -65,6 +66,10 @@ export default function PredictionTab({ onAction }) {
   };
 
   const toggleModel = (key) => {
+    if (isBlocked) {
+      return;
+    }
+
     const shouldSelect = !selectedModels[key];
     setSelectedModels((prev) => ({
       ...prev,
@@ -80,6 +85,21 @@ export default function PredictionTab({ onAction }) {
     <div>
       <h2>Prediction</h2>
 
+      {isBlocked ? (
+        <div
+          style={{
+            marginTop: "1rem",
+            marginBottom: "1rem",
+            padding: "1rem",
+            border: "1px solid #d8b25f",
+            borderRadius: "10px",
+          }}
+        >
+          <strong>Unavailable</strong>
+          <p style={{ marginTop: "0.5rem" }}>Run the pipeline before prediction</p>
+        </div>
+      ) : null}
+
       {predictionModels.map((model) => {
         const state = resultsByModel[model.key] || {};
         const result = state.data ? {
@@ -94,6 +114,7 @@ export default function PredictionTab({ onAction }) {
             model={model}
             checked={!!selectedModels[model.key]}
             onToggle={() => toggleModel(model.key)}
+            disabled={isBlocked}
             loading={state.loading || false}
             error={state.error || ""}
             result={result}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import ModelCard from "./ModelCard";
 import { runZscoreAnomaly, runIsolationForestAnomaly } from "../api/client";
 
@@ -43,9 +43,10 @@ const MODEL_RUNNERS = {
   }),
 };
 
-export default function MlTab({ onAction }) {
+export default function MlTab({ onAction, hasDataset }) {
   const [selectedModels, setSelectedModels] = useState({});
   const [resultsByModel, setResultsByModel] = useState({});
+  const isBlocked = !hasDataset;
 
   const loadModelResults = async (modelKey) => {
     console.log(`[MlTab] Starting load for ${modelKey}`);
@@ -101,6 +102,10 @@ export default function MlTab({ onAction }) {
   };
 
   const toggleModel = (key) => {
+    if (isBlocked) {
+      return;
+    }
+
     const shouldSelect = !selectedModels[key];
     setSelectedModels((prev) => ({
       ...prev,
@@ -115,6 +120,21 @@ export default function MlTab({ onAction }) {
   return (
     <div>
       <h2>ML — Anomaly Detection</h2>
+
+      {isBlocked ? (
+        <div
+          style={{
+            marginTop: "1rem",
+            marginBottom: "1rem",
+            padding: "1rem",
+            border: "1px solid #d8b25f",
+            borderRadius: "10px",
+          }}
+        >
+          <strong>Unavailable</strong>
+          <p style={{ marginTop: "0.5rem" }}>You must run a dataset first</p>
+        </div>
+      ) : null}
 
       {anomalyModels.map((model) => {
         const state = resultsByModel[model.key] || {};
@@ -131,6 +151,7 @@ export default function MlTab({ onAction }) {
             model={model}
             checked={!!selectedModels[model.key]}
             onToggle={() => toggleModel(model.key)}
+            disabled={isBlocked}
             loading={state.loading || false}
             error={state.error || ""}
             result={result}
