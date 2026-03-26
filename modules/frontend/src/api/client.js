@@ -115,24 +115,24 @@ export async function triggerPipeline(payload, config = {}) {
 }
 
 export async function runZscoreAnomaly(config = {}) {
-  return request(ENDPOINTS.ML_ANOMALY_ZSCORE, { method: "GET" }, config.baseUrl);
+  return request(ENDPOINTS.ANOMALY_DETECTION_ZSCORE, { method: "GET" }, config.baseUrl);
 }
 
 export async function runIsolationForestAnomaly(config = {}) {
-  return request(ENDPOINTS.ML_ANOMALY_ISOLATION_FOREST, { method: "GET" }, config.baseUrl);
+  return request(ENDPOINTS.ANOMALY_DETECTION_ISOLATION_FOREST, { method: "GET" }, config.baseUrl);
 }
 
 export async function runKmeansAnomaly(config = {}) {
-  return request(ENDPOINTS.ML_ANOMALY_KMEANS, { method: "GET" }, config.baseUrl);
+  return request(ENDPOINTS.ANOMALY_DETECTION_KMEANS, { method: "GET" }, config.baseUrl);
 }
 
 export async function runRegressionPrediction(stepsAhead = 5, config = {}) {
-  const path = `${ENDPOINTS.ML_PREDICTION_REGRESSION}?steps_ahead=${encodeURIComponent(stepsAhead)}`;
+  const path = `${ENDPOINTS.PREDICTION_REGRESSION}?steps_ahead=${encodeURIComponent(stepsAhead)}`;
   return request(path, { method: "GET" }, config.baseUrl);
 }
 
 export async function runMovingAveragePrediction(stepsAhead = 5, config = {}) {
-  const path = `${ENDPOINTS.ML_PREDICTION_MOVING_AVERAGE}?steps_ahead=${encodeURIComponent(stepsAhead)}`;
+  const path = `${ENDPOINTS.PREDICTION_MOVING_AVERAGE}?steps_ahead=${encodeURIComponent(stepsAhead)}`;
   return request(path, { method: "GET" }, config.baseUrl);
 }
 

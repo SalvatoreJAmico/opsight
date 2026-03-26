@@ -40,14 +40,14 @@ const MODEL_RUNNERS = {
   threshold: () => runZscoreAnomaly(),
 };
 
-export default function MlTab({ onAction, hasDataset }) {
+export default function AnomalyDetectionTab({ onAction, hasDataset }) {
   const [selectedModels, setSelectedModels] = useState({});
   const [resultsByModel, setResultsByModel] = useState({});
   const isBlocked = !hasDataset;
 
   const loadModelResults = async (modelKey) => {
-    console.log(`[MlTab] Starting load for ${modelKey}`);
-    
+    console.log(`[AnomalyDetectionTab] Starting load for ${modelKey}`);
+
     setResultsByModel((prev) => ({
       ...prev,
       [modelKey]: { loading: true, error: "", data: null },
@@ -55,12 +55,12 @@ export default function MlTab({ onAction, hasDataset }) {
 
     try {
       const response = await MODEL_RUNNERS[modelKey]();
-      console.log(`[MlTab] Response for ${modelKey}:`, response);
+      console.log(`[AnomalyDetectionTab] Response for ${modelKey}:`, response);
 
       if (!response || !response.ok) {
         const errorMsg = response?.error || "Failed to load results";
-        console.error(`[MlTab] Error for ${modelKey}:`, errorMsg);
-        
+        console.error(`[AnomalyDetectionTab] Error for ${modelKey}:`, errorMsg);
+
         setResultsByModel((prev) => ({
           ...prev,
           [modelKey]: {
@@ -72,8 +72,8 @@ export default function MlTab({ onAction, hasDataset }) {
         return;
       }
 
-      console.log(`[MlTab] Success for ${modelKey}, data:`, response.data);
-      
+      console.log(`[AnomalyDetectionTab] Success for ${modelKey}, data:`, response.data);
+
       setResultsByModel((prev) => ({
         ...prev,
         [modelKey]: {
@@ -83,8 +83,8 @@ export default function MlTab({ onAction, hasDataset }) {
         },
       }));
     } catch (err) {
-      console.error(`[MlTab] Exception for ${modelKey}:`, err);
-      
+      console.error(`[AnomalyDetectionTab] Exception for ${modelKey}:`, err);
+
       setResultsByModel((prev) => ({
         ...prev,
         [modelKey]: {
@@ -136,11 +136,13 @@ export default function MlTab({ onAction, hasDataset }) {
       {anomalyModels.map((model) => {
         const state = resultsByModel[model.key] || {};
         const summary = state.data?.summary;
-        const result = summary ? {
-          status: "Ready",
-          summary: `${summary.anomaly_count} anomalies detected out of ${summary.total_records} records`,
-          notes: state.data?.notes || "Backend-driven result from selected model.",
-        } : null;
+        const result = summary
+          ? {
+              status: "Ready",
+              summary: `${summary.anomaly_count} anomalies detected out of ${summary.total_records} records`,
+              notes: state.data?.notes || "Backend-driven result from selected model.",
+            }
+          : null;
 
         return (
           <ModelCard

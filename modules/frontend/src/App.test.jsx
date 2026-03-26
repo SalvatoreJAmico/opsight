@@ -14,7 +14,7 @@ vi.mock("./api/client", () => ({
   resetSession: clientMocks.resetSession,
 }));
 
-vi.mock("./tabs/UploadTab", () => ({
+vi.mock("./tabs/DatasetTab", () => ({
   default: function MockDatasetTab({ onPipelineComplete, onAction, onDatasetChange }) {
     return (
       <div>
@@ -42,9 +42,9 @@ vi.mock("./tabs/ChartsTab", () => ({
   },
 }));
 
-vi.mock("./tabs/MlTab", () => ({
-  default: function MockMlTab() {
-    return <div>ML</div>;
+vi.mock("./tabs/AnomalyDetectionTab", () => ({
+  default: function MockAnomalyDetectionTab() {
+    return <div>Anomaly Detection</div>;
   },
 }));
 

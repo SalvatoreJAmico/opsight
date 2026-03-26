@@ -58,7 +58,7 @@ def _clean_records_for_ml(records: list) -> list:
 
 
 def _load_ml_records() -> list:
-    """Load persisted canonical records and flatten them for ML consumption."""
+    """Load persisted canonical records and flatten them for model consumption."""
     config = StorageConfig()
     storage = LocalStorage(storage_path=config.storage_path)
     records = storage.load_records()
@@ -66,7 +66,7 @@ def _load_ml_records() -> list:
     if not records:
         raise HTTPException(
             status_code=422,
-            detail="No dataset loaded. Upload and run a dataset first.",
+            detail="No dataset loaded. Select and run a dataset first.",
         )
 
     flat = []
@@ -84,7 +84,7 @@ def _load_ml_records() -> list:
             "value": value,
         })
 
-    # Clean records to remove NaN values before ML processing
+    # Clean records to remove NaN values before model processing
     return _clean_records_for_ml(flat)
 
 

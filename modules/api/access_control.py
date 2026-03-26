@@ -66,4 +66,4 @@ async def require_upload_access_code(request: Request, payload: Optional[dict]) 
         logger.warning("Protected endpoint access attempt", extra=log_payload)
 
     if not is_valid:
-        raise HTTPException(status_code=403, detail="Invalid or missing upload access code")
+        raise HTTPException(status_code=403, detail="Invalid or missing dataset access code")

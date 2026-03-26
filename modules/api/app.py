@@ -68,7 +68,7 @@ def get_chart_dataframe() -> pd.DataFrame:
     if not records:
         raise HTTPException(
             status_code=422,
-            detail="No dataset loaded. Upload and run a dataset to view charts.",
+            detail="No dataset loaded. Select and run a dataset to view charts.",
         )
 
     return _records_to_chart_df(records)
@@ -245,7 +245,7 @@ def charts_overview():
     if not records:
         raise HTTPException(
             status_code=422,
-            detail="No dataset loaded. Upload and run a dataset to view charts.",
+            detail="No dataset loaded. Select and run a dataset to view charts.",
         )
 
     session = get_session_state()

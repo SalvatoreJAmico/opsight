@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import MlTab from "./MlTab";
+import AnomalyDetectionTab from "./AnomalyDetectionTab";
 import {
   runIsolationForestAnomaly,
   runKmeansAnomaly,
@@ -13,13 +13,13 @@ vi.mock("../api/client", () => ({
   runKmeansAnomaly: vi.fn(),
 }));
 
-describe("MlTab", () => {
+describe("AnomalyDetectionTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("shows a blocked message and disables model actions when no dataset is loaded", () => {
-    render(<MlTab hasDataset={false} />);
+    render(<AnomalyDetectionTab hasDataset={false} />);
 
     expect(screen.getByText("You must run a dataset first")).toBeInTheDocument();
 
@@ -40,7 +40,7 @@ describe("MlTab", () => {
       },
     });
 
-    render(<MlTab hasDataset />);
+    render(<AnomalyDetectionTab hasDataset />);
 
     fireEvent.click(screen.getByLabelText("Z-Score"));
 
@@ -61,7 +61,7 @@ describe("MlTab", () => {
       },
     });
 
-    render(<MlTab hasDataset />);
+    render(<AnomalyDetectionTab hasDataset />);
 
     fireEvent.click(screen.getByLabelText("K-Means"));
 

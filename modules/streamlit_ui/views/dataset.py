@@ -5,11 +5,11 @@ from pathlib import Path
 from modules.streamlit_ui.views._config import API_BASE_URL
 
 
-def render_upload_view():
-    st.subheader("Dataset Upload")
-    access_code = st.text_input("Upload Access Code", type="password")
+def render_dataset_view():
+    st.subheader("Dataset")
+    access_code = st.text_input("Dataset Access Code", type="password")
 
-    uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+    uploaded_file = st.file_uploader("Select a CSV dataset", type=["csv"])
 
     if uploaded_file is None:
         return
@@ -26,7 +26,7 @@ def render_upload_view():
 
     if st.button("Run Pipeline"):
         if not access_code:
-            st.error("Upload access code is required to run the pipeline")
+            st.error("Dataset access code is required to run the pipeline")
             return
 
         try:
