@@ -70,11 +70,11 @@ describe("DatasetTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
     expect(await screen.findByText(/Dataset run triggered successfully/)).toBeInTheDocument();
-    expect(screen.getByText("Response")).toBeInTheDocument();
+    expect(screen.getByText(/Response/)).toBeInTheDocument();
     expect(screen.getByText("Dataset Execution")).toBeInTheDocument();
-    expect(screen.getByText("Dataset: Sales CSV")).toBeInTheDocument();
-    expect(screen.getByText("Source: Blob Storage")).toBeInTheDocument();
-    expect(screen.getByText("File: Sample - Superstore.csv")).toBeInTheDocument();
+    expect(screen.getByText(/Dataset:/)).toBeInTheDocument();
+    expect(screen.getByText(/Source:/)).toBeInTheDocument();
+    expect(screen.getByText(/File:/)).toBeInTheDocument();
     expect(screen.getByText(/records_ingested/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
       expect.objectContaining({

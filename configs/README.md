@@ -35,6 +35,12 @@ Backend deployment workflow currently expects these GitHub secrets:
 
 Frontend deployment should use the same pattern: build-time values and deploy tokens belong in GitHub configuration, not in committed files.
 
+Frontend deployment workflow currently expects:
+
+- GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN`
+- GitHub repository variable `VITE_CLOUD_API_URL`
+- optional GitHub repository variables `VITE_API_BASE_URL` and `VITE_LOCAL_API_URL`
+
 ### 3. Azure runtime configuration
 
 These values belong on the deployed service itself, for example in Azure Container Apps environment variables or secrets.
@@ -117,6 +123,8 @@ Most important values:
 
 - `VITE_CLOUD_API_URL` or `VITE_API_BASE_URL`
 - any deploy token or platform-specific credential required by the frontend host
+
+For the Azure Static Web Apps workflow in this repo, keep the deploy token in `AZURE_STATIC_WEB_APPS_API_TOKEN` and set frontend URLs through GitHub repository variables.
 
 When the frontend and API are hosted on different origins, the backend must also define `CORS_ALLOWED_ORIGINS` to include the deployed frontend URL.
 
