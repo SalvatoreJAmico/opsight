@@ -29,9 +29,13 @@ Production builds should point to the deployed backend using frontend environmen
 
 The frontend is intended to deploy to Azure Static Web Apps through [deploy-frontend.yml](../../.github/workflows/deploy-frontend.yml).
 
+Hosted frontend behavior is defined in [modules/frontend/public/staticwebapp.config.json](./public/staticwebapp.config.json). That file enables SPA fallback to `index.html` and applies basic security headers at the edge.
+
 That workflow expects:
 
 - GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN`
 - GitHub repository variables for frontend build-time URLs such as `VITE_CLOUD_API_URL`
 
 If the deployed frontend and API run on different origins, configure the backend `CORS_ALLOWED_ORIGINS` value to include the frontend URL.
+
+The remaining non-repo inputs for a live UI deployment are the Azure Static Web Apps deploy token, the eventual public frontend URL, and the production API URL that should be injected at build time.
