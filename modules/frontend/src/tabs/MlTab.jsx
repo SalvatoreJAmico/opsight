@@ -43,7 +43,7 @@ const MODEL_RUNNERS = {
   }),
 };
 
-export default function MlTab() {
+export default function MlTab({ onAction }) {
   const [selectedModels, setSelectedModels] = useState({});
   const [resultsByModel, setResultsByModel] = useState({});
 
@@ -95,6 +95,8 @@ export default function MlTab() {
           data: null,
         },
       }));
+    } finally {
+      onAction?.();
     }
   };
 

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { getHealth } from "./api/client";
+import { useEffect, useState, useCallback } from "react";
+import { getHealth, getSessionState } from "./api/client";
+import GlobalStatusBar from "./components/GlobalStatusBar";
 import DatasetTab from "./tabs/UploadTab";
 import MetricsTab from "./tabs/MetricsTab";
 import ChartsTab from "./tabs/ChartsTab";
@@ -20,6 +21,14 @@ export default function App() {
   const [healthError, setHealthError] = useState("");
   const [apiVersion, setApiVersion] = useState("");
   const [pipelineResult, setPipelineResult] = useState(null);
+  const [sessionState, setSessionState] = useState(null);
+
+  const refreshSessionState = useCallback(async () => {
+    const result = await getSessionState();
+    if (result.ok) {
+      setSessionState(result.data);
+    }
+  }, []);
 
   useEffect(() => {
     async function checkApi() {
@@ -38,18 +47,24 @@ export default function App() {
     checkApi();
   }, []);
 
+  useEffect(() => {
+    refreshSessionState();
+    const intervalId = setInterval(refreshSessionState, 8000);
+    return () => clearInterval(intervalId);
+  }, [refreshSessionState]);
+
   const renderPanel = () => {
     switch (activeTab) {
       case "dataset":
-        return <DatasetTab onPipelineComplete={setPipelineResult} />;
+        return <DatasetTab onPipelineComplete={setPipelineResult} onAction={refreshSessionState} />;
       case "metrics":
         return <MetricsTab pipelineResult={pipelineResult} />;
       case "charts":
         return <ChartsTab />;
       case "ml":
-        return <MlTab />;
+        return <MlTab onAction={refreshSessionState} />;
       case "prediction":
-        return <PredictionTab />;
+        return <PredictionTab onAction={refreshSessionState} />;
       default:
         return null;
     }
@@ -76,6 +91,8 @@ export default function App() {
           ) : null}
         </div>
       </header>
+
+      <GlobalStatusBar sessionState={sessionState} />
 
       <nav
         style={{

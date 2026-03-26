@@ -23,7 +23,7 @@ function getFilename(path) {
   return segments[segments.length - 1] || path;
 }
 
-export default function DatasetTab({ onPipelineComplete }) {
+export default function DatasetTab({ onPipelineComplete, onAction }) {
   const [targetEnvironment, setTargetEnvironment] = useState(isDev ? "local" : "cloud");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -65,6 +65,7 @@ export default function DatasetTab({ onPipelineComplete }) {
       } else {
         setError(response.error || "Pipeline trigger failed.");
       }
+      onAction?.();
       return;
     }
 
@@ -76,6 +77,7 @@ export default function DatasetTab({ onPipelineComplete }) {
     if (onPipelineComplete) {
       onPipelineComplete(response.data);
     }
+    onAction?.();
   }
 
   return (
