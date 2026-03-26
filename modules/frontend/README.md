@@ -1,16 +1,37 @@
-# React + Vite
+# Opsight Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This package contains the React and Vite frontend for Opsight.
 
-Currently, two official plugins are available:
+## Local Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Install dependencies and start the dev server:
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+By default, local development uses the Vite proxy routes defined in `vite.config.js`.
 
-## Expanding the ESLint configuration
+Frontend environment examples live in [modules/frontend/.env.example](./.env.example).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Production Build
+
+Create a production bundle with:
+
+```bash
+npm run build
+```
+
+Production builds should point to the deployed backend using frontend environment variables such as `VITE_CLOUD_API_URL` or `VITE_API_BASE_URL`.
+
+## Deployment
+
+The frontend is intended to deploy to Azure Static Web Apps through [deploy-frontend.yml](../../.github/workflows/deploy-frontend.yml).
+
+That workflow expects:
+
+- GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN`
+- GitHub repository variables for frontend build-time URLs such as `VITE_CLOUD_API_URL`
+
+If the deployed frontend and API run on different origins, configure the backend `CORS_ALLOWED_ORIGINS` value to include the frontend URL.
