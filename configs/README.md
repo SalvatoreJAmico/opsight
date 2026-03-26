@@ -59,6 +59,7 @@ Optional runtime values:
 - `API_BASE_URL`
 - `ENABLE_PIPELINE`
 - `INPUT_SOURCE_PATH`
+- `CORS_ALLOWED_ORIGINS`
 - `LOG_TO_FILE`
 - `LOG_FILE`
 - `AZURE_STORAGE_CONNECTION_STRING`
@@ -68,6 +69,8 @@ Optional runtime values:
 - `AZURE_OPENAI_ENDPOINT`
 
 If `AZURE_STORAGE_CONNECTION_STRING` is used, treat it as a secret.
+
+`CORS_ALLOWED_ORIGINS` is not a secret. It should be set in deployment configuration when the frontend is hosted on a different origin from the API.
 
 ## Required Variables
 
@@ -114,6 +117,8 @@ Most important values:
 
 - `VITE_CLOUD_API_URL` or `VITE_API_BASE_URL`
 - any deploy token or platform-specific credential required by the frontend host
+
+When the frontend and API are hosted on different origins, the backend must also define `CORS_ALLOWED_ORIGINS` to include the deployed frontend URL.
 
 These values should be supplied through deployment settings rather than committed files.
 

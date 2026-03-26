@@ -22,6 +22,7 @@ os.environ.setdefault("ALLOW_LOCAL_FALLBACK", "true")
 os.environ.setdefault("API_BASE_URL", "http://api-test.local:8000")
 os.environ.setdefault("INPUT_SOURCE_PATH", "data/opsight_sample_sales.csv")
 os.environ.setdefault("PIPELINE_SUMMARY_PATH", "reports/pipeline_run_summary.json")
+os.environ.setdefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 
 import modules.api.app as api_app_module
 import app as root_app_module
@@ -49,6 +50,21 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(
             response.json(),
             {"status": "ok", "version": os.environ["APP_VERSION"]},
+        )
+
+    def test_preflight_request_returns_cors_headers_for_allowed_origin(self):
+        response = self.client.options(
+            "/health",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers.get("access-control-allow-origin"),
+            "http://localhost:5173",
         )
 
     def test_root_asgi_entrypoint_exposes_the_api_app(self):

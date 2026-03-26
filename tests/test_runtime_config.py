@@ -26,6 +26,7 @@ class TestRuntimeConfigModes(unittest.TestCase):
             "ENABLE_PIPELINE",
             "INPUT_SOURCE_PATH",
             "PIPELINE_SUMMARY_PATH",
+            "CORS_ALLOWED_ORIGINS",
         ]
         self._saved_env = {key: os.environ.get(key) for key in self.required_env_keys}
 
@@ -47,6 +48,7 @@ class TestRuntimeConfigModes(unittest.TestCase):
         os.environ["ENABLE_PIPELINE"] = "true"
         os.environ["INPUT_SOURCE_PATH"] = "data/opsight_sample_sales.csv"
         os.environ["PIPELINE_SUMMARY_PATH"] = "reports/pipeline_run_summary.json"
+        os.environ.pop("CORS_ALLOWED_ORIGINS", None)
         os.environ.pop("BLOB_ACCOUNT", None)
         os.environ.pop("BLOB_CONTAINER", None)
         os.environ.pop("BLOB_PATH", None)
@@ -60,6 +62,7 @@ class TestRuntimeConfigModes(unittest.TestCase):
 
         self.assertEqual(config.app_env, "dev")
         self.assertTrue(config.allow_local_fallback)
+        self.assertEqual(config.cors_allowed_origins, ())
 
     def test_prod_mode_fails_when_local_fallback_enabled(self):
         self._set_base_env()
@@ -106,6 +109,19 @@ class TestRuntimeConfigModes(unittest.TestCase):
         self.assertEqual(config.blob_account, "acc")
         self.assertEqual(config.blob_container, "container")
         self.assertEqual(config.blob_path, "incoming/data.csv")
+
+    def test_cors_allowed_origins_parses_comma_separated_values(self):
+        self._set_base_env()
+        os.environ["APP_ENV"] = "dev"
+        os.environ["ALLOW_LOCAL_FALLBACK"] = "true"
+        os.environ["CORS_ALLOWED_ORIGINS"] = "http://localhost:5173, https://opsight-ui.example.com "
+
+        config = load_runtime_config()
+
+        self.assertEqual(
+            config.cors_allowed_origins,
+            ("http://localhost:5173", "https://opsight-ui.example.com"),
+        )
 
     def test_local_env_file_sets_missing_values_only(self):
         for key in self.required_env_keys:

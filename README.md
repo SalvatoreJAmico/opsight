@@ -195,6 +195,8 @@ For the backend, production runtime must define `APP_ENV=prod`, disable local fa
 
 For the frontend, production builds should supply the deployed API URL through deployment configuration rather than relying on local dev proxy behavior.
 
+If the frontend is deployed on a different origin from the API, the backend must also set `CORS_ALLOWED_ORIGINS` to include the deployed frontend URL.
+
 The source of truth for the production environment and secrets contract is [configs/README.md](configs/README.md).
 
 ## Repository Map
