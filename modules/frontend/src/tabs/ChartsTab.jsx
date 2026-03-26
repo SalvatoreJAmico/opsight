@@ -144,8 +144,7 @@ const getObservationText = (chartId) => {
         <>
           {activeDatasetId && overview.source && overview.source !== activeDatasetId && (
             <p style={{ color: "#b8860b", fontWeight: 600, marginBottom: "0.5rem" }}>
-              Warning: charts are showing data from &ldquo;{overview.source}&rdquo;. Run the pipeline for
-              &ldquo;{activeDatasetId}&rdquo; to update the charts for the selected dataset.
+              Note: charts show data from &ldquo;{overview.source}&rdquo;. Run the selected dataset to update.
             </p>
           )}
           <p>Source: {overview.source}</p>
@@ -166,39 +165,46 @@ const getObservationText = (chartId) => {
       </p>
 
       <div style={{ marginBottom: "1.25rem" }}>
-        <span style={{ fontWeight: 600, marginRight: "0.75rem" }}>API Target:</span>
-        <button
-          type="button"
-          onClick={() => setTarget("local")}
-          style={{
-            marginRight: "0.5rem",
-            padding: "0.4rem 0.9rem",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            fontWeight: target === "local" ? 700 : 400,
-            background: target === "local" ? "#e8f0fe" : "transparent",
-            cursor: "pointer",
-          }}
-        >
-          Local
-        </button>
-        <button
-          type="button"
-          onClick={() => setTarget("cloud")}
-          style={{
-            padding: "0.4rem 0.9rem",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            fontWeight: target === "cloud" ? 700 : 400,
-            background: target === "cloud" ? "#e8f0fe" : "transparent",
-            cursor: "pointer",
-          }}
-        >
-          Cloud
-        </button>
-        <p style={{ marginTop: "0.25rem", opacity: 0.85 }}>
-          Target: <strong>{target === "local" ? "Local API (this computer)" : "Deployed API (cloud)"}</strong>
-        </p>
+        {isDev && (
+          <>
+            <div style={{ fontWeight: 600, marginBottom: "0.75rem", fontSize: "0.9rem", textAlign: "center" }}>Dev — API Target:</div>
+            <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={() => setTarget("local")}
+                style={{
+                  padding: "0.4rem 0.9rem",
+                  borderRadius: "6px",
+                  border: "1px solid #ccc",
+                  fontWeight: target === "local" ? 700 : 400,
+                  background: target === "local" ? "#e8f0fe" : "transparent",
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Local
+              </button>
+              <button
+                type="button"
+                onClick={() => setTarget("cloud")}
+                style={{
+                  padding: "0.4rem 0.9rem",
+                  borderRadius: "6px",
+                  border: "1px solid #ccc",
+                  fontWeight: target === "cloud" ? 700 : 400,
+                  background: target === "cloud" ? "#e8f0fe" : "transparent",
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Cloud
+              </button>
+            </div>
+            <p style={{ marginTop: "0.25rem", opacity: 0.85, fontSize: "0.9rem" }}>
+              Target: <strong>{target === "local" ? "Local API (this computer)" : "Deployed API (cloud)"}</strong>
+            </p>
+          </>
+        )}
       </div>
 
       <h3>Available Charts</h3>

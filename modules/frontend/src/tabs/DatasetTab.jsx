@@ -85,46 +85,47 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
       <p>Run analysis on the selected dataset.</p>
 
       <div style={{ marginTop: "1.5rem", maxWidth: "560px" }}>
-        <div style={{ marginBottom: "1rem" }}>
-          <span style={{ fontWeight: 600, marginRight: "0.75rem" }}>API Target:</span>
-          <button
-            type="button"
-            onClick={() => setTargetEnvironment("local")}
-            disabled={loading}
-            style={{
-              marginRight: "0.5rem",
-              padding: "0.4rem 0.9rem",
-              borderRadius: "6px",
-              border: targetEnvironment === "local" ? "1px solid #a78bfa" : "1px solid #4b5563",
-              fontWeight: targetEnvironment === "local" ? 700 : 400,
-              background: targetEnvironment === "local" ? "#e9d5ff" : "#1f2937",
-              color: targetEnvironment === "local" ? "#111827" : "#f3f4f6",
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            Local
-          </button>
-          <button
-            type="button"
-            onClick={() => setTargetEnvironment("cloud")}
-            disabled={loading}
-            style={{
-              padding: "0.4rem 0.9rem",
-              borderRadius: "6px",
-              border: targetEnvironment === "cloud" ? "1px solid #a78bfa" : "1px solid #4b5563",
-              fontWeight: targetEnvironment === "cloud" ? 700 : 400,
-              background: targetEnvironment === "cloud" ? "#e9d5ff" : "#1f2937",
-              color: targetEnvironment === "cloud" ? "#111827" : "#f3f4f6",
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            Cloud
-          </button>
-        </div>
-
-        <p style={{ marginBottom: "1rem", color: "#d1d5db" }}>
-          Target: <strong>{targetEnvironment === "local" ? "Local API (this computer)" : "Deployed API (cloud)"}</strong>
-        </p>
+        {isDev && (
+          <div style={{ marginBottom: "1rem", textAlign: "center" }}>
+            <div style={{ fontWeight: 600, marginBottom: "0.5rem", fontSize: "0.9rem" }}>Dev — API Target:</div>
+            <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={() => setTargetEnvironment("local")}
+                disabled={loading}
+                style={{
+                  padding: "0.4rem 0.9rem",
+                  borderRadius: "6px",
+                  border: targetEnvironment === "local" ? "1px solid #a78bfa" : "1px solid #4b5563",
+                  fontWeight: targetEnvironment === "local" ? 700 : 400,
+                  background: targetEnvironment === "local" ? "#e9d5ff" : "#1f2937",
+                  color: targetEnvironment === "local" ? "#111827" : "#f3f4f6",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Local
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetEnvironment("cloud")}
+                disabled={loading}
+                style={{
+                  padding: "0.4rem 0.9rem",
+                  borderRadius: "6px",
+                  border: targetEnvironment === "cloud" ? "1px solid #a78bfa" : "1px solid #4b5563",
+                  fontWeight: targetEnvironment === "cloud" ? 700 : 400,
+                  background: targetEnvironment === "cloud" ? "#e9d5ff" : "#1f2937",
+                  color: targetEnvironment === "cloud" ? "#111827" : "#f3f4f6",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Cloud
+              </button>
+            </div>
+          </div>
+        )}
 
         <label htmlFor="dataset-select" style={{ display: "block", marginBottom: "0.4rem", fontWeight: 600 }}>
           Dataset
@@ -241,10 +242,14 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
               ) : null}
             </div>
           ) : null}
-          <strong>Response</strong>
-          <pre style={{ marginTop: "0.75rem", whiteSpace: "pre-wrap" }}>
-            {JSON.stringify(result, null, 2)}
-          </pre>
+          {isDev ? (
+            <>
+              <strong>Response (Dev)</strong>
+              <pre style={{ marginTop: "0.75rem", whiteSpace: "pre-wrap", fontSize: "0.85rem", maxHeight: "300px", overflowY: "auto" }}>
+                {JSON.stringify(result, null, 2)}
+              </pre>
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>
