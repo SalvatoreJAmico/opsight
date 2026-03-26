@@ -5,11 +5,13 @@ import App from "./App";
 const clientMocks = vi.hoisted(() => ({
   getHealth: vi.fn(),
   getSessionState: vi.fn(),
+  resetSession: vi.fn(),
 }));
 
 vi.mock("./api/client", () => ({
   getHealth: clientMocks.getHealth,
   getSessionState: clientMocks.getSessionState,
+  resetSession: clientMocks.resetSession,
 }));
 
 vi.mock("./tabs/UploadTab", () => ({
@@ -58,6 +60,18 @@ describe("App dataset switching", () => {
     clientMocks.getHealth.mockResolvedValue({
       ok: true,
       data: { version: "test" },
+    });
+    clientMocks.resetSession.mockResolvedValue({
+      ok: true,
+      data: {
+        status: "reset",
+        session: {
+          active_dataset: null,
+          pipeline_status: "not_run",
+          anomaly_status: "idle",
+          prediction_status: "idle",
+        },
+      },
     });
   });
 
@@ -140,5 +154,60 @@ describe("App dataset switching", () => {
     });
 
     expect(screen.queryByText("Pipeline completed successfully")).not.toBeInTheDocument();
+  });
+
+  it("resets session and clears stale UI state", async () => {
+    let sessionResponse = {
+      active_dataset: "sales_csv",
+      pipeline_status: "completed",
+      anomaly_status: "idle",
+      prediction_status: "idle",
+    };
+
+    clientMocks.resetSession.mockImplementation(async () => {
+      sessionResponse = {
+        active_dataset: null,
+        pipeline_status: "not_run",
+        anomaly_status: "idle",
+        prediction_status: "idle",
+      };
+
+      return {
+        ok: true,
+        data: {
+          status: "reset",
+          session: sessionResponse,
+        },
+      };
+    });
+
+    clientMocks.getSessionState.mockImplementation(async () => ({
+      ok: true,
+      data: sessionResponse,
+    }));
+
+    render(<App />);
+
+    await screen.findByText("Pipeline completed successfully");
+
+    fireEvent.click(screen.getByRole("button", { name: "Seed Sales Metrics" }));
+    fireEvent.click(screen.getByRole("button", { name: "Metrics" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("11")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset Session" }));
+
+    await waitFor(() => {
+      expect(clientMocks.resetSession).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByRole("heading", { name: "Dataset" })).toBeInTheDocument();
+    expect(screen.getByText("No dataset loaded \u2014 upload data to get started")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Metrics" }));
+    expect(screen.getByText("No data yet. Run the pipeline from the Dataset tab.")).toBeInTheDocument();
+    expect(screen.queryByText("11")).not.toBeInTheDocument();
   });
 });
