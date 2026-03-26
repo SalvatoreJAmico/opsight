@@ -102,7 +102,7 @@ export default function App() {
       case "metrics":
         return <MetricsTab pipelineResult={pipelineResult} />;
       case "charts":
-        return <ChartsTab />;
+        return <ChartsTab activeDatasetId={activeDatasetIdentity} />;
       case "ml":
         return <MlTab onAction={refreshSessionState} hasDataset={hasDataset} />;
       case "prediction":

@@ -1,35 +1,53 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   getHistogram,
   getBarCategory,
   getBoxplot,
   getScatter,
   getGroupedComparison,
+  getChartOverview,
   resolveApiAssetUrl,
 } from "../api/client";
 import { chartCatalog } from "../catalog/chartCatalog";
 import { resolveBaseUrl } from "../config/env";
 
-const SAMPLE_DATA = [
-  { entity_id: "A", metric_value: 10, secondary_metric: 8, category: "X" },
-  { entity_id: "B", metric_value: 20, secondary_metric: 18, category: "Y" },
-  { entity_id: "C", metric_value: 15, secondary_metric: 12, category: "X" },
-  { entity_id: "D", metric_value: 30, secondary_metric: 25, category: "Z" },
-];
-
-export default function ChartsTab() {
-  const data = SAMPLE_DATA;
-  const values = data.map((d) => d.metric_value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const mean = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
-
+export default function ChartsTab({ activeDatasetId = null }) {
   const isDev = import.meta.env.DEV;
   const [target, setTarget] = useState(isDev ? "local" : "cloud");
   const [activeChart, setActiveChart] = useState("");
   const [chartImages, setChartImages] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [overview, setOverview] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewError, setOverviewError] = useState("");
+
+  useEffect(() => {
+    if (!activeDatasetId) {
+      setOverview(null);
+      setOverviewError("");
+      return;
+    }
+
+    let cancelled = false;
+    setOverviewLoading(true);
+    setOverviewError("");
+
+    const baseUrl = resolveBaseUrl(target);
+    getChartOverview({ baseUrl }).then((result) => {
+      if (cancelled) return;
+      setOverviewLoading(false);
+      if (result.ok) {
+        setOverview(result.data);
+      } else {
+        setOverviewError(result.error || "Failed to load dataset overview.");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDatasetId, target]);
 
   const loadChartById = async (chartId) => {
     const baseUrl = resolveBaseUrl(target);
@@ -114,16 +132,28 @@ const getObservationText = (chartId) => {
       <h2>Charts</h2>
 
       <h3>Dataset Overview</h3>
-      <p>Source: Sample Dataset</p>
-      <p>Rows: {data.length}</p>
-      <p>Variables: {Object.keys(data[0]).length}</p>
-      <p>Fields: {Object.keys(data[0]).join(", ")}</p>
+      {!activeDatasetId ? (
+        <p style={{ opacity: 0.7 }}>
+          No dataset loaded — upload and run a dataset to view charts.
+        </p>
+      ) : overviewLoading ? (
+        <p>Loading dataset overview...</p>
+      ) : overviewError ? (
+        <p style={{ color: "#c00" }}>{overviewError}</p>
+      ) : overview ? (
+        <>
+          <p>Source: {overview.source}</p>
+          <p>Rows: {overview.rows}</p>
+          {overview.variables != null && <p>Variables: {overview.variables}</p>}
+          {overview.fields && <p>Fields: {overview.fields.join(", ")}</p>}
 
-      <h3>Summary Statistics</h3>
-      <p>Min: {min}</p>
-      <p>Max: {max}</p>
-      <p>Mean: {mean}</p>
-      <p>Count: {values.length}</p>
+          <h3>Summary Statistics</h3>
+          {overview.min != null && <p>Min: {overview.min}</p>}
+          {overview.max != null && <p>Max: {overview.max}</p>}
+          {overview.mean != null && <p>Mean: {overview.mean}</p>}
+          {overview.count != null && <p>Count: {overview.count}</p>}
+        </>
+      ) : null}
 
       <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
         Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.

@@ -4,6 +4,8 @@ import time
 from pathlib import Path
 
 import pandas as pd
+import json
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -25,6 +27,26 @@ import modules.api.app as api_app_module
 
 
 client = TestClient(api_app_module.app)
+
+_TEST_RECORDS = [
+    {"entity_id": "A", "features": {"metric_value": 10, "secondary_metric": 8, "category": "X"}, "metadata": {}},
+    {"entity_id": "B", "features": {"metric_value": 20, "secondary_metric": 18, "category": "Y"}, "metadata": {}},
+    {"entity_id": "C", "features": {"metric_value": 15, "secondary_metric": 12, "category": "X"}, "metadata": {}},
+    {"entity_id": "D", "features": {"metric_value": 30, "secondary_metric": 25, "category": "Z"}, "metadata": {}},
+]
+
+_STORAGE_PATH = Path("data/test-records.json")
+
+
+@pytest.fixture(autouse=True)
+def seed_test_records():
+    """Write sample records to test storage before each chart test and clean up after."""
+    _STORAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _STORAGE_PATH.write_text(json.dumps(_TEST_RECORDS))
+    yield
+    if _STORAGE_PATH.exists():
+        _STORAGE_PATH.unlink()
+
 
 CHART_ENDPOINTS = {
     "/charts/histogram": {

@@ -86,6 +86,9 @@ export async function getScatter({ baseUrl } = {}) {
 export async function getGroupedComparison({ baseUrl } = {}) {
   return request("/charts/grouped-comparison", { method: "GET" }, baseUrl);
 }
+export async function getChartOverview({ baseUrl } = {}) {
+  return request(ENDPOINTS.CHARTS_OVERVIEW, { method: "GET" }, baseUrl);
+}
 export async function getHealth() {
   return request(ENDPOINTS.HEALTH, {
     method: "GET",

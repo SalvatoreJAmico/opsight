@@ -17,6 +17,7 @@ vi.mock("../api/client", () => ({
   getBoxplot: vi.fn(),
   getScatter: vi.fn(),
   getGroupedComparison: vi.fn(),
+  getChartOverview: vi.fn(),
   resolveApiAssetUrl: vi.fn((imagePath) => imagePath),
 }));
 
