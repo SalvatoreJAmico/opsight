@@ -29,6 +29,7 @@ const tabs = [
 ];
 
 export default function App() {
+  const isDev = import.meta.env.DEV;
   const [activeTab, setActiveTab] = useState("dataset");
   const [uiResetVersion, setUiResetVersion] = useState(0);
   const [resettingSession, setResettingSession] = useState(false);
@@ -141,39 +142,65 @@ export default function App() {
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "2rem" }}>
       <header style={{ marginBottom: "1.5rem" }}>
         <h1>Opsight</h1>
-        <p>Operational analytics, visualization, and anomaly detection demo UI.</p>
+        <p>Operational analytics, visualization, and anomaly detection.</p>
 
-        <div
-          style={{
-            marginTop: "1rem",
-            padding: "0.75rem 1rem",
-            border: "1px solid #ddd",
-            borderRadius: "10px",
-          }}
-        >
-          <strong>{healthStatus}</strong>
-          {apiVersion ? <span> — version {apiVersion}</span> : null}
-          {healthError ? (
-            <p style={{ marginTop: "0.5rem" }}>{healthError}</p>
-          ) : null}
-        </div>
-
-        <div style={{ marginTop: "0.75rem" }}>
-          <button
-            type="button"
-            onClick={handleSessionReset}
-            disabled={resettingSession}
+        {isDev ? (
+          <>
+            <div
+              style={{
+                marginTop: "1rem",
+                padding: "0.75rem 1rem",
+                 border: "1px solid #444",
+                borderRadius: "10px",
+                 background: "#1a1a1a",
+                fontSize: "0.9rem",
+                             textAlign: "center",
+                             color: "#e0e0e0",
+              }}
+            >
+              <strong>{healthStatus}</strong>
+              {apiVersion ? <span> — version {apiVersion}</span> : null}
+              {healthError ? (
+                 <p style={{ marginTop: "0.5rem", color: "#ff6b6b" }}>{healthError}</p>
+              ) : null}
+            </div>
+             <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
+              <button
+                type="button"
+                onClick={handleSessionReset}
+                disabled={resettingSession}
+                style={{
+                  padding: "0.65rem 1rem",
+                  borderRadius: "8px",
+                   border: "1px solid #555",
+                  cursor: resettingSession ? "not-allowed" : "pointer",
+                  fontWeight: 600,
+                   background: "#333",
+                   color: "#e0e0e0",
+                  fontSize: "0.9rem",
+                }}
+              >
+                {resettingSession ? "Resetting..." : "Reset Session"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div
             style={{
-              padding: "0.65rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              cursor: resettingSession ? "not-allowed" : "pointer",
-              fontWeight: 600,
+              marginTop: "1rem",
+              padding: "0.75rem 1rem",
+              borderRadius: "10px",
+              fontSize: "0.9rem",
+               color: "#999",
             }}
           >
-            {resettingSession ? "Resetting..." : "Reset Session"}
-          </button>
-        </div>
+            {healthError ? (
+               <p style={{ color: "#ff6b6b", marginBottom: 0 }}>{healthError}</p>
+            ) : (
+              <p style={{ marginBottom: 0, opacity: 0.7 }}>{healthStatus}</p>
+            )}
+          </div>
+        )}
       </header>
 
       <GlobalStatusBar sessionState={sessionState} />

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+const isDev = import.meta.env.DEV;
 import ModelCard from "./ModelCard";
 import {
   runIsolationForestAnomaly,
@@ -56,7 +57,7 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
 
       if (!response || !response.ok) {
         const errorMsg = response?.error || "Failed to load results";
-        console.error(`[AnomalyDetectionTab] Error for ${modelKey}:`, errorMsg);
+        if (isDev) console.error(`[AnomalyDetectionTab] Error for ${modelKey}:`, errorMsg);
 
         setResultsByModel((prev) => ({
           ...prev,
@@ -78,7 +79,7 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
         },
       }));
     } catch (err) {
-      console.error(`[AnomalyDetectionTab] Exception for ${modelKey}:`, err);
+      if (isDev) console.error(`[AnomalyDetectionTab] Exception for ${modelKey}:`, err);
 
       setResultsByModel((prev) => ({
         ...prev,
