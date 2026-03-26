@@ -60,6 +60,7 @@ class RuntimeConfig:
     input_source_path: Optional[str]
     pipeline_summary_path: Optional[str]
     azure_storage_connection_string: Optional[str]
+    cors_allowed_origins: tuple[str, ...]
 
 
 def get_env(name: str, required: bool = True, default: Optional[str] = None) -> Optional[str]:
@@ -76,6 +77,14 @@ def _to_bool(value: Optional[str], default: bool = False) -> bool:
     if value is None:
         return default
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _to_csv_list(value: Optional[str]) -> tuple[str, ...]:
+    if value is None:
+        return ()
+
+    items = [item.strip() for item in str(value).split(",")]
+    return tuple(item for item in items if item)
 
 
 def load_runtime_config() -> RuntimeConfig:
@@ -106,6 +115,9 @@ def load_runtime_config() -> RuntimeConfig:
     input_source_path = get_env("INPUT_SOURCE_PATH", required=False, default=None)
     pipeline_summary_path = get_env("PIPELINE_SUMMARY_PATH")
     azure_storage_connection_string = get_env("AZURE_STORAGE_CONNECTION_STRING", required=False, default=None)
+    cors_allowed_origins = _to_csv_list(
+        get_env("CORS_ALLOWED_ORIGINS", required=False, default=None)
+    )
 
     # ===== PRODUCTION MODE VALIDATION =====
     if app_env == "prod":
@@ -154,4 +166,5 @@ def load_runtime_config() -> RuntimeConfig:
         input_source_path=input_source_path,
         pipeline_summary_path=pipeline_summary_path,
         azure_storage_connection_string=azure_storage_connection_string,
+        cors_allowed_origins=cors_allowed_origins,
     )

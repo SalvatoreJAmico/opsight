@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi import Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from modules.config.logging_config import setup_logging
 from modules.config.runtime_config import load_runtime_config
@@ -158,6 +159,16 @@ STATIC_DIR = PROJECT_ROOT / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(title="Opsight API", version=runtime_config.app_version)
+
+if runtime_config.cors_allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(runtime_config.cors_allowed_origins),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(ingest_router)
 app.include_router(entities_router)
