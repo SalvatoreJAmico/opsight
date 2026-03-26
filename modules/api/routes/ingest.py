@@ -74,7 +74,14 @@ def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False, s
 @router.post("/data")
 async def ingest_data_endpoint(payload: dict, request: Request):
     await require_upload_access_code(request=request, payload=payload)
-    return _run_pipeline_for_payload(payload)
+    set_pipeline_status("running")
+    try:
+        response = _run_pipeline_for_payload(payload)
+        set_pipeline_status("completed")
+        return response
+    except Exception:
+        set_pipeline_status("failed")
+        raise
 
 
 @router.post("/pipeline/trigger")

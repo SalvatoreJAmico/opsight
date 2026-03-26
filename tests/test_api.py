@@ -77,6 +77,52 @@ class TestApiLayer(unittest.TestCase):
         expected_path = str((Path(__file__).resolve().parents[1] / "data" / "opsight_sample_sales.csv").resolve())
         mocked_runner.assert_called_once_with(expected_path, source_mode=None, data_format=None)
 
+    def test_ingestion_endpoint_success_updates_session_pipeline_status_completed(self):
+        mocked_summary = {
+            "status": "SUCCESS",
+            "failed_stage": None,
+            "records_ingested": 3,
+            "records_valid": 3,
+            "records_invalid": 0,
+            "records_persisted": 3,
+            "runtime_seconds": 0.1,
+        }
+
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary):
+            response = self.client.post(
+                "/data",
+                json={"source_path": "data/opsight_sample_sales.csv"},
+                headers=self.valid_headers,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        state = session_state.get_session_state()
+        self.assertEqual(state["pipeline_status"], "completed")
+
+    def test_ingestion_endpoint_failure_updates_session_pipeline_status_failed(self):
+        failed_summary = {
+            "status": "FAILED",
+            "failed_stage": "ingestion",
+            "error_type": "blob_not_found_error",
+            "error_message": "Ingestion failed - Blob not found: Blob 'csv/missing.csv' not found",
+            "records_ingested": 0,
+            "records_valid": 0,
+            "records_invalid": 0,
+            "records_persisted": 0,
+            "runtime_seconds": 0.1,
+        }
+
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=failed_summary):
+            response = self.client.post(
+                "/data",
+                json={"source_path": "data/missing.csv"},
+                headers=self.valid_headers,
+            )
+
+        self.assertEqual(response.status_code, 500)
+        state = session_state.get_session_state()
+        self.assertEqual(state["pipeline_status"], "failed")
+
     def test_ingestion_endpoint_returns_500_when_pipeline_runner_fails(self):
         failed_summary = {
             "status": "FAILED",
