@@ -52,6 +52,8 @@ The FastAPI service currently provides:
 - prediction endpoints
 - static asset serving for generated chart images
 
+**For a complete list of endpoints, parameters, and example requests/responses, see [API_DOCUMENTATION.md](API_DOCUMENTATION.md).**
+
 ### Data Pipeline
 
 The Python pipeline currently handles:
