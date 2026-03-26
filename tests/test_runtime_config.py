@@ -78,8 +78,11 @@ class TestRuntimeConfigModes(unittest.TestCase):
         os.environ["APP_ENV"] = "prod"
         os.environ["ALLOW_LOCAL_FALLBACK"] = "false"
 
-        with self.assertRaises(RuntimeError) as context:
-            load_runtime_config()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            missing_env_path = Path(tmp_dir) / ".env"
+            with patch.object(runtime_config_module, "LOCAL_ENV_PATH", missing_env_path):
+                with self.assertRaises(RuntimeError) as context:
+                    load_runtime_config()
 
         message = str(context.exception)
         self.assertTrue(

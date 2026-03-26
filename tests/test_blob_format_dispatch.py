@@ -92,7 +92,7 @@ class TestBlobClientFormatAwareReading:
             result = client.read_blob_data(data_format="json")
 
             assert result["status"] == "success"
-            assert result["rows"] is expected_df
+            assert result["rows"].equals(expected_df)
             assert result["source"] == "blob"
             mock_read_json.assert_called_once()
 
@@ -159,7 +159,7 @@ class TestBlobClientFormatAwareReading:
             result = client.read_blob_data(data_format="parquet")
 
             assert result["status"] == "success"
-            assert result["rows"] is expected_df
+            assert result["rows"].equals(expected_df)
             assert result["source"] == "blob"
             mock_read_parquet.assert_called_once()
 
@@ -195,7 +195,7 @@ class TestBlobClientFormatAwareReading:
             result = client.read_blob_data(data_format="xlsx")
 
             assert result["status"] == "success"
-            assert result["rows"] is expected_df
+            assert result["rows"].equals(expected_df)
             assert result["source"] == "blob"
             mock_read_excel.assert_called_once()
 
