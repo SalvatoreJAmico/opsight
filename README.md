@@ -193,6 +193,8 @@ Production configuration is split across three places:
 
 For the backend, production runtime must define `APP_ENV=prod`, disable local fallback, and provide Blob ingestion settings.
 
+For the current deployment target, the backend runtime is Azure Container Apps `opsight-api` in `rg-opsight-dev`, and runtime secrets should live in Azure Container Apps secrets rather than in the repository.
+
 For the frontend, production builds should supply the deployed API URL through deployment configuration rather than relying on local dev proxy behavior.
 
 This repo includes a frontend deployment workflow for Azure Static Web Apps at `.github/workflows/deploy-frontend.yml`. It expects the deploy token in `AZURE_STATIC_WEB_APPS_API_TOKEN` and frontend build-time URLs in GitHub repository variables.
@@ -200,6 +202,8 @@ This repo includes a frontend deployment workflow for Azure Static Web Apps at `
 If the frontend is deployed on a different origin from the API, the backend must also set `CORS_ALLOWED_ORIGINS` to include the deployed frontend URL.
 
 The source of truth for the production environment and secrets contract is [configs/README.md](configs/README.md).
+
+For a local preflight check of the backend runtime contract, run `validate_opsight_runtime.bat`.
 
 ## Repository Map
 

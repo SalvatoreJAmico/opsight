@@ -45,6 +45,8 @@ Frontend deployment workflow currently expects:
 
 These values belong on the deployed service itself, for example in Azure Container Apps environment variables or secrets.
 
+For the current deployment target, the runtime host is Azure Container Apps `opsight-api` in resource group `rg-opsight-dev` in subscription `Amico-DevLab`.
+
 Required production runtime values:
 
 - `APP_ENV=prod`
@@ -75,6 +77,8 @@ Optional runtime values:
 - `AZURE_OPENAI_ENDPOINT`
 
 If `AZURE_STORAGE_CONNECTION_STRING` is used, treat it as a secret.
+
+The current production Blob authentication plan uses a connection string, so `AZURE_STORAGE_CONNECTION_STRING` should be present as an Azure Container Apps secret for runtime validation.
 
 `CORS_ALLOWED_ORIGINS` is not a secret. It should be set in deployment configuration when the frontend is hosted on a different origin from the API.
 
@@ -135,3 +139,13 @@ These values should be supplied through deployment settings rather than committe
 - Use environment variables for credentials and connection strings
 - Production should not rely on development-only defaults
 - Bump `APP_VERSION` deliberately for each release deployment (semantic versioning, baseline `1.0.0`)
+
+## Runtime Validation
+
+Use the repo validator before or after setting Azure Container Apps configuration:
+
+```powershell
+./validate_opsight_runtime.bat
+```
+
+That command validates the current production contract, including the current Blob connection-string requirement, without printing secret values.
