@@ -46,8 +46,6 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
   const isBlocked = !hasDataset;
 
   const loadModelResults = async (modelKey) => {
-    console.log(`[AnomalyDetectionTab] Starting load for ${modelKey}`);
-
     setResultsByModel((prev) => ({
       ...prev,
       [modelKey]: { loading: true, error: "", data: null },
@@ -55,7 +53,6 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
 
     try {
       const response = await MODEL_RUNNERS[modelKey]();
-      console.log(`[AnomalyDetectionTab] Response for ${modelKey}:`, response);
 
       if (!response || !response.ok) {
         const errorMsg = response?.error || "Failed to load results";
@@ -71,8 +68,6 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
         }));
         return;
       }
-
-      console.log(`[AnomalyDetectionTab] Success for ${modelKey}, data:`, response.data);
 
       setResultsByModel((prev) => ({
         ...prev,
