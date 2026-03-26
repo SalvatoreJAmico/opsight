@@ -7,6 +7,7 @@ data/
 
 # Python cache
 __pycache__/
+.pytest_cache/
 
 # OS files
 .DS_Store
@@ -16,6 +17,14 @@ Thumbs.db
 logs/
 reports/pipeline_run_summary.json
 reports/pipeline_failure_summary.json
+
+# local emulation/runtime state
+__azurite_db_*.json
+__blobstorage__/
+__queuestorage__/
+
+# local temp authoring files
+.gh_issue_body_tmp.md
 
 # frontend generated artifacts (top-level Vite app)
 ui/node_modules/
