@@ -1,5 +1,6 @@
 from statistics import mean, pstdev
 from typing import List
+import math
 
 from modules.ml.base import BaseModel
 from modules.ml.schemas import FeatureRecord, PredictionRecord, PredictionResult
@@ -35,6 +36,10 @@ class ZScoreAnomalyModel(BaseModel):
             if record.value is not None and self.std_value not in (None, 0.0):
                 z_score_value = abs((record.value - self.mean_value) / self.std_value)
                 is_anomaly = z_score_value > self.threshold
+
+            # Ensure z_score_value is not NaN before storing
+            if z_score_value is not None and (math.isnan(z_score_value) or math.isinf(z_score_value)):
+                z_score_value = None
 
             predictions.append(
                 PredictionRecord(

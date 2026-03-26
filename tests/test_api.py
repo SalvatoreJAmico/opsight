@@ -525,6 +525,123 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(body["error"], "Request failed")
         self.assertEqual(body["detail"], "No dataset loaded. Upload and run a dataset first.")
 
+    def test_ml_endpoints_handle_nan_values_in_dataset(self):
+        """Test that ML endpoints handle NaN values in dataset and produce valid JSON output."""
+        import math
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage_path = Path(tmp_dir) / "records.json"
+            local_storage = LocalStorage(storage_path=str(storage_path))
+            # Create records with mixed NaN and valid values
+            local_storage.save_records([
+                {"entity_id": "1", "timestamp": "2026-01-01", "features": {"value": 10.5}, "metadata": {}},
+                {"entity_id": "2", "timestamp": "2026-01-02", "features": {"value": float('nan')}, "metadata": {}},
+                {"entity_id": "3", "timestamp": "2026-01-03", "features": {"value": 20.3}, "metadata": {}},
+                {"entity_id": "4", "timestamp": "2026-01-04", "features": {"value": float('nan')}, "metadata": {}},
+                {"entity_id": "5", "timestamp": "2026-01-05", "features": {"value": 15.8}, "metadata": {}},
+            ])
+
+            with patch("modules.api.routes.ml.StorageConfig") as mocked_config:
+                mocked_config.return_value.storage_path = str(storage_path)
+                
+                # Test Z-Score anomaly detection
+                response = self.client.get("/ml/anomaly/zscore")
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertIn("result", body)
+                self.assertIn("summary", body)
+                # Ensure no NaN or Inf values in result
+                for result in body["result"]:
+                    if result.get("anomaly_score") is not None:
+                        self.assertFalse(math.isnan(result["anomaly_score"]))
+                        self.assertFalse(math.isinf(result["anomaly_score"]))
+
+    def test_isolation_forest_endpoint_handles_nan_values(self):
+        """Test that Isolation Forest endpoint handles NaN values correctly."""
+        import math
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage_path = Path(tmp_dir) / "records.json"
+            local_storage = LocalStorage(storage_path=str(storage_path))
+            # Create records with NaN values
+            local_storage.save_records([
+                {"entity_id": "1", "timestamp": "2026-01-01", "features": {"value": 100.0}, "metadata": {}},
+                {"entity_id": "2", "timestamp": "2026-01-02", "features": {"value": float('nan')}, "metadata": {}},
+                {"entity_id": "3", "timestamp": "2026-01-03", "features": {"value": 105.0}, "metadata": {}},
+                {"entity_id": "4", "timestamp": "2026-01-04", "features": {"value": float('nan')}, "metadata": {}},
+                {"entity_id": "5", "timestamp": "2026-01-05", "features": {"value": 110.0}, "metadata": {}},
+                {"entity_id": "6", "timestamp": "2026-01-06", "features": {"value": 500.0}, "metadata": {}},  # outlier
+            ])
+
+            with patch("modules.api.routes.ml.StorageConfig") as mocked_config:
+                mocked_config.return_value.storage_path = str(storage_path)
+                
+                response = self.client.get("/ml/anomaly/isolation-forest")
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertIn("result", body)
+                self.assertIn("summary", body)
+                # Ensure no NaN or Inf values in result (they should be None)
+                for result in body["result"]:
+                    if result.get("anomaly_score") is not None:
+                        score = result["anomaly_score"]
+                        self.assertFalse(isinstance(score, float) and math.isnan(score))
+
+    def test_regression_endpoint_handles_nan_values(self):
+        """Test that Linear Regression endpoint handles NaN values and produces valid JSON."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage_path = Path(tmp_dir) / "records.json"
+            local_storage = LocalStorage(storage_path=str(storage_path))
+            # Create records with NaN values
+            local_storage.save_records([
+                {"entity_id": "1", "timestamp": "2026-01-01", "features": {"value": 10.0}, "metadata": {}},
+                {"entity_id": "2", "timestamp": "2026-01-02", "features": {"value": float('nan')}, "metadata": {}},
+                {"entity_id": "3", "timestamp": "2026-01-03", "features": {"value": 20.0}, "metadata": {}},
+                {"entity_id": "4", "timestamp": "2026-01-04", "features": {"value": float('nan')}, "metadata": {}},
+                {"entity_id": "5", "timestamp": "2026-01-05", "features": {"value": 30.0}, "metadata": {}},
+            ])
+
+            with patch("modules.api.routes.ml.StorageConfig") as mocked_config:
+                mocked_config.return_value.storage_path = str(storage_path)
+                
+                response = self.client.get("/ml/prediction/regression?steps_ahead=2")
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertIn("result", body)
+                # Verify all predictions have valid numeric values
+                for result in body["result"]:
+                    self.assertIsNotNone(result.get("value"))
+                    value = result["value"]
+                    if isinstance(value, float):
+                        import math
+                        self.assertFalse(math.isnan(value))
+
+    def test_moving_average_endpoint_handles_nan_values(self):
+        """Test that Moving Average endpoint handles NaN values correctly."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage_path = Path(tmp_dir) / "records.json"
+            local_storage = LocalStorage(storage_path=str(storage_path))
+            # Create records with NaN values
+            local_storage.save_records([
+                {"entity_id": "1", "timestamp": "2026-01-01", "features": {"value": 100.0}, "metadata": {}},
+                {"entity_id": "2", "timestamp": "2026-01-02", "features": {"value": float('nan')}, "metadata": {}},
+                {"entity_id": "3", "timestamp": "2026-01-03", "features": {"value": 110.0}, "metadata": {}},
+                {"entity_id": "4", "timestamp": "2026-01-04", "features": {"value": float('nan')}, "metadata": {}},
+                {"entity_id": "5", "timestamp": "2026-01-05", "features": {"value": 105.0}, "metadata": {}},
+            ])
+
+            with patch("modules.api.routes.ml.StorageConfig") as mocked_config:
+                mocked_config.return_value.storage_path = str(storage_path)
+                
+                response = self.client.get("/ml/prediction/moving-average?steps_ahead=3")
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertIn("result", body)
+                # Verify all predictions have valid values
+                for result in body["result"]:
+                    value = result.get("value")
+                    if isinstance(value, float):
+                        import math
+                        self.assertFalse(math.isnan(value))
+
 
 if __name__ == "__main__":
     unittest.main()

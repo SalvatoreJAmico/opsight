@@ -1,5 +1,6 @@
 from statistics import mean, pstdev
 from typing import List
+import math
 
 from sklearn.cluster import KMeans
 
@@ -50,6 +51,9 @@ class KMeansAnomalyModel(BaseModel):
         for record, point, label in zip(records, values, labels):
             distance = abs(point[0] - float(self.model.cluster_centers_[label][0]))
             is_anomaly = distance > self.threshold
+            
+            # Ensure distance is not NaN before storing
+            distance_value = float(distance) if not (math.isnan(distance) or math.isinf(distance)) else None
 
             results.append(
                 PredictionRecord(
@@ -57,7 +61,7 @@ class KMeansAnomalyModel(BaseModel):
                     timestamp=record.timestamp,
                     value=record.value,
                     is_anomaly=is_anomaly,
-                    anomaly_score=round(float(distance), 6),
+                    anomaly_score=round(distance_value, 6) if distance_value is not None else None,
                 )
             )
 

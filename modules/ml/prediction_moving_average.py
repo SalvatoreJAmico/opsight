@@ -1,4 +1,5 @@
 from typing import List
+import math
 
 from modules.ml.base import BaseModel
 from modules.ml.schemas import FeatureRecord, PredictionRecord, PredictionResult
@@ -39,13 +40,19 @@ class MovingAverageModel(BaseModel):
             window = history[-self.window_size:]
             avg = sum(window) / len(window)
 
+            # Ensure average is not NaN or Inf
+            if math.isnan(avg) or math.isinf(avg):
+                avg = 0.0
+            else:
+                avg = round(avg, 4)
+
             history.append(avg)
 
             results.append(
                 PredictionRecord(
                     entity_id="future",
                     timestamp=f"t+{i+1}",
-                    value=round(avg, 4),
+                    value=avg,
                     is_anomaly=False,
                     anomaly_score=None,
                 )

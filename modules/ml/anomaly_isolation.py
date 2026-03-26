@@ -1,4 +1,5 @@
 from typing import List
+import math
 
 from sklearn.ensemble import IsolationForest
 
@@ -33,6 +34,8 @@ class IsolationForestModel(BaseModel):
 
         for record, pred, score in zip(records, preds, scores):
             is_anomaly = pred == -1
+            # Ensure score is not NaN or Inf before storing
+            score_value = float(score) if not (math.isnan(score) or math.isinf(score)) else None
 
             results.append(
                 PredictionRecord(
@@ -40,7 +43,7 @@ class IsolationForestModel(BaseModel):
                     timestamp=record.timestamp,
                     value=record.value,
                     is_anomaly=is_anomaly,
-                    anomaly_score=float(score),
+                    anomaly_score=score_value,
                 )
             )
 

@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, HTTPException
 from modules.ml.anomaly_kmeans import KMeansAnomalyModel
 from modules.ml.anomaly_isolation import IsolationForestModel
@@ -10,6 +11,50 @@ from modules.config.storage_config import StorageConfig
 from modules.persistence.local_storage import LocalStorage
 
 router = APIRouter(prefix="/ml", tags=["ml"])
+
+
+def _is_valid_number(value) -> bool:
+    """Check if value is a valid number (not None and not NaN)."""
+    if value is None:
+        return False
+    try:
+        float_val = float(value)
+        return not math.isnan(float_val)
+    except (TypeError, ValueError):
+        return False
+
+
+def _sanitize_for_json(obj):
+    """Remove NaN and Infinity values from objects before JSON serialization."""
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    else:
+        return obj
+
+
+def _clean_records_for_ml(records: list) -> list:
+    """Clean records by removing rows with NaN values."""
+    cleaned = []
+    valid_values = []
+    
+    # First pass: collect all valid numeric values
+    for record in records:
+        value = record.get("value")
+        if value is not None:
+            try:
+                float_val = float(value)
+                if not math.isnan(float_val):
+                    valid_values.append(record)
+            except (TypeError, ValueError):
+                pass
+    
+    return valid_values if valid_values else records
 
 
 def _load_ml_records() -> list:
@@ -30,18 +75,17 @@ def _load_ml_records() -> list:
         # Map the first numeric feature to ``value``
         value = None
         for v in features.values():
-            try:
+            if _is_valid_number(v):
                 value = float(v)
                 break
-            except (TypeError, ValueError):
-                continue
         flat.append({
             "entity_id": str(r.get("entity_id", i)),
             "timestamp": str(r.get("timestamp", i)),
             "value": value,
         })
 
-    return flat
+    # Clean records to remove NaN values before ML processing
+    return _clean_records_for_ml(flat)
 
 
 @router.get("/anomaly/zscore")
@@ -56,10 +100,11 @@ def run_zscore_anomaly():
         summary = model.evaluate(dataset.records)
         set_anomaly_status("completed")
 
-        return {
+        response = {
             "result": [p.model_dump() for p in predictions],
             "summary": summary.model_dump(),
         }
+        return _sanitize_for_json(response)
     except Exception:
         set_anomaly_status("idle")
         raise
@@ -77,10 +122,11 @@ def run_isolation_forest():
         summary = model.evaluate(dataset.records)
         set_anomaly_status("completed")
 
-        return {
+        response = {
             "result": [p.model_dump() for p in predictions],
             "summary": summary.model_dump(),
         }
+        return _sanitize_for_json(response)
     except Exception:
         set_anomaly_status("idle")
         raise
@@ -97,7 +143,7 @@ def run_kmeans_anomaly():
         summary = model.evaluate(dataset.records)
         set_anomaly_status("completed")
 
-        return {
+        response = {
             "status": "completed",
             "anomalies": summary.anomaly_count,
             "total": summary.total_records,
@@ -105,6 +151,7 @@ def run_kmeans_anomaly():
             "notes": "K-Means clustering using distance from centroid.",
             "result": [p.model_dump() for p in summary.records],
         }
+        return _sanitize_for_json(response)
     except Exception:
         set_anomaly_status("idle")
         raise
@@ -121,9 +168,10 @@ def run_linear_regression(steps_ahead: int = 5):
         predictions = model.predict(dataset.records, steps_ahead=steps_ahead)
         set_prediction_status("completed")
 
-        return {
+        response = {
             "result": [p.model_dump() for p in predictions],
         }
+        return _sanitize_for_json(response)
     except Exception:
         set_prediction_status("idle")
         raise
@@ -140,9 +188,10 @@ def run_moving_average(steps_ahead: int = 5):
         predictions = model.predict(dataset.records, steps_ahead=steps_ahead)
         set_prediction_status("completed")
 
-        return {
+        response = {
             "result": [p.model_dump() for p in predictions],
         }
+        return _sanitize_for_json(response)
     except Exception:
         set_prediction_status("idle")
         raise

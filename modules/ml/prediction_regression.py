@@ -1,4 +1,5 @@
 from typing import List
+import math
 
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -51,11 +52,18 @@ class LinearRegressionModel(BaseModel):
                 entity_id = "future"
                 timestamp = f"t+{i-n+1}"
 
+            # Ensure prediction value is not NaN or Inf
+            pred_value = predictions[i]
+            if math.isnan(pred_value) or math.isinf(pred_value):
+                pred_value = 0.0
+            else:
+                pred_value = round(float(pred_value), 4)
+
             results.append(
                 PredictionRecord(
                     entity_id=entity_id,
                     timestamp=timestamp,
-                    value=round(float(predictions[i]), 4),
+                    value=pred_value,
                     is_anomaly=False,
                     anomaly_score=None,
                 )
