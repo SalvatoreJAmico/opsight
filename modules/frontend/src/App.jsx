@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { getHealth, getSessionState } from "./api/client";
 import GlobalStatusBar from "./components/GlobalStatusBar";
 import DatasetTab from "./tabs/UploadTab";
@@ -6,6 +6,19 @@ import MetricsTab from "./tabs/MetricsTab";
 import ChartsTab from "./tabs/ChartsTab";
 import MlTab from "./tabs/MlTab";
 import PredictionTab from "./tabs/PredictionTab";
+
+const RESET_SESSION_STATE = {
+  pipeline_status: "not_run",
+  anomaly_status: "idle",
+  prediction_status: "idle",
+};
+
+function buildResetSessionState(datasetId) {
+  return {
+    active_dataset: datasetId || null,
+    ...RESET_SESSION_STATE,
+  };
+}
 
 const tabs = [
   { id: "dataset", label: "Dataset" },
@@ -22,12 +35,29 @@ export default function App() {
   const [apiVersion, setApiVersion] = useState("");
   const [pipelineResult, setPipelineResult] = useState(null);
   const [sessionState, setSessionState] = useState(null);
+  const [pendingDatasetId, setPendingDatasetId] = useState(null);
+
+  const activeDatasetIdentity = pendingDatasetId ?? sessionState?.active_dataset ?? null;
 
   const refreshSessionState = useCallback(async () => {
     const result = await getSessionState();
     if (result.ok) {
+      if (pendingDatasetId && result.data?.active_dataset !== pendingDatasetId) {
+        setSessionState(buildResetSessionState(pendingDatasetId));
+        return;
+      }
+
+      if (pendingDatasetId && result.data?.active_dataset === pendingDatasetId) {
+        setPendingDatasetId(null);
+      }
+
       setSessionState(result.data);
     }
+  }, [pendingDatasetId]);
+
+  const handleDatasetChange = useCallback((datasetId) => {
+    setPendingDatasetId(datasetId || null);
+    setSessionState(buildResetSessionState(datasetId));
   }, []);
 
   useEffect(() => {
@@ -53,10 +83,20 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [refreshSessionState]);
 
+  useEffect(() => {
+    setPipelineResult(null);
+  }, [activeDatasetIdentity]);
+
   const renderPanel = () => {
     switch (activeTab) {
       case "dataset":
-        return <DatasetTab onPipelineComplete={setPipelineResult} onAction={refreshSessionState} />;
+        return (
+          <DatasetTab
+            onPipelineComplete={setPipelineResult}
+            onAction={refreshSessionState}
+            onDatasetChange={handleDatasetChange}
+          />
+        );
       case "metrics":
         return <MetricsTab pipelineResult={pipelineResult} />;
       case "charts":

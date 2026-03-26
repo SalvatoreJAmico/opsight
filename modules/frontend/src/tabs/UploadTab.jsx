@@ -23,7 +23,7 @@ function getFilename(path) {
   return segments[segments.length - 1] || path;
 }
 
-export default function DatasetTab({ onPipelineComplete, onAction }) {
+export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChange }) {
   const [targetEnvironment, setTargetEnvironment] = useState(isDev ? "local" : "cloud");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -143,10 +143,17 @@ export default function DatasetTab({ onPipelineComplete, onAction }) {
           }}
           value={activeDataset || ""}
           onChange={(e) => {
-            setActiveDataset(e.target.value);
+            const nextDataset = e.target.value || null;
+            const hasChanged = nextDataset !== activeDataset;
+
+            setActiveDataset(nextDataset);
             setError("");
             setSuccessMessage("");
             setResult(null);
+
+            if (hasChanged) {
+              onDatasetChange?.(nextDataset);
+            }
           }}
         >
           <option value="">Select dataset</option>
