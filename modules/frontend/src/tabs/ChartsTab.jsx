@@ -142,6 +142,12 @@ const getObservationText = (chartId) => {
         <p style={{ color: "#c00" }}>{overviewError}</p>
       ) : overview ? (
         <>
+          {activeDatasetId && overview.source && overview.source !== activeDatasetId && (
+            <p style={{ color: "#b8860b", fontWeight: 600, marginBottom: "0.5rem" }}>
+              Warning: charts are showing data from &ldquo;{overview.source}&rdquo;. Run the pipeline for
+              &ldquo;{activeDatasetId}&rdquo; to update the charts for the selected dataset.
+            </p>
+          )}
           <p>Source: {overview.source}</p>
           <p>Rows: {overview.rows}</p>
           {overview.variables != null && <p>Variables: {overview.variables}</p>}

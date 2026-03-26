@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -456,6 +457,40 @@ class TestApiLayer(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "no runs recorded"})
+
+    def test_kmeans_anomaly_endpoint_returns_summary_from_persisted_records(self):
+        mocked_records = [
+            {"entity_id": "1", "timestamp": "2026-03-01", "value": 10.0},
+            {"entity_id": "2", "timestamp": "2026-03-02", "value": 11.0},
+            {"entity_id": "3", "timestamp": "2026-03-03", "value": 12.0},
+            {"entity_id": "4", "timestamp": "2026-03-04", "value": 13.0},
+            {"entity_id": "5", "timestamp": "2026-03-05", "value": 80.0},
+        ]
+
+        with patch("modules.api.routes.ml._load_ml_records", return_value=mocked_records):
+            response = self.client.get("/ml/anomaly/kmeans")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "completed")
+        self.assertEqual(body["total"], 5)
+        self.assertEqual(body["summary"]["total_records"], 5)
+        self.assertIn("anomalies", body)
+        self.assertEqual(body["anomalies"], body["summary"]["anomaly_count"])
+        self.assertEqual(body["notes"], "K-Means clustering using distance from centroid.")
+        self.assertEqual(len(body["result"]), 5)
+
+    def test_kmeans_anomaly_endpoint_returns_422_when_no_dataset_loaded(self):
+        with patch(
+            "modules.api.routes.ml._load_ml_records",
+            side_effect=HTTPException(status_code=422, detail="No dataset loaded. Upload and run a dataset first."),
+        ):
+            response = self.client.get("/ml/anomaly/kmeans")
+
+        self.assertEqual(response.status_code, 422)
+        body = response.json()
+        self.assertEqual(body["error"], "Request failed")
+        self.assertEqual(body["detail"], "No dataset loaded. Upload and run a dataset first.")
 
 
 if __name__ == "__main__":

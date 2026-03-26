@@ -1,14 +1,10 @@
 import React, { useState } from "react";
 import ModelCard from "./ModelCard";
-import { runZscoreAnomaly, runIsolationForestAnomaly } from "../api/client";
-
-const DEMO_RECORDS = [
-  { entity_id: "101", timestamp: "2026-03-12", value: 25.5 },
-  { entity_id: "102", timestamp: "2026-03-13", value: 42.1 },
-  { entity_id: "103", timestamp: "2026-03-14", value: 13.75 },
-  { entity_id: "104", timestamp: "2026-03-15", value: 28.2 },
-  { entity_id: "105", timestamp: "2026-03-16", value: 31.4 },
-];
+import {
+  runIsolationForestAnomaly,
+  runKmeansAnomaly,
+  runZscoreAnomaly,
+} from "../api/client";
 
 const anomalyModels = [
   {
@@ -29,18 +25,19 @@ const anomalyModels = [
     education: "Uses tree-based isolation to detect anomalies.",
     recommendation: "Best for complex, less obvious anomalies.",
   },
+  {
+    key: "kmeans",
+    name: "K-Means",
+    education: "Clusters records and flags points far from their assigned centroid.",
+    recommendation: "Useful classical baseline for unsupervised anomaly comparison.",
+  },
 ];
 
 const MODEL_RUNNERS = {
-  zscore: () => runZscoreAnomaly(DEMO_RECORDS),
-  isolation_forest: () => runIsolationForestAnomaly(DEMO_RECORDS),
-  threshold: () => Promise.resolve({
-    ok: true,
-    data: {
-      summary: { total_records: 5, anomaly_count: 1 },
-      result: [{entity_id: "103", timestamp: "2026-03-14", value: 13.75, is_anomaly: true}]
-    }
-  }),
+  zscore: () => runZscoreAnomaly(),
+  isolation_forest: () => runIsolationForestAnomaly(),
+  kmeans: () => runKmeansAnomaly(),
+  threshold: () => runZscoreAnomaly(),
 };
 
 export default function MlTab({ onAction, hasDataset }) {
@@ -142,7 +139,7 @@ export default function MlTab({ onAction, hasDataset }) {
         const result = summary ? {
           status: "Ready",
           summary: `${summary.anomaly_count} anomalies detected out of ${summary.total_records} records`,
-          notes: "Backend-driven result from selected model.",
+          notes: state.data?.notes || "Backend-driven result from selected model.",
         } : null;
 
         return (

@@ -2,14 +2,6 @@ import React, { useState } from "react";
 import ModelCard from "./ModelCard";
 import { runRegressionPrediction, runMovingAveragePrediction } from "../api/client";
 
-const DEMO_RECORDS = [
-  { entity_id: "101", timestamp: "2026-03-12", value: 25.5 },
-  { entity_id: "102", timestamp: "2026-03-13", value: 42.1 },
-  { entity_id: "103", timestamp: "2026-03-14", value: 13.75 },
-  { entity_id: "104", timestamp: "2026-03-15", value: 28.2 },
-  { entity_id: "105", timestamp: "2026-03-16", value: 31.4 },
-];
-
 const predictionModels = [
   {
     key: "linear_regression",
@@ -26,8 +18,8 @@ const predictionModels = [
 ];
 
 const MODEL_RUNNERS = {
-  linear_regression: () => runRegressionPrediction(DEMO_RECORDS, 3),
-  moving_average: () => runMovingAveragePrediction(DEMO_RECORDS, 3),
+  linear_regression: () => runRegressionPrediction(5),
+  moving_average: () => runMovingAveragePrediction(5),
 };
 
 export default function PredictionTab({ onAction, pipelineCompleted }) {
