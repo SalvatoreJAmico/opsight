@@ -238,6 +238,13 @@ Important settings:
 - `VITE_API_BASE_URL`
 - `VITE_API_PROXY_TARGET`
 - `VITE_API_PROXY_TARGET_LOCAL`
+- `VITE_LOCAL_API_URL` (production build)
+- `VITE_CLOUD_API_URL` (production build)
+
+How it works:
+
+- `npm run dev`: frontend uses Vite proxy routes (`/api-local` and `/api-cloud`)
+- `npm run build`: frontend uses real URLs (`VITE_LOCAL_API_URL` and `VITE_CLOUD_API_URL`, or built-in defaults)
 
 ### Backend Runtime Configuration
 
@@ -253,6 +260,7 @@ Important backend settings:
 - `STORAGE_PATH`
 - `LOG_LEVEL`
 - `ALLOW_LOCAL_FALLBACK`
+- `PIPELINE_SUMMARY_PATH`
 
 Optional cloud-related settings include:
 
@@ -265,6 +273,10 @@ Optional cloud-related settings include:
 - `AZURE_KEY_VAULT_URL`
 - `AZURE_OPENAI_API_KEY`
 - `AZURE_OPENAI_ENDPOINT`
+
+Production-specific requirement:
+
+- if `APP_ENV=prod`, set `BLOB_ACCOUNT`, `BLOB_CONTAINER`, and `BLOB_PATH`
 
 ### Docker
 
