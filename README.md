@@ -1,5 +1,7 @@
 # Opsight
 
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+
 ## Live Demo
 
 Frontend
@@ -277,6 +279,12 @@ npm run build
 - Frontend: React, Vite, Vitest
 - Storage: JSON and Parquet backends, with cloud integration hooks
 
+## 📬 Commercial Use
+
+This project is intended for educational and portfolio use.
+
+If you are interested in using Opsight in a commercial or production setting, please contact me.
+
 ## License
 
-This project is licensed under the MIT License. See LICENSE.
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). See LICENSE.
