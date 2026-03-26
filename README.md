@@ -185,6 +185,18 @@ Opsight supports split frontend and backend deployment.
 - Frontend environment examples: [modules/frontend/.env.example](modules/frontend/.env.example)
 - Backend environment templates: [.env.example](.env.example), [configs/production.env](configs/production.env)
 
+Production configuration is split across three places:
+
+1. repo-tracked templates for documented keys only
+2. GitHub deployment secrets and variables for workflow execution
+3. Azure runtime settings and secrets for the live service
+
+For the backend, production runtime must define `APP_ENV=prod`, disable local fallback, and provide Blob ingestion settings.
+
+For the frontend, production builds should supply the deployed API URL through deployment configuration rather than relying on local dev proxy behavior.
+
+The source of truth for the production environment and secrets contract is [configs/README.md](configs/README.md).
+
 ## Repository Map
 
 ```text
