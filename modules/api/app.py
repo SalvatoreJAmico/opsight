@@ -56,6 +56,42 @@ def _records_to_chart_df(records: list) -> pd.DataFrame:
     return df
 
 
+def _build_chart_context(df: pd.DataFrame) -> dict:
+    """Return per-chart field-role context from the active dataset."""
+    num_cols = [
+        c for c in df.columns
+        if c != "entity_id" and pd.api.types.is_numeric_dtype(df[c])
+    ]
+    str_cols = [
+        c for c in df.columns
+        if c != "entity_id" and not pd.api.types.is_numeric_dtype(df[c])
+    ]
+
+    first_numeric = num_cols[0] if len(num_cols) >= 1 else None
+    second_numeric = num_cols[1] if len(num_cols) >= 2 else first_numeric
+    first_grouping = str_cols[0] if str_cols else "entity_id"
+
+    return {
+        "histogram": {
+            "value": first_numeric,
+        },
+        "bar-category": {
+            "grouping": first_grouping,
+        },
+        "boxplot": {
+            "value": first_numeric,
+        },
+        "scatter": {
+            "value": first_numeric,
+            "value_secondary": second_numeric,
+        },
+        "grouped-comparison": {
+            "value": first_numeric,
+            "grouping": first_grouping,
+        },
+    }
+
+
 def get_chart_dataframe() -> pd.DataFrame:
     """Load the active persisted records and return a chart-ready DataFrame.
 
@@ -280,6 +316,7 @@ def charts_overview():
         "rows": len(df),
         "variables": len(df.columns),
         "fields": list(df.columns),
+        "chart_context": _build_chart_context(df),
         **stats,
     }
 

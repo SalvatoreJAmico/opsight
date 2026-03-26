@@ -137,6 +137,7 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
               status: "Ready",
               summary: `${summary.anomaly_count} anomalies detected out of ${summary.total_records} records`,
               notes: state.data?.notes || "Backend-driven result from selected model.",
+              datasetContext: state.data?.dataset_context || null,
             }
           : null;
 

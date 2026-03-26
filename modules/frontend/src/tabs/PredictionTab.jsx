@@ -98,6 +98,7 @@ export default function PredictionTab({ onAction, pipelineCompleted }) {
           status: "Ready",
           summary: `Generated ${state.data.result?.length || 0} prediction records.`,
           notes: "Includes historical and future predictions from backend model.",
+          datasetContext: state.data?.dataset_context || null,
         } : null;
 
         return (

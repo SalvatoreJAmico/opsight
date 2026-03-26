@@ -1,6 +1,8 @@
 import React from "react";
 
 export default function ModelCard({ model, checked, onToggle, disabled = false, loading = false, error = "", result = null }) {
+  const datasetContextEntries = Object.entries(result?.datasetContext || {}).filter(([, value]) => Boolean(value));
+
   return (
     <div
       style={{
@@ -48,6 +50,24 @@ export default function ModelCard({ model, checked, onToggle, disabled = false, 
                 <p style={{ margin: 0 }}>
                   <strong>Notes:</strong> {result.notes}
                 </p>
+                {datasetContextEntries.length > 0 ? (
+                  <div
+                    style={{
+                      marginTop: "0.65rem",
+                      padding: "0.6rem",
+                      border: "1px solid #ddd",
+                      borderRadius: "6px",
+                      background: "#fff",
+                    }}
+                  >
+                    <strong>Dataset Context</strong>
+                    {datasetContextEntries.map(([role, field]) => (
+                      <p key={role} style={{ margin: "0.35rem 0 0 0" }}>
+                        <strong>{role}:</strong> {field}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             )}
           </div>

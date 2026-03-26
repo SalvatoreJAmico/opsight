@@ -88,11 +88,22 @@ def _load_ml_records() -> list:
     return _clean_records_for_ml(flat)
 
 
+def _get_ml_dataset_context(records: list) -> dict:
+    """Return role-based field context for ML endpoints."""
+    value_field = "value" if records else None
+    return {
+        "identifier": "entity_id",
+        "time": "timestamp",
+        "value": value_field,
+    }
+
+
 @router.get("/anomaly/zscore")
 def run_zscore_anomaly():
     set_anomaly_status("running")
     try:
         records = _load_ml_records()
+        dataset_context = _get_ml_dataset_context(records)
         dataset = build_feature_dataset(records)
 
         model = ZScoreAnomalyModel(threshold=1.5)
@@ -103,6 +114,7 @@ def run_zscore_anomaly():
         response = {
             "result": [p.model_dump() for p in predictions],
             "summary": summary.model_dump(),
+            "dataset_context": dataset_context,
         }
         return _sanitize_for_json(response)
     except Exception:
@@ -115,6 +127,7 @@ def run_isolation_forest():
     set_anomaly_status("running")
     try:
         records = _load_ml_records()
+        dataset_context = _get_ml_dataset_context(records)
         dataset = build_feature_dataset(records)
 
         model = IsolationForestModel(contamination=0.1)
@@ -125,6 +138,7 @@ def run_isolation_forest():
         response = {
             "result": [p.model_dump() for p in predictions],
             "summary": summary.model_dump(),
+            "dataset_context": dataset_context,
         }
         return _sanitize_for_json(response)
     except Exception:
@@ -137,6 +151,7 @@ def run_kmeans_anomaly():
     set_anomaly_status("running")
     try:
         records = _load_ml_records()
+        dataset_context = _get_ml_dataset_context(records)
         dataset = build_feature_dataset(records)
 
         model = KMeansAnomalyModel(n_clusters=3)
@@ -150,6 +165,7 @@ def run_kmeans_anomaly():
             "summary": summary.model_dump(),
             "notes": "K-Means clustering using distance from centroid.",
             "result": [p.model_dump() for p in summary.records],
+            "dataset_context": dataset_context,
         }
         return _sanitize_for_json(response)
     except Exception:
@@ -162,6 +178,7 @@ def run_linear_regression(steps_ahead: int = 5):
     set_prediction_status("running")
     try:
         records = _load_ml_records()
+        dataset_context = _get_ml_dataset_context(records)
         dataset = build_feature_dataset(records)
 
         model = LinearRegressionModel()
@@ -170,6 +187,7 @@ def run_linear_regression(steps_ahead: int = 5):
 
         response = {
             "result": [p.model_dump() for p in predictions],
+            "dataset_context": dataset_context,
         }
         return _sanitize_for_json(response)
     except Exception:
@@ -182,6 +200,7 @@ def run_moving_average(steps_ahead: int = 5):
     set_prediction_status("running")
     try:
         records = _load_ml_records()
+        dataset_context = _get_ml_dataset_context(records)
         dataset = build_feature_dataset(records)
 
         model = MovingAverageModel(window_size=2)
@@ -190,6 +209,7 @@ def run_moving_average(steps_ahead: int = 5):
 
         response = {
             "result": [p.model_dump() for p in predictions],
+            "dataset_context": dataset_context,
         }
         return _sanitize_for_json(response)
     except Exception:

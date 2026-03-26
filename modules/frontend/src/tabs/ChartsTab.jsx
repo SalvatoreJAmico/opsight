@@ -122,6 +122,11 @@ const getObservationText = (chartId) => {
   }
 };
 
+const getChartContextEntries = (overview, chartId) => {
+  const context = overview?.chart_context?.[chartId] || {};
+  return Object.entries(context).filter(([, value]) => Boolean(value));
+};
+
 
 
 
@@ -241,6 +246,25 @@ const getObservationText = (chartId) => {
       alt={`${chart.title} visualization`}
       style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
     />
+
+    {getChartContextEntries(overview, chart.id).length > 0 ? (
+      <div
+        style={{
+          marginTop: "0.75rem",
+          padding: "0.75rem",
+          border: "1px solid #ddd",
+          borderRadius: "8px",
+          background: "#fafafa",
+        }}
+      >
+        <strong>Dataset Context</strong>
+        {getChartContextEntries(overview, chart.id).map(([role, field]) => (
+          <p key={`${chart.id}-${role}`} style={{ marginTop: "0.35rem" }}>
+            <strong>{role}:</strong> {field}
+          </p>
+        ))}
+      </div>
+    ) : null}
 
     <div
       style={{
