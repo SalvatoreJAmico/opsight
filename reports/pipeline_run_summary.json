@@ -3,9 +3,9 @@
     "failed_stage": null,
     "error_type": null,
     "error_message": null,
-    "records_ingested": 9994,
-    "records_valid": 9994,
+    "records_ingested": 40,
+    "records_valid": 40,
     "records_invalid": 0,
-    "records_persisted": 9994,
-    "runtime_seconds": 4.90504
+    "records_persisted": 40,
+    "runtime_seconds": 0.924628
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { getHealth, getSessionState } from "./api/client";
+import { getHealth, getSessionState, resetSession } from "./api/client";
 import GlobalStatusBar from "./components/GlobalStatusBar";
 import DatasetTab from "./tabs/UploadTab";
 import MetricsTab from "./tabs/MetricsTab";
@@ -30,6 +30,8 @@ const tabs = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dataset");
+  const [uiResetVersion, setUiResetVersion] = useState(0);
+  const [resettingSession, setResettingSession] = useState(false);
   const [healthStatus, setHealthStatus] = useState("Checking API...");
   const [healthError, setHealthError] = useState("");
   const [apiVersion, setApiVersion] = useState("");
@@ -89,24 +91,47 @@ export default function App() {
     setPipelineResult(null);
   }, [activeDatasetIdentity]);
 
+  const handleSessionReset = useCallback(async () => {
+    setResettingSession(true);
+    setHealthError("");
+
+    const response = await resetSession();
+    if (!response.ok) {
+      setHealthError(response.error || "Session reset failed.");
+      setResettingSession(false);
+      return;
+    }
+
+    setPendingDatasetId(null);
+    setPipelineResult(null);
+    setSessionState(response.data?.session || buildResetSessionState(null));
+    setActiveTab("dataset");
+    setUiResetVersion((prev) => prev + 1);
+    await refreshSessionState();
+    setResettingSession(false);
+  }, [refreshSessionState]);
+
+  const panelKey = `${activeTab}-${uiResetVersion}`;
+
   const renderPanel = () => {
     switch (activeTab) {
       case "dataset":
         return (
           <DatasetTab
+            key={panelKey}
             onPipelineComplete={setPipelineResult}
             onAction={refreshSessionState}
             onDatasetChange={handleDatasetChange}
           />
         );
       case "metrics":
-        return <MetricsTab pipelineResult={pipelineResult} />;
+        return <MetricsTab key={panelKey} pipelineResult={pipelineResult} />;
       case "charts":
-        return <ChartsTab activeDatasetId={activeDatasetIdentity} />;
+        return <ChartsTab key={panelKey} activeDatasetId={activeDatasetIdentity} />;
       case "ml":
-        return <MlTab onAction={refreshSessionState} hasDataset={hasDataset} />;
+        return <MlTab key={panelKey} onAction={refreshSessionState} hasDataset={hasDataset} />;
       case "prediction":
-        return <PredictionTab onAction={refreshSessionState} pipelineCompleted={pipelineCompleted} />;
+        return <PredictionTab key={panelKey} onAction={refreshSessionState} pipelineCompleted={pipelineCompleted} />;
       default:
         return null;
     }
@@ -131,6 +156,23 @@ export default function App() {
           {healthError ? (
             <p style={{ marginTop: "0.5rem" }}>{healthError}</p>
           ) : null}
+        </div>
+
+        <div style={{ marginTop: "0.75rem" }}>
+          <button
+            type="button"
+            onClick={handleSessionReset}
+            disabled={resettingSession}
+            style={{
+              padding: "0.65rem 1rem",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              cursor: resettingSession ? "not-allowed" : "pointer",
+              fontWeight: 600,
+            }}
+          >
+            {resettingSession ? "Resetting..." : "Reset Session"}
+          </button>
         </div>
       </header>
 

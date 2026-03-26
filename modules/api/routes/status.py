@@ -3,7 +3,9 @@ import json
 import os
 from pathlib import Path
 from fastapi import APIRouter
-from modules.api.session_state import get_session_state
+from modules.api.session_state import get_session_state, reset_session_state
+from modules.config.storage_config import StorageConfig
+from modules.persistence.local_storage import LocalStorage
 
 router = APIRouter()
 
@@ -28,3 +30,16 @@ def get_pipeline_status():
 @router.get("/session/state")
 def get_session_state_endpoint():
     return get_session_state()
+
+
+@router.post("/session/reset")
+def reset_session_endpoint():
+    config = StorageConfig()
+    storage = LocalStorage(storage_path=config.storage_path)
+    storage.save_records([])
+
+    state = reset_session_state()
+    return {
+        "status": "reset",
+        "session": state,
+    }

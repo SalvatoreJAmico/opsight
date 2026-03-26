@@ -370,6 +370,39 @@ class TestApiLayer(unittest.TestCase):
             },
         )
 
+    def test_session_reset_clears_storage_and_resets_session_state(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage_path = Path(tmp_dir) / "records.json"
+            local_storage = LocalStorage(storage_path=str(storage_path))
+            local_storage.save_records([
+                {"entity_id": "101", "timestamp": "2026-03-12", "features": {"value": 10}, "metadata": {}},
+            ])
+
+            session_state.set_active_dataset("sales_csv")
+            session_state.set_pipeline_status("completed")
+            session_state.set_anomaly_status("completed")
+            session_state.set_prediction_status("completed")
+
+            with patch("modules.api.routes.status.StorageConfig") as mocked_storage_config:
+                mocked_storage_config.return_value.storage_path = str(storage_path)
+                response = self.client.post("/session/reset")
+
+            reloaded_storage = LocalStorage(storage_path=str(storage_path))
+            self.assertEqual(reloaded_storage.load_records(), [])
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "reset")
+        self.assertEqual(
+            body["session"],
+            {
+                "active_dataset": None,
+                "pipeline_status": "not_run",
+                "anomaly_status": "idle",
+                "prediction_status": "idle",
+            },
+        )
+
     def test_protected_attempt_logging_excludes_secret(self):
         with patch("modules.api.access_control.logger.info") as mocked_info, patch(
             "modules.api.access_control.logger.warning"

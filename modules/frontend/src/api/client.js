@@ -101,6 +101,12 @@ export async function getSessionState() {
   });
 }
 
+export async function resetSession() {
+  return request(ENDPOINTS.SESSION_RESET, {
+    method: "POST",
+  });
+}
+
 export async function triggerPipeline(payload, config = {}) {
   return request(ENDPOINTS.PIPELINE_TRIGGER, {
     method: "POST",
