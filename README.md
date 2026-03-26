@@ -205,6 +205,10 @@ The source of truth for the production environment and secrets contract is [conf
 
 For a local preflight check of the backend runtime contract, run `validate_opsight_runtime.bat`.
 
+For a full live deployment verification pass, run `run_live_smoke_tests.bat` with the frontend and API URLs.
+
+Deployment runbook and rollback steps are documented in [reports/deployment_runbook.md](reports/deployment_runbook.md).
+
 ## Repository Map
 
 ```text

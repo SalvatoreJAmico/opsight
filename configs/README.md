@@ -119,6 +119,13 @@ Optional but commonly used:
 - Production (`APP_ENV=prod`): local fallback must be disabled.
 - Production requires Blob ingestion settings (`BLOB_ACCOUNT`, `BLOB_CONTAINER`, `BLOB_PATH`).
 
+## Hosted Persistence Scope (Current)
+
+- Hosted deployment currently runs with `PERSISTENCE_MODE=json`.
+- This persistence mode is accepted for demo and portfolio deployment scope.
+- Data can be reset when container instances are replaced or restarted.
+- Durable persistence migration is a follow-up architecture item, not a blocker for current live deployment.
+
 ## Frontend Production Values
 
 For a deployed frontend build, define production frontend values outside source control.
