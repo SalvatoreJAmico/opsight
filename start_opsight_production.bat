@@ -35,7 +35,7 @@ if errorlevel 1 (
 )
 
 echo [3/4] Starting frontend preview server...
-start "Opsight Frontend (Prod Preview)" cmd /c "cd /d ""%~dp0modules\frontend"" && npm run preview -- --host 127.0.0.1 --port 4173"
+start "Opsight Frontend (Prod Preview)" cmd /c "cd /d ""%~dp0modules\frontend"" && npx vite preview --host 127.0.0.1 --port 4173"
 
 echo [4/4] Waiting for services to start (12 seconds)...
 timeout /t 12 >nul
