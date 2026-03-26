@@ -1,89 +1,91 @@
 # Opsight
 
-Opsight is a modular operational data pipeline for ingesting heterogeneous datasets, normalizing them into a canonical schema, validating data integrity, and persisting validated records for downstream analytics.
+Opsight is a portfolio-ready operational analytics project that turns raw business datasets into a usable analysis workflow.
 
-The project is structured around small, composable pipeline stages and a single orchestration entrypoint. The repository already includes a working end-to-end runner, sample datasets, JSON and Parquet persistence backends, reporting artifacts, and unit tests covering both success and failure paths.
+It combines a modular Python data pipeline, a FastAPI backend, a React frontend, chart generation, anomaly detection, and lightweight prediction tools. A user can select a dataset, run the pipeline, inspect summary metrics, explore charts, and execute anomaly detection or prediction models from one interface.
 
-## Pipeline Overview
+## What Opsight Does
+
+Opsight is built for the common real-world problem of operational data arriving in inconsistent formats and needing to become usable quickly.
+
+At a high level, Opsight:
+
+- ingests tabular source data such as CSV, JSON, Parquet, and Excel
+- maps source rows into a canonical record format
+- validates records before persistence
+- stores processed records for downstream analysis
+- exposes backend endpoints for charts, session state, anomaly detection, and prediction
+- provides a React UI with Dataset, Metrics, Charts, Anomaly Detection, and Prediction tabs
+
+## Why It Matters
+
+Opsight is designed to show more than isolated scripts or notebooks.
+
+It demonstrates how to:
+
+- structure a data product as a modular pipeline
+- separate backend processing from frontend presentation
+- carry data from ingestion through validation to analysis
+- expose analytical capabilities through a usable UI
+- validate behavior with automated tests across backend and frontend layers
+
+## Current Product Surface
+
+### Frontend UI
+
+The React frontend currently provides these tabs:
+
+- Dataset: choose a sample dataset, target local or deployed API, and trigger the pipeline
+- Metrics: review pipeline counts such as ingested, valid, invalid, and persisted records
+- Charts: load generated visualizations and dataset overview statistics
+- Anomaly Detection: run anomaly models such as Z-Score, Isolation Forest, and K-Means
+- Prediction: run forecasting-oriented models such as Linear Regression and Moving Average
+
+### Backend API
+
+The FastAPI service currently provides:
+
+- health and version reporting
+- pipeline trigger and session reset/state endpoints
+- chart generation and chart overview endpoints
+- anomaly detection endpoints
+- prediction endpoints
+- static asset serving for generated chart images
+
+### Data Pipeline
+
+The Python pipeline currently handles:
+
+- dataset ingestion
+- schema normalization through adapter logic
+- canonical record creation
+- validation and duplicate checks
+- persistence to local storage
+- run summaries, failure summaries, and structured logs
+
+## High-Level Architecture
 
 ```text
-Opsight Pipeline Architecture
-               ┌───────────────┐
-               │   Source Data │
-               │ CSV / JSON /  │
-               │ Parquet / API │
-               └───────┬───────┘
-                       │
-                       ▼
-               ┌───────────────┐
-               │   Ingestion   │
-               │ Load dataset  │
-               │ Basic checks  │
-               └───────┬───────┘
-                       │
-                       ▼
-               ┌───────────────┐
-               │    Adapter    │
-               │ Normalize     │
-               │ Map schema    │
-               └───────┬───────┘
-                       │
-                       ▼
-               ┌───────────────┐
-               │  Canonical    │
-               │    Records    │
-               │ entity_id     │
-               │ timestamp     │
-               │ features{}    │
-               └───────┬───────┘
-                       │
-                       ▼
-               ┌───────────────┐
-               │  Validation   │
-               │ Field checks  │
-               │ duplicates    │
-               │ timestamps    │
-               └───────┬───────┘
-                       │
-                       ▼
-               ┌───────────────┐
-               │  Persistence  │
-               │ JSON / Parquet│
-               │ storage layer │
-               └───────┬───────┘
-                       │
-                       ▼
-               ┌───────────────┐
-               │ Observability │
-               │ Logs          │
-               │ Run summary   │
-               │ Error reports │
-               └───────────────┘
+Dataset Source
+    |
+    v
+Ingestion -> Adapter -> Canonical Records -> Validation -> Persistence
+                                                        |
+                                                        v
+                                               Reports and Logs
+                                                        |
+                                                        v
+                                                FastAPI Endpoints
+                                                        |
+                            -------------------------------------------------
+                            |                                               |
+                            v                                               v
+                     React Frontend                                 Legacy Streamlit UI
 ```
 
-The system emphasizes:
+## Canonical Record Shape
 
-- modular pipeline stages
-- clear data contracts
-- centralized orchestration
-- observability through logs and run summaries
-- testable failure handling
-
-## What The Project Does Today
-
-Opsight currently ships with a runnable pipeline in `run_pipeline.py` that:
-
-1. ingests a source dataset from the `data/` directory
-2. adapts the source rows into a canonical record shape
-3. validates each canonical record
-4. persists valid records through the configured storage backend
-5. writes a run summary and stage logs for observability
-
-The default pipeline configuration reads `data/opsight_sample_sales.csv` and persists valid records to `data/records.json` using the JSON storage backend.
-
-## Canonical Record Schema
-
-Canonical records in Opsight follow this structure:
+Opsight normalizes records into a consistent structure so the rest of the system can work against one contract.
 
 ```python
 {
@@ -94,411 +96,273 @@ Canonical records in Opsight follow this structure:
 }
 ```
 
-This schema creates a consistent contract between ingestion, transformation, validation, and persistence.
+## Key Capabilities
 
-## Core Modules
+### Dataset Handling
 
-### Ingestion
+Opsight supports multiple source formats in the ingestion layer, including:
 
-The ingestion layer detects source format and loads data into a dataframe for downstream processing.
-
-Currently supported source handling:
-
-- CSV
-- TSV
+- CSV and TSV
 - JSON
 - Parquet
 - Excel
 - HTTP and HTTPS file URLs for common tabular formats
 
-### Adapter
+### Charts
 
-The adapter layer normalizes source column names and maps source rows into the canonical Opsight record format.
+The charts workflow currently includes:
 
-Current mapping behavior:
+- histogram
+- category bar chart
+- box plot
+- scatter plot
+- grouped comparison chart
+- dataset overview statistics
 
-- columns containing `id` are treated as entity identifiers
-- columns containing `time` or `date` are treated as timestamps
-- all remaining columns are grouped into `features`
+### Anomaly Detection
 
-### Validation
+The anomaly detection workflow currently includes:
 
-The validation package includes:
+- Z-Score baseline
+- Isolation Forest
+- K-Means clustering
 
-- canonical record validation
-- timestamp validation helpers
-- feature validation helpers
-- duplicate detection utilities
-- report and quality-report modules
+### Prediction
 
-The current pipeline runner validates each canonical record before persistence and separates valid and invalid records for reporting.
+The prediction workflow currently includes:
 
-### Persistence
+- Linear Regression
+- Moving Average
 
-The persistence layer provides a backend abstraction with implemented support for:
+## Quick Start
 
-- local JSON storage
-- Parquet storage
+### Option 1: Windows One-Command Startup
 
-Backend selection is handled through `StorageConfig` and `StorageFactory`.
+From the repository root:
 
-## Running The Pipeline
-
-Run the pipeline from the repository root:
-
-```bash
-python run_pipeline.py
+```bat
+start_opsight.bat
 ```
 
-Observed current sample run:
+This starts:
 
-```python
-{
-    "status": "SUCCESS",
-    "failed_stage": None,
-    "records_ingested": 3,
-    "records_valid": 3,
-    "records_invalid": 0,
-    "records_persisted": 3,
-    "runtime_seconds": 0.007852,
-}
+- backend API on `http://localhost:8000`
+- frontend UI on `http://localhost:5173`
+
+To stop local processes:
+
+```bat
+stop_opsight.bat
 ```
 
-## Generated Artifacts
+### Option 2: Manual Local Setup
 
-When the pipeline runs, Opsight produces:
+#### 1. Create and activate a virtual environment
 
-- stage logs in `logs/`
-- `reports/pipeline_run_summary.json` for every run
-- `reports/pipeline_failure_summary.json` when a run fails
-- persisted output in `data/records.json` by default
+PowerShell:
 
-## Testing
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
 
-Install dependencies, then run the full test suite:
+#### 2. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
-python -m pytest
 ```
 
-If dependencies are already installed, run:
+#### 3. Install frontend dependencies
 
 ```bash
-python -m pytest
+cd modules/frontend
+npm install
+cd ../..
 ```
 
-## Deployment And Operations
+#### 4. Create local environment file
 
-### Environment Variables
+```powershell
+Copy-Item .env.example .env
+```
 
-Opsight reads runtime configuration from environment variables.
+Minimum local defaults already exist in `.env.example`. The most important value to review is:
 
-- `.env.example` provides a local baseline
-- `configs/production.env` provides production-oriented defaults
+- `UPLOAD_ACCESS_CODE`
 
-At minimum, set these for runtime:
+#### 5. Start the backend API
+
+From repository root:
+
+```bash
+uvicorn modules.api.app:app --reload
+```
+
+#### 6. Start the frontend UI
+
+In a second terminal:
+
+```bash
+cd modules/frontend
+npm run dev
+```
+
+#### 7. Open the app
+
+- Frontend UI: `http://localhost:5173`
+- Backend API: `http://localhost:8000`
+- Health endpoint: `http://localhost:8000/health`
+
+## Using the App Locally
+
+A typical local flow is:
+
+1. Open the Dataset tab.
+2. Select a sample dataset.
+3. Run the pipeline against the local API.
+4. Review Metrics.
+5. Open Charts for visual analysis.
+6. Run Anomaly Detection models.
+7. Run Prediction models after the pipeline completes.
+
+## Deployed Usage
+
+Opsight is structured to support a deployed frontend and API split.
+
+### Frontend API Targeting
+
+The frontend supports local and deployed API targets. Relevant frontend environment options are in [modules/frontend/.env.example](modules/frontend/.env.example).
+
+Important settings:
+
+- `VITE_API_BASE_URL`
+- `VITE_API_PROXY_TARGET`
+- `VITE_API_PROXY_TARGET_LOCAL`
+
+### Backend Runtime Configuration
+
+Runtime settings are defined through environment variables. The local baseline is in [.env.example](.env.example), and production-oriented defaults are in [configs/production.env](configs/production.env).
+
+Important backend settings:
 
 - `APP_ENV`
 - `APP_VERSION`
 - `PORT`
-- `UPLOAD_ACCESS_CODE` (dataset access code)
+- `UPLOAD_ACCESS_CODE`
 - `PERSISTENCE_MODE`
 - `STORAGE_PATH`
 - `LOG_LEVEL`
 - `ALLOW_LOCAL_FALLBACK`
 
-### Versioning Strategy (PS-096)
+Optional cloud-related settings include:
 
-Opsight uses semantic versioning with release baseline `v1.0.0`.
-
-- Version source of truth: `APP_VERSION` environment variable
-- Startup observability: API startup logs include `app_version`
-- Runtime observability: `GET /health` returns `version`
-- Deployment updates: update `APP_VERSION` in deployment environment configuration before rollout
-
-Recommended semantic version increments:
-
-- `MAJOR` for breaking API or data-contract changes
-- `MINOR` for backward-compatible features
-- `PATCH` for backward-compatible fixes
-
-Example deployment update:
-
-```bash
-APP_VERSION=1.0.1
-```
-
-Then deploy and confirm the release via `GET /health`.
-
-Optional Azure settings:
-
-- `BLOB_ACCOUNT` (required when `APP_ENV=prod`)
-- `BLOB_CONTAINER` (required when `APP_ENV=prod`)
+- `BLOB_ACCOUNT`
+- `BLOB_CONTAINER`
 - `BLOB_PATH`
 - `API_BASE_URL`
-- `ENABLE_PIPELINE`
-- `INPUT_SOURCE_PATH`
-- `PIPELINE_SUMMARY_PATH`
 - `AZURE_STORAGE_CONNECTION_STRING`
 - `AZURE_STORAGE_CONTAINER`
 - `AZURE_KEY_VAULT_URL`
 - `AZURE_OPENAI_API_KEY`
 - `AZURE_OPENAI_ENDPOINT`
 
-### Run API Locally
+### Docker
 
-From repository root:
-
-```bash
-# Create a local .env file first if you do not already have one.
-# PowerShell: Copy-Item .env.example .env
-uvicorn modules.api.app:app --host 0.0.0.0 --port 8000
-```
-
-Health check:
-
-```bash
-curl http://localhost:8000/health
-```
-
-Expected response:
-
-```json
-{"status":"ok","version":"1.0.0"}
-```
-
-### Run Streamlit UI Locally
-
-From repository root:
-
-```bash
-streamlit run modules/streamlit_ui/app.py
-```
-
-Configuration resolution order for the Streamlit UI:
-
-- existing environment variables
-- repo-root `.env` file, if present
-- local defaults for `API_BASE_URL`, `STORAGE_PATH`, and `PIPELINE_SUMMARY_PATH`
-
-Local default for `API_BASE_URL` is `http://127.0.0.1:8000`.
-
-If you want to override local defaults without exporting shell variables, copy `.env.example` to `.env` at the repository root and update the values there.
-
-### Build And Run Docker Image
-
-Build image:
+Build the image:
 
 ```bash
 docker build -t opsight:final .
 ```
 
-Run API container:
+Run the API container:
 
 ```bash
 docker run --rm -p 8000:8000 --name opsight-api opsight:final
 ```
 
-## Branching and Release Workflow
-
-### Branch Roles
-
-- main: production-ready branch
-- dev: active development and integration branch
-- feature/*: isolated work for individual issues or changes
-
-### Standard Flow
-
-```text
-feature/* -> dev -> main
-```
-
-### Merge Rules
-
-- No direct commits to main
-- All production-bound changes must be reviewed before merging
-- Changes should merge into dev first, then be promoted to main
-- main must always remain deployable
-- main should only receive validated changes from dev, not ad hoc feature branches
-
-### Release Rules
-
-A release is considered ready when:
-
-- Relevant issue scope is complete
-- Tests pass
-- Documentation is updated when behavior or configuration changes
-- APP_VERSION is deliberately bumped
-- The validated release is merged into main
-
-### Conceptual Branch Protection
-
-- Protect main
-- Require pull requests for merge
-- Require passing checks before merge
-- Disallow force-pushes to main
-
-## Deployment Flow (Pre-CI/CD)
-
-Opsight uses two deployment paths.
-
-### API Deployment Path
-
-1. Develop and validate API changes locally.
-2. Merge validated changes through `feature/* -> dev -> main`.
-3. Build a versioned Docker image from the repository.
-4. Push the image to Azure Container Registry (ACR).
-5. Update Azure Container Apps to use the new image tag.
-6. Azure creates a new revision for the API deployment.
-7. Validate the live API after deployment.
-
-### UI Deployment Path
-
-1. Develop and validate UI changes locally.
-2. Merge validated changes through `feature/* -> dev -> main`.
-3. Deploy the UI source to Azure Static Web Apps.
-4. Configure the UI to use the deployed API base URL.
-5. Validate the live UI after deployment.
-
-### Runtime Configuration
-
-The API runs in Azure Container Apps using:
-
-- environment variables
-- secrets
-- managed identity
-- Azure Blob ingestion
-- structured stdout logging
-
-The API is deployed as a versioned container image, not by shipping source files directly.
-
-### Update Model
-
-Each release should:
-
-- complete scoped work
-- pass validation
-- include documentation updates if needed
-- deliberately bump `APP_VERSION`
-- produce a new API image version
-- update the deployed Container App revision
-- deploy UI changes when frontend behavior changed
-- validate the live system
-
-### Rollback Model
-
-- API rollback uses the previous known-good container image/revision.
-- UI rollback uses the previous known-good frontend deployment.
-
-### Clean Architecture Flow
-
-```text
-Local Repo
-        |
-        v
-GitHub Repository
-        |
-        |-- UI source -> Azure Static Web Apps
-        |
-        `-- API source -> Docker image build
-                                                                |
-                                                                v
-                                        Azure Container Registry
-                                                                |
-                                                                v
-                                  Azure Container Apps
-                                                                |
-                                                                |-- Env vars / secrets
-                                                                |-- Managed identity
-                                                                |-- Azure Blob access
-                                                                `-- Log Analytics / Azure Monitor
-```
-
-## Logging and Monitoring
-
-Opsight runtime logs are emitted as structured JSON for API, pipeline, and ingestion components.
-
-- Logs are written to stdout by default
-- Azure can ingest stdout logs through Container Apps and Log Analytics
-- Key lifecycle events and categorized failures are intentionally logged
-- Secret values (for example, access codes and credentials) are never logged
-
-Structured log payloads include stable fields for queryability:
-
-- event
-- level
-- timestamp
-- app_env
-- app_version
-
-Additional fields are included when relevant, such as route, status, source, error_type, and error_message.
-
-### Use Docker Compose
-
-Start services (API + pipeline service definition):
+Or use Docker Compose:
 
 ```bash
 docker compose up --build
 ```
 
-Run in detached mode:
-
-```bash
-docker compose up --build -d
-```
-
-Stop services:
-
-```bash
-docker compose down
-```
-
-The current test suite covers:
-
-- successful pipeline execution
-- ingestion, adapter, validation, and persistence failure paths
-- canonical record validation behavior
-- duplicate detection behavior
-
-## Repository Layout
+## Repository Map
 
 ```text
 opsight/
-├── configs/            storage and pipeline configuration
-├── data/               sample input data and persisted records
+├── configs/            runtime and deployment configuration
+├── data/               sample datasets and persisted records
 ├── logs/               pipeline execution logs
-├── models/             future model artifacts
 ├── modules/
 │   ├── adapter/        source-to-canonical mapping
 │   ├── api/            FastAPI service and routes
 │   ├── config/         runtime and storage configuration
-│   ├── frontend/       React + Vite frontend
+│   ├── frontend/       React + Vite application
 │   ├── ingestion/      source loading and format detection
-│   ├── intelligence/   scoring and anomaly logic
-│   ├── streamlit_ui/   legacy Streamlit dashboard
-│   ├── persistence/    storage backends and factory
-│   └── validation/     validation and quality checks
-├── notebooks/          exploratory notebooks
-├── reports/            pipeline summaries and failure reports
-├── tests/              unit tests for pipeline and validation
-├── run_pipeline.py     end-to-end pipeline entrypoint
-└── README.md
+│   ├── intelligence/   analysis-related modules
+│   ├── ml/             anomaly detection and prediction models
+│   ├── persistence/    storage backends
+│   ├── streamlit_ui/   legacy internal dashboard
+│   ├── validation/     record validation and quality checks
+│   └── visualization/  chart generation
+├── reports/            run summaries and failure summaries
+├── tests/              backend and integration tests
+├── run_pipeline.py     pipeline entrypoint
+├── start_opsight.bat   local startup helper
+└── stop_opsight.bat    local shutdown helper
 ```
 
-## Sample Data
+## Testing
 
-The repository includes representative source files for development and testing:
+### Backend and pipeline tests
 
-- `data/opsight_sample_customers.json`
-- `data/opsight_sample_events.parquet`
-- `data/opsight_sample_finance.xlsx`
-- `data/opsight_sample_sales.csv`
+From repository root:
 
-## Project Status
+```bash
+python -m pytest
+```
 
-Opsight is under active development, but the repository already contains a functional end-to-end pipeline path for local file-based sources. The current implementation is strongest in modular design, orchestration structure, failure reporting, and local persistence. Future work can extend configuration, richer validation orchestration, and additional source and storage integrations.
+### Frontend tests
+
+```bash
+cd modules/frontend
+npm test
+```
+
+### Frontend build
+
+```bash
+cd modules/frontend
+npm run build
+```
+
+## Tech Stack
+
+### Backend
+
+- Python
+- FastAPI
+- Pandas
+- Pydantic
+- scikit-learn
+- Matplotlib
+
+### Frontend
+
+- React
+- Vite
+- Vitest
+
+### Data and Storage
+
+- JSON
+- Parquet
+- Azure Blob integration hooks
+
+## Status
+
+Opsight is actively developed, but it already works as an end-to-end demonstration of dataset ingestion, validation, persistence, charting, anomaly detection, and prediction through a combined backend and UI workflow.
 
 ## License
 
-This project is licensed under the MIT License. See `LICENSE` for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

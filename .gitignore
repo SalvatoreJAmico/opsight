@@ -4,9 +4,16 @@ _design/
 data/
 .tmp_issue_bodies/
 .tmp_issues/
+.gh_issue_body_tmp.md
 
 # Python cache
 __pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
 
 # OS files
 .DS_Store
@@ -18,9 +25,9 @@ reports/pipeline_run_summary.json
 reports/pipeline_failure_summary.json
 
 # frontend generated artifacts (top-level Vite app)
-ui/node_modules/
-ui/.vite/
-ui/dist/
+modules/frontend/node_modules/
+modules/frontend/.vite/
+modules/frontend/dist/
 
 # local environment and secret artifacts
 .env
@@ -34,4 +41,9 @@ id_rsa.pub
 # keep shareable templates/examples tracked
 !.env.example
 !configs/production.env
-reports/pipeline_run_summary.json
+
+# local emulator state
+__azurite_db_blob__.json
+__azurite_db_blob_extent__.json
+__azurite_db_queue__.json
+__azurite_db_queue_extent__.json
