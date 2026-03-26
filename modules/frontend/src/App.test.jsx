@@ -81,7 +81,9 @@ describe("App dataset switching", () => {
     fireEvent.click(screen.getByRole("button", { name: "Seed Sales Metrics" }));
     fireEvent.click(screen.getByRole("button", { name: "Metrics" }));
 
-    expect(screen.getByText("11")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("11")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Dataset" }));
     fireEvent.click(screen.getByRole("button", { name: "Switch To Customers" }));
