@@ -138,8 +138,8 @@ describe("DatasetTab", () => {
         status: "processed",
         dataset_id: "sales_sql",
         dataset_source_type: "sql",
-        dataset_schema: "sales",
-        dataset_table: "orders",
+        dataset_schema: "dbo",
+        dataset_table: "Orders",
         records_ingested: 10,
       },
     });

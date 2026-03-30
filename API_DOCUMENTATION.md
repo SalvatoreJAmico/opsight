@@ -93,7 +93,7 @@ Triggers the ingestion and processing pipeline for a selected dataset. Supports 
 - `transactions_json`: JSON file from blob storage  
 - `userdata_parquet`: Parquet file from blob storage
 - `employee_xlsx`: Excel file from blob storage
-- `sales_sql`: SQL database table (Northwind.sales.orders)
+- `sales_sql`: SQL database table (Northwind.dbo.Orders)
 
 **Response Status**: 
 - `200 OK` - Pipeline executed successfully

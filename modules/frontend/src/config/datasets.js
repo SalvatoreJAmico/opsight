@@ -33,7 +33,7 @@ export const DATASETS = [
   sourceType: "sql",
   format: "sql",
   location: "Northwind",
-  schema: "sales",
-  table: "orders"
+  schema: "dbo",
+  table: "Orders"
 }
 ];

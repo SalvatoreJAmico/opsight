@@ -22,7 +22,7 @@ DATASET_MAP = {
     "sales_sql": {
         "source_type": "sql",
         "database": "Northwind",
-        "schema": "sales",
-        "table": "orders",
+        "schema": "dbo",
+        "table": "Orders",
     },
 }
