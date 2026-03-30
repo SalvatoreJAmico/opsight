@@ -15,6 +15,7 @@ Prod mode:
 
 import os
 import logging
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -169,6 +170,72 @@ def _load_from_blob(
     return blob_result["rows"]
 
 
+def _parse_sql_source_path(source_path: str) -> tuple[str, str, str]:
+    if not isinstance(source_path, str) or not source_path.startswith("sql://"):
+        raise ValueError("SQL source path must start with 'sql://'")
+
+    path_parts = source_path[len("sql://"):].split("/")
+    if len(path_parts) != 3:
+        raise ValueError("SQL source path must use format sql://<database>/<schema>/<table>")
+
+    database, schema, table = (part.strip() for part in path_parts)
+    if not database or not schema or not table:
+        raise ValueError("SQL source path must include database, schema, and table")
+
+    return database, schema, table
+
+
+def _validate_sql_identifier(identifier: str, identifier_type: str) -> str:
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", identifier):
+        raise ValueError(
+            f"Invalid SQL {identifier_type}: '{identifier}'. "
+            "Use letters, numbers, and underscores only."
+        )
+    return identifier
+
+
+def _load_from_sql(
+    database: str,
+    schema: str,
+    table: str,
+    sql_connection_string: str = None,
+) -> pd.DataFrame:
+    """Load data from a configured SQL database table."""
+    if not sql_connection_string:
+        raise ValueError(
+            "SQL source requires SQL_CONNECTION_STRING to be set in environment configuration."
+        )
+
+    safe_database = _validate_sql_identifier(database, "database")
+    safe_schema = _validate_sql_identifier(schema, "schema")
+    safe_table = _validate_sql_identifier(table, "table")
+
+    try:
+        from sqlalchemy import create_engine, text
+    except Exception as exc:
+        raise ValueError(
+            "SQL support requires SQLAlchemy and a database driver. "
+            "Install dependencies from requirements.txt and ensure your driver is available "
+            "(for SQL Server, usually mssql+pyodbc with pyodbc and ODBC Driver 17/18)."
+        ) from exc
+
+    qualified_table = f"[{safe_database}].[{safe_schema}].[{safe_table}]"
+    query = text(f"SELECT * FROM {qualified_table}")
+
+    logger.debug(
+        "Loading data from SQL source: database=%s schema=%s table=%s",
+        safe_database,
+        safe_schema,
+        safe_table,
+    )
+
+    engine = create_engine(sql_connection_string)
+    with engine.connect() as connection:
+        dataframe = pd.read_sql_query(query, connection)
+
+    return normalize_loaded_dataframe(dataframe)
+
+
 def ingest_data(source_path: str = None, source_mode: str = None, data_format: str = None) -> pd.DataFrame:
     """
     Ingest data based on runtime configuration and source mode.
@@ -254,6 +321,15 @@ def ingest_data(source_path: str = None, source_mode: str = None, data_format: s
 
     if source_path:
         logger.info(f"Using explicit source path: {source_path}")
+
+        if source_path.startswith("sql://"):
+            database, schema, table = _parse_sql_source_path(source_path)
+            return _load_from_sql(
+                database=database,
+                schema=schema,
+                table=table,
+                sql_connection_string=config.sql_connection_string,
+            )
 
         if source_path.startswith(("http://", "https://")):
             source_lower = source_path.lower()

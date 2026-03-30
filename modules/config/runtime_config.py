@@ -60,6 +60,7 @@ class RuntimeConfig:
     input_source_path: Optional[str]
     pipeline_summary_path: Optional[str]
     azure_storage_connection_string: Optional[str]
+    sql_connection_string: Optional[str]
     cors_allowed_origins: tuple[str, ...]
 
 
@@ -115,6 +116,7 @@ def load_runtime_config() -> RuntimeConfig:
     input_source_path = get_env("INPUT_SOURCE_PATH", required=False, default=None)
     pipeline_summary_path = get_env("PIPELINE_SUMMARY_PATH")
     azure_storage_connection_string = get_env("AZURE_STORAGE_CONNECTION_STRING", required=False, default=None)
+    sql_connection_string = get_env("SQL_CONNECTION_STRING", required=False, default=None)
     cors_allowed_origins = _to_csv_list(
         get_env("CORS_ALLOWED_ORIGINS", required=False, default=None)
     )
@@ -166,5 +168,6 @@ def load_runtime_config() -> RuntimeConfig:
         input_source_path=input_source_path,
         pipeline_summary_path=pipeline_summary_path,
         azure_storage_connection_string=azure_storage_connection_string,
+        sql_connection_string=sql_connection_string,
         cors_allowed_origins=cors_allowed_origins,
     )

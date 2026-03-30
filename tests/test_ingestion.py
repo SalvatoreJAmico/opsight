@@ -99,6 +99,23 @@ class TestSourceNormalization(unittest.TestCase):
 
 
 class TestIngestionRouting(unittest.TestCase):
+    def test_explicit_sql_source_path_routes_to_sql_loader(self):
+        runtime_config = SimpleNamespace(sql_connection_string="sqlite:///tmp.db")
+        expected_df = MagicMock(name="sql_dataframe")
+
+        with patch("modules.ingestion.ingestion._get_runtime_config", return_value=runtime_config), \
+            patch("modules.ingestion.ingestion._load_from_sql", return_value=expected_df) as mocked_sql_loader:
+
+            result = ingest_data(source_path="sql://Northwind/sales/orders")
+
+        self.assertIs(result, expected_df)
+        mocked_sql_loader.assert_called_once_with(
+            database="Northwind",
+            schema="sales",
+            table="orders",
+            sql_connection_string="sqlite:///tmp.db",
+        )
+
     def test_explicit_blob_style_source_path_routes_to_blob_loader(self):
         runtime_config = SimpleNamespace(
             blob_account="stopsightdev",

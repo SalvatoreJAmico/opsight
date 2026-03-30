@@ -351,21 +351,35 @@ class TestApiLayer(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["detail"], "Unknown dataset_id")
 
-    def test_pipeline_trigger_sql_dataset_not_wired(self):
+    def test_pipeline_trigger_sql_dataset_runs(self):
         session_state.set_active_dataset("sales_csv")
         session_state.set_pipeline_status("completed")
 
-        response = self.client.post(
-            "/pipeline/trigger",
-            json={"target": "local", "dataset_id": "sales_sql"},
-        )
+        mocked_summary = {
+            "status": "SUCCESS",
+            "failed_stage": None,
+            "records_ingested": 5,
+            "records_valid": 5,
+            "records_invalid": 0,
+            "records_persisted": 5,
+            "runtime_seconds": 0.1,
+        }
 
-        self.assertEqual(response.status_code, 501)
+        with patch("modules.api.routes.ingest.run_pipeline", return_value=mocked_summary):
+            response = self.client.post(
+                "/pipeline/trigger",
+                json={"target": "local", "dataset_id": "sales_sql"},
+            )
+
+        self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["detail"], "SQL dataset execution not wired yet")
+        self.assertEqual(body["dataset_id"], "sales_sql")
+        self.assertEqual(body["dataset_source_type"], "sql")
+        self.assertEqual(body["dataset_schema"], "sales")
+        self.assertEqual(body["dataset_table"], "orders")
         state = session_state.get_session_state()
         self.assertEqual(state["active_dataset"], "sales_sql")
-        self.assertEqual(state["pipeline_status"], "not_run")
+        self.assertEqual(state["pipeline_status"], "completed")
 
     def test_session_state_endpoint_returns_current_state(self):
         session_state.set_active_dataset("transactions_json")

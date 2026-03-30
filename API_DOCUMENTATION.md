@@ -617,6 +617,6 @@ Check `logs/` directory for application logs (when running with file logging ena
 
 ## Future Considerations
 
-- **SQL datasets** (`sales_sql`) are configured but execution is not yet implemented (returns 501 Not Implemented)
+- SQL datasets require `SQL_CONNECTION_STRING` to be configured in environment variables.
 - Consider adding request validation/rate limiting for production deployments  
 - API documentation is versioned alongside schema changes

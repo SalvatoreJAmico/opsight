@@ -136,8 +136,31 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
             "schema": dataset.get("schema"),
             "table": dataset.get("table"),
         }
-        if not selected_source["schema"] or not selected_source["table"]:
+        if not selected_source["database"] or not selected_source["schema"] or not selected_source["table"]:
             raise HTTPException(status_code=400, detail="SQL dataset is not configured correctly")
-        raise HTTPException(status_code=501, detail="SQL dataset execution not wired yet")
+
+        sql_source_path = (
+            f"sql://{selected_source['database']}/{selected_source['schema']}/{selected_source['table']}"
+        )
+
+        set_pipeline_status("running")
+        try:
+            response = _run_pipeline_for_payload(
+                {"source_path": sql_source_path},
+                use_default_source=False,
+                source_mode=None,
+                data_format="sql",
+            )
+            set_pipeline_status("completed")
+        except Exception:
+            set_pipeline_status("failed")
+            raise
+
+        response["dataset_id"] = payload.dataset_id
+        response["dataset_source_type"] = selected_source["source_type"]
+        response["dataset_database"] = selected_source["database"]
+        response["dataset_schema"] = selected_source["schema"]
+        response["dataset_table"] = selected_source["table"]
+        return response
 
     raise HTTPException(status_code=400, detail="Unsupported dataset source_type")

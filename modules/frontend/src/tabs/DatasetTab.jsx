@@ -31,17 +31,11 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
   const [result, setResult] = useState(null);
   const [activeDataset, setActiveDataset] = useState(null);
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
-  const isSqlDataset = activeDatasetConfig?.sourceType === "sql";
   const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
 
   async function handleTrigger() {
     if (!activeDataset) {
       setError("Select a dataset before running.");
-      return;
-    }
-
-    if (isSqlDataset) {
-      setError("SQL dataset is not available yet. Please select a Blob dataset.");
       return;
     }
 

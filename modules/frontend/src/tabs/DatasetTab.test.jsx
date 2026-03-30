@@ -129,13 +129,33 @@ describe("DatasetTab", () => {
     );
   });
 
-  it("blocks SQL dataset runs with a clear message", async () => {
+  it("triggers pipeline for SQL dataset", async () => {
+    triggerPipeline.mockResolvedValue({
+      ok: true,
+      status: 200,
+      error: null,
+      data: {
+        status: "processed",
+        dataset_id: "sales_sql",
+        dataset_source_type: "sql",
+        dataset_schema: "sales",
+        dataset_table: "orders",
+        records_ingested: 10,
+      },
+    });
+
     render(<DatasetTab />);
 
     fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_sql" } });
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
-    expect(await screen.findByText("SQL dataset is not available yet. Please select a Blob dataset.")).toBeInTheDocument();
-    expect(triggerPipeline).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Dataset run triggered successfully/)).toBeInTheDocument();
+    expect(triggerPipeline).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: expectedDefaultBaseUrl === "/api-local" ? "local" : "cloud",
+        dataset_id: "sales_sql",
+      }),
+      expect.objectContaining({ baseUrl: expectedDefaultBaseUrl }),
+    );
   });
 });
