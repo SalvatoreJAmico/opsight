@@ -219,11 +219,13 @@ def _load_from_sql(
             "(for SQL Server, usually mssql+pyodbc with pyodbc and ODBC Driver 17/18)."
         ) from exc
 
-    qualified_table = f"[{safe_database}].[{safe_schema}].[{safe_table}]"
+    # Azure SQL and managed SQL tiers often disallow three-part names.
+    # Use schema-qualified table names and rely on the connection string's database.
+    qualified_table = f"[{safe_schema}].[{safe_table}]"
     query = text(f"SELECT * FROM {qualified_table}")
 
     logger.debug(
-        "Loading data from SQL source: database=%s schema=%s table=%s",
+        "Loading data from SQL source: database=%s (from config), schema=%s, table=%s",
         safe_database,
         safe_schema,
         safe_table,
