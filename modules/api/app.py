@@ -127,6 +127,31 @@ except Exception as exc:
     )
     raise
 
+
+def validate_sql_config(config):
+    if not getattr(config, "sql_connection_string", None):
+        logger.warning(
+            "SQL connection string not configured",
+            extra={
+                "event": "startup_warning",
+                "warning_type": "sql_not_configured",
+                "warning_message": "SQL datasets will fail at runtime",
+            },
+        )
+        return False
+    else:
+        logger.info(
+            "SQL configuration detected",
+            extra={
+                "event": "startup_check",
+                "sql_configured": True,
+            },
+        )
+        return True
+
+
+SQL_CONFIGURED = validate_sql_config(runtime_config)
+
 logger.info(
     "Runtime configuration loaded",
     extra={
@@ -280,6 +305,7 @@ def health():
     return {
         "status": "ok",
         "version": runtime_config.app_version,
+        "sql_configured": SQL_CONFIGURED,
     }
 
 

@@ -49,7 +49,11 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"status": "ok", "version": os.environ["APP_VERSION"]},
+            {
+                "status": "ok",
+                "version": os.environ["APP_VERSION"],
+                "sql_configured": False,
+            },
         )
 
     def test_preflight_request_returns_cors_headers_for_allowed_origin(self):
