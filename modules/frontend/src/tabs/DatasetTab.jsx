@@ -31,11 +31,17 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
   const [result, setResult] = useState(null);
   const [activeDataset, setActiveDataset] = useState(null);
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
+  const isSqlDataset = activeDatasetConfig?.sourceType === "sql";
   const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
 
   async function handleTrigger() {
     if (!activeDataset) {
       setError("Select a dataset before running.");
+      return;
+    }
+
+    if (isSqlDataset) {
+      setError("SQL dataset is not available yet. Please select a Blob dataset.");
       return;
     }
 
@@ -60,8 +66,6 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
     if (!response.ok) {
       if (response.status === 0 && targetEnvironment === "local") {
         setError("Local API is unavailable. Start the API on http://127.0.0.1:8000 and try again.");
-      } else if (response.status === 501 && activeDatasetConfig?.sourceType === "sql") {
-        setError("SQL dataset execution is not wired yet.");
       } else {
         setError(response.error || "Pipeline trigger failed.");
       }
@@ -84,7 +88,15 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
       <h2>Dataset</h2>
       <p>Run analysis on the selected dataset.</p>
 
-      <div style={{ marginTop: "1.5rem", maxWidth: "560px" }}>
+      <div
+        style={{
+          marginTop: "1.5rem",
+          maxWidth: "560px",
+          marginLeft: "auto",
+          marginRight: "auto",
+          textAlign: "center",
+        }}
+      >
         {isDev && (
           <div style={{ marginBottom: "1rem", textAlign: "center" }}>
             <div style={{ fontWeight: 600, marginBottom: "0.5rem", fontSize: "0.9rem" }}>Dev — API Target:</div>
@@ -134,7 +146,8 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
           id="dataset-select"
           style={{
             width: "100%",
-            marginBottom: "0.75rem",
+            margin: "0 auto 0.75rem auto",
+            display: "block",
             padding: "0.55rem 0.7rem",
             borderRadius: "8px",
             border: "1px solid #4b5563",
@@ -171,6 +184,8 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
           onClick={handleTrigger}
           disabled={loading || !activeDataset}
           style={{
+            display: "block",
+            margin: "0 auto",
             padding: "0.75rem 1.5rem",
             borderRadius: "8px",
             border: "1px solid #ccc",

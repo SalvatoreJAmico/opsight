@@ -129,19 +129,13 @@ describe("DatasetTab", () => {
     );
   });
 
-  it("shows SQL not wired message for 501 responses on SQL datasets", async () => {
-    triggerPipeline.mockResolvedValue({
-      ok: false,
-      status: 501,
-      error: "SQL dataset execution not wired yet",
-      data: null,
-    });
-
+  it("blocks SQL dataset runs with a clear message", async () => {
     render(<DatasetTab />);
 
     fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_sql" } });
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
 
-    expect(await screen.findByText("SQL dataset execution is not wired yet.")).toBeInTheDocument();
+    expect(await screen.findByText("SQL dataset is not available yet. Please select a Blob dataset.")).toBeInTheDocument();
+    expect(triggerPipeline).not.toHaveBeenCalled();
   });
 });
