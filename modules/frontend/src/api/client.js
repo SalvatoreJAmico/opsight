@@ -107,6 +107,12 @@ export async function resetSession() {
   });
 }
 
+export async function startSqlServer(config = {}) {
+  return request(ENDPOINTS.SQL_START, {
+    method: "POST",
+  }, config.baseUrl);
+}
+
 export async function triggerPipeline(payload, config = {}) {
   return request(ENDPOINTS.PIPELINE_TRIGGER, {
     method: "POST",

@@ -1,6 +1,6 @@
 import React from "react";
 import { useState } from "react";
-import { triggerPipeline } from "../api/client";
+import { startSqlServer, triggerPipeline } from "../api/client";
 import { resolveBaseUrl } from "../config/env";
 import { DATASETS } from "../config/datasets";
 const isDev = import.meta.env.DEV;
@@ -30,8 +30,31 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
   const [successMessage, setSuccessMessage] = useState("");
   const [result, setResult] = useState(null);
   const [activeDataset, setActiveDataset] = useState(null);
+  const [sqlReadiness, setSqlReadiness] = useState("idle");
+  const [sqlStartupMessage, setSqlStartupMessage] = useState("");
+  const [sqlStartupError, setSqlStartupError] = useState("");
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
+  const isSalesSqlDataset = activeDataset === "sales_sql";
   const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
+  const isRunDisabled = loading || !activeDataset || (isSalesSqlDataset && sqlReadiness !== "ready");
+
+  async function handleStartSqlServer() {
+    setSqlReadiness("starting");
+    setSqlStartupError("");
+    setSqlStartupMessage("");
+
+    const requestBaseUrl = resolveBaseUrl(targetEnvironment);
+    const response = await startSqlServer({ baseUrl: requestBaseUrl });
+
+    if (!response.ok) {
+      setSqlReadiness("failed");
+      setSqlStartupError(response.error || "Failed to start SQL Server");
+      return;
+    }
+
+    setSqlReadiness("ready");
+    setSqlStartupMessage("SQL Server is ready");
+  }
 
   async function handleTrigger() {
     if (!activeDataset) {
@@ -157,6 +180,9 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
             setError("");
             setSuccessMessage("");
             setResult(null);
+            setSqlReadiness("idle");
+            setSqlStartupMessage("");
+            setSqlStartupError("");
 
             if (hasChanged) {
               onDatasetChange?.(nextDataset);
@@ -173,17 +199,41 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
 
         {activeDataset && <p style={{ marginBottom: "1rem" }}>Loaded: {activeDatasetConfig?.label}</p>}
 
+        {isSalesSqlDataset ? (
+          <div style={{ marginBottom: "1rem" }}>
+            <button
+              type="button"
+              onClick={handleStartSqlServer}
+              disabled={sqlReadiness === "starting"}
+              style={{
+                display: "block",
+                margin: "0 auto",
+                padding: "0.75rem 1.5rem",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                cursor: sqlReadiness === "starting" ? "not-allowed" : "pointer",
+                fontWeight: 600,
+                fontSize: "1rem",
+              }}
+            >
+              {sqlReadiness === "starting" ? "Starting SQL Server..." : "Start SQL Server"}
+            </button>
+            {sqlStartupMessage ? <p style={{ marginTop: "0.6rem", color: "#86efac" }}>{sqlStartupMessage}</p> : null}
+            {sqlStartupError ? <p style={{ marginTop: "0.6rem", color: "#fca5a5" }}>{sqlStartupError}</p> : null}
+          </div>
+        ) : null}
+
         <button
           type="button"
           onClick={handleTrigger}
-          disabled={loading || !activeDataset}
+          disabled={isRunDisabled}
           style={{
             display: "block",
             margin: "0 auto",
             padding: "0.75rem 1.5rem",
             borderRadius: "8px",
             border: "1px solid #ccc",
-            cursor: loading ? "not-allowed" : "pointer",
+            cursor: isRunDisabled ? "not-allowed" : "pointer",
             fontWeight: 600,
             fontSize: "1rem",
           }}

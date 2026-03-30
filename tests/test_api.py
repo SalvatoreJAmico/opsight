@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi import HTTPException
@@ -403,6 +404,21 @@ class TestApiLayer(unittest.TestCase):
                 "prediction_status": "running",
             },
         )
+
+    def test_sql_start_endpoint_returns_ready_when_connection_succeeds(self):
+        with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string="mssql+pyodbc://x")), \
+            patch("modules.api.routes.status._probe_sql_connection", return_value=None):
+            response = self.client.post("/sql/start")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get("message"), "SQL Server is ready")
+
+    def test_sql_start_endpoint_fails_when_connection_string_missing(self):
+        with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string=None)):
+            response = self.client.post("/sql/start")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json().get("detail"), "SQL connection string not configured")
 
     def test_session_reset_clears_storage_and_resets_session_state(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
