@@ -23,6 +23,7 @@ SUMMARY_PATH = Path(summary_path)
 DEFAULT_SQL_DOCKER_SERVICE = "opsight-sqlserver"
 SQL_STARTUP_TIMEOUT_SECONDS = 60
 SQL_STARTUP_POLL_INTERVAL_SECONDS = 2
+SQL_CLOUD_STARTUP_TIMEOUT_SECONDS = 90
 
 
 class SqlStartRequest(BaseModel):
@@ -50,17 +51,17 @@ def _format_sql_start_error(exc: Exception) -> str:
 
     if "hyt00" in lowered_error_text or "login timeout expired" in lowered_error_text:
         return (
-            "Could not connect to SQL Server (connection timed out). "
-            "Verify SQL_CONNECTION_STRING server, port, credentials, and firewall access."
+            "We could not reach the SQL database in time. "
+            "Please try again, and if it keeps failing contact support."
         )
 
     if "[28000]" in error_text or "login failed" in lowered_error_text:
-        return "Could not connect to SQL Server (login failed). Check SQL username and password."
+        return "Database sign-in failed. Please contact support to verify database access settings."
 
     if "data source name not found" in lowered_error_text or "odbc driver" in lowered_error_text:
-        return "Could not connect to SQL Server (ODBC driver issue). Confirm ODBC Driver 18 for SQL Server is installed."
+        return "A database driver issue was detected. Please contact support."
 
-    return f"Could not connect to SQL Server. {error_text}"
+    return "We could not connect to the SQL database right now. Please try again shortly."
 
 
 def _run_sql_start_command() -> tuple[bool, str]:
@@ -141,8 +142,8 @@ def _run_sql_start_command() -> tuple[bool, str]:
     return True, f"SQL Server container startup requested for service '{sql_docker_service}'"
 
 
-def _wait_for_sql_ready(sql_connection_string: str) -> Exception | None:
-    deadline = time.time() + SQL_STARTUP_TIMEOUT_SECONDS
+def _wait_for_sql_ready(sql_connection_string: str, timeout_seconds: int) -> Exception | None:
+    deadline = time.time() + timeout_seconds
     last_exception = None
 
     while time.time() < deadline:
@@ -201,13 +202,19 @@ def start_sql_server_endpoint(payload: SqlStartRequest):
         _probe_sql_connection(sql_connection_string)
     except Exception as initial_exception:
         if target == "cloud":
+            final_exception = _wait_for_sql_ready(sql_connection_string, SQL_CLOUD_STARTUP_TIMEOUT_SECONDS)
+            if final_exception is not None:
+                return {
+                    "status": "not_ready",
+                    "ready": False,
+                    "message": "The cloud database is still starting. Please wait a moment and try again.",
+                }
+
             return {
-                "status": "not_ready",
-                "ready": False,
-                "message": (
-                    "Cloud mode can only validate SQL connectivity and cannot start a SQL Server process. "
-                    f"{_format_sql_start_error(initial_exception)}"
-                ),
+                "status": "ready",
+                "ready": True,
+                "message": "SQL Server started and is ready",
+                "startup": "Cloud database wake-up completed",
             }
 
         started, startup_message = _run_sql_start_command()
@@ -221,7 +228,7 @@ def start_sql_server_endpoint(payload: SqlStartRequest):
                 ),
             }
 
-        final_exception = _wait_for_sql_ready(sql_connection_string)
+        final_exception = _wait_for_sql_ready(sql_connection_string, SQL_STARTUP_TIMEOUT_SECONDS)
         if final_exception is not None:
             return {
                 "status": "not_ready",

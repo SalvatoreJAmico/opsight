@@ -448,16 +448,30 @@ class TestApiLayer(unittest.TestCase):
         self.assertFalse(response.json().get("ready"))
         self.assertIn("No SQL startup method is configured", response.json().get("message"))
 
-    def test_sql_start_endpoint_cloud_mode_does_not_attempt_server_start(self):
+    def test_sql_start_endpoint_cloud_mode_wakes_database_by_retrying_probe(self):
+        with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string="mssql+pyodbc://x")), \
+            patch(
+                "modules.api.routes.status._probe_sql_connection",
+                side_effect=[RuntimeError("HYT00 login timeout expired"), None],
+            ):
+            response = self.client.post("/sql/start", json={"target": "cloud"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("ready"))
+        self.assertEqual(response.json().get("message"), "SQL Server started and is ready")
+
+    def test_sql_start_endpoint_cloud_mode_reports_start_failure(self):
         with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string="mssql+pyodbc://x")), \
             patch("modules.api.routes.status._probe_sql_connection", side_effect=RuntimeError("HYT00 login timeout expired")), \
-            patch("modules.api.routes.status._run_sql_start_command") as mocked_start:
+            patch("modules.api.routes.status._wait_for_sql_ready", return_value=RuntimeError("HYT00 login timeout expired")):
             response = self.client.post("/sql/start", json={"target": "cloud"})
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json().get("ready"))
-        self.assertIn("Cloud mode can only validate SQL connectivity", response.json().get("message"))
-        mocked_start.assert_not_called()
+        self.assertEqual(
+            response.json().get("message"),
+            "The cloud database is still starting. Please wait a moment and try again.",
+        )
 
     def test_session_reset_clears_storage_and_resets_session_state(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

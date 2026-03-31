@@ -23,6 +23,25 @@ function getFilename(path) {
   return segments[segments.length - 1] || path;
 }
 
+function formatSqlUserMessage(message, isCloudTarget) {
+  const text = (message || "").toLowerCase();
+
+  if (isCloudTarget) {
+    if (text.includes("cannot start a database server")) {
+      return "Connection check failed in cloud mode. The app cannot start a database server in cloud mode, so please contact support if this continues.";
+    }
+    if (text.includes("could not reach") || text.includes("timeout")) {
+      return "We could not reach the database from the cloud app right now. Please try again, and contact support if it keeps failing.";
+    }
+  }
+
+  if (text.includes("sign-in failed") || text.includes("login")) {
+    return "Database access failed. Please contact support to verify database credentials and permissions.";
+  }
+
+  return message || "Database connection failed. Please try again.";
+}
+
 export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChange }) {
   const [targetEnvironment, setTargetEnvironment] = useState(isDev ? "local" : "cloud");
   const [loading, setLoading] = useState(false);
@@ -35,7 +54,6 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
   const [sqlStartupError, setSqlStartupError] = useState("");
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
   const isSalesSqlDataset = activeDataset === "sales_sql";
-  const isCloudTarget = targetEnvironment === "cloud";
   const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
   const isRunDisabled = loading || !activeDataset || (isSalesSqlDataset && sqlReadiness !== "ready");
 
@@ -52,13 +70,13 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
 
     if (!response.ok) {
       setSqlReadiness("failed");
-      setSqlStartupError(response.error || "Failed to initialize SQL connectivity");
+      setSqlStartupError(formatSqlUserMessage(response.error, targetEnvironment === "cloud"));
       return;
     }
 
     if (!response.data?.ready) {
       setSqlReadiness("failed");
-      setSqlStartupError(response.data?.message || "SQL Server is not ready");
+      setSqlStartupError(formatSqlUserMessage(response.data?.message, targetEnvironment === "cloud"));
       return;
     }
 
@@ -231,13 +249,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
                 fontSize: "1rem",
               }}
             >
-              {sqlReadiness === "starting"
-                ? isCloudTarget
-                  ? "Checking SQL Connection..."
-                  : "Starting SQL Server..."
-                : isCloudTarget
-                  ? "Check SQL Connection"
-                  : "Start SQL Server"}
+              {sqlReadiness === "starting" ? "Starting SQL Server..." : "Start SQL Server"}
             </button>
             {sqlStartupMessage ? <p style={{ marginTop: "0.6rem", color: "#86efac" }}>{sqlStartupMessage}</p> : null}
             {sqlStartupError ? <p style={{ marginTop: "0.6rem", color: "#fca5a5" }}>{sqlStartupError}</p> : null}
