@@ -35,6 +35,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
   const [sqlStartupError, setSqlStartupError] = useState("");
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
   const isSalesSqlDataset = activeDataset === "sales_sql";
+  const isCloudTarget = targetEnvironment === "cloud";
   const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
   const isRunDisabled = loading || !activeDataset || (isSalesSqlDataset && sqlReadiness !== "ready");
 
@@ -44,16 +45,25 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
     setSqlStartupMessage("");
 
     const requestBaseUrl = resolveBaseUrl(targetEnvironment);
-    const response = await startSqlServer({ baseUrl: requestBaseUrl });
+    const response = await startSqlServer({
+      baseUrl: requestBaseUrl,
+      target: targetEnvironment,
+    });
 
     if (!response.ok) {
       setSqlReadiness("failed");
-      setSqlStartupError(response.error || "Failed to start SQL Server");
+      setSqlStartupError(response.error || "Failed to initialize SQL connectivity");
+      return;
+    }
+
+    if (!response.data?.ready) {
+      setSqlReadiness("failed");
+      setSqlStartupError(response.data?.message || "SQL Server is not ready");
       return;
     }
 
     setSqlReadiness("ready");
-    setSqlStartupMessage("SQL Server is ready");
+    setSqlStartupMessage(response.data?.message || "SQL Server is ready");
   }
 
   async function handleTrigger() {
@@ -83,6 +93,11 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
     if (!response.ok) {
       if (response.status === 0 && targetEnvironment === "local") {
         setError("Local API is unavailable. Start the API on http://127.0.0.1:8000 and try again.");
+      } else if (isSalesSqlDataset) {
+        setError(
+          response.error ||
+            "SQL dataset run failed. Ensure SQL Server is reachable, then click Start SQL Server before running.",
+        );
       } else {
         setError(response.error || "Pipeline trigger failed.");
       }
@@ -216,7 +231,13 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
                 fontSize: "1rem",
               }}
             >
-              {sqlReadiness === "starting" ? "Starting SQL Server..." : "Start SQL Server"}
+              {sqlReadiness === "starting"
+                ? isCloudTarget
+                  ? "Checking SQL Connection..."
+                  : "Starting SQL Server..."
+                : isCloudTarget
+                  ? "Check SQL Connection"
+                  : "Start SQL Server"}
             </button>
             {sqlStartupMessage ? <p style={{ marginTop: "0.6rem", color: "#86efac" }}>{sqlStartupMessage}</p> : null}
             {sqlStartupError ? <p style={{ marginTop: "0.6rem", color: "#fca5a5" }}>{sqlStartupError}</p> : null}

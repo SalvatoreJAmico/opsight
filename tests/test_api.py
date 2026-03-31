@@ -408,17 +408,56 @@ class TestApiLayer(unittest.TestCase):
     def test_sql_start_endpoint_returns_ready_when_connection_succeeds(self):
         with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string="mssql+pyodbc://x")), \
             patch("modules.api.routes.status._probe_sql_connection", return_value=None):
-            response = self.client.post("/sql/start")
+            response = self.client.post("/sql/start", json={"target": "local"})
 
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("ready"))
         self.assertEqual(response.json().get("message"), "SQL Server is ready")
 
     def test_sql_start_endpoint_fails_when_connection_string_missing(self):
         with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string=None)):
-            response = self.client.post("/sql/start")
+            response = self.client.post("/sql/start", json={"target": "local"})
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json().get("detail"), "SQL connection string not configured")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json().get("ready"))
+        self.assertEqual(response.json().get("message"), "SQL connection string not configured")
+
+    def test_sql_start_endpoint_starts_server_when_initial_probe_fails(self):
+        with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string="mssql+pyodbc://x")), \
+            patch(
+                "modules.api.routes.status._probe_sql_connection",
+                side_effect=[RuntimeError("HYT00 login timeout expired"), None],
+            ), \
+            patch("modules.api.routes.status._run_sql_start_command", return_value=(True, "startup triggered")):
+            response = self.client.post("/sql/start", json={"target": "local"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("ready"))
+        self.assertEqual(response.json().get("message"), "SQL Server started and is ready")
+
+    def test_sql_start_endpoint_reports_error_when_startup_unavailable(self):
+        with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string="mssql+pyodbc://x")), \
+            patch("modules.api.routes.status._probe_sql_connection", side_effect=RuntimeError("HYT00 login timeout expired")), \
+            patch(
+                "modules.api.routes.status._run_sql_start_command",
+                return_value=(False, "No SQL startup method is configured"),
+            ):
+            response = self.client.post("/sql/start", json={"target": "local"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json().get("ready"))
+        self.assertIn("No SQL startup method is configured", response.json().get("message"))
+
+    def test_sql_start_endpoint_cloud_mode_does_not_attempt_server_start(self):
+        with patch("modules.api.routes.status.load_runtime_config", return_value=SimpleNamespace(sql_connection_string="mssql+pyodbc://x")), \
+            patch("modules.api.routes.status._probe_sql_connection", side_effect=RuntimeError("HYT00 login timeout expired")), \
+            patch("modules.api.routes.status._run_sql_start_command") as mocked_start:
+            response = self.client.post("/sql/start", json={"target": "cloud"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json().get("ready"))
+        self.assertIn("Cloud mode can only validate SQL connectivity", response.json().get("message"))
+        mocked_start.assert_not_called()
 
     def test_session_reset_clears_storage_and_resets_session_state(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

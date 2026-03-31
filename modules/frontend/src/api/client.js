@@ -110,6 +110,9 @@ export async function resetSession() {
 export async function startSqlServer(config = {}) {
   return request(ENDPOINTS.SQL_START, {
     method: "POST",
+    body: JSON.stringify({
+      target: config.target || "local",
+    }),
   }, config.baseUrl);
 }
 

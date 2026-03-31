@@ -1,4 +1,13 @@
 services:
+  opsight-sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: opsight-sqlserver
+    ports:
+      - "${SQL_SERVER_PORT:-1433}:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:-OpsightDev!23456}
+
   opsight-api:
     build: .
     ports:

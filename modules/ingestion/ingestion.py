@@ -231,9 +231,20 @@ def _load_from_sql(
         safe_table,
     )
 
-    engine = create_engine(sql_connection_string)
-    with engine.connect() as connection:
-        dataframe = pd.read_sql_query(query, connection)
+    try:
+        engine = create_engine(sql_connection_string, connect_args={"timeout": 10})
+        with engine.connect() as connection:
+            dataframe = pd.read_sql_query(query, connection)
+    except Exception as exc:
+        sql_error = str(exc)
+        lowered_sql_error = sql_error.lower()
+        if "hyt00" in lowered_sql_error or "login timeout expired" in lowered_sql_error:
+            raise ValueError(
+                "SQL Server connection timed out. Verify SQL_CONNECTION_STRING server, port, credentials, and firewall access."
+            ) from exc
+        if "[28000]" in sql_error or "login failed" in lowered_sql_error:
+            raise ValueError("SQL Server login failed. Check SQL_CONNECTION_STRING username and password.") from exc
+        raise ValueError(f"SQL dataset query failed: {sql_error}") from exc
 
     return normalize_loaded_dataframe(dataframe)
 
