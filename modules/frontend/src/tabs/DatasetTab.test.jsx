@@ -194,6 +194,19 @@ describe("DatasetTab", () => {
     expect(triggerPipeline).not.toHaveBeenCalled();
   });
 
+  it("recovers from rejected SQL startup request without requiring dataset switch", async () => {
+    startSqlServer.mockRejectedValue(new Error("Request timed out"));
+
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_sql" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start SQL Server" }));
+
+    expect(await screen.findByText("Request timed out")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start SQL Server" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
+  });
+
   it("does not show SQL start button for non-SQL datasets and allows Run as before", async () => {
     triggerPipeline.mockResolvedValue({
       ok: true,

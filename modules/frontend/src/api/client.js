@@ -25,14 +25,22 @@ export function resolveApiAssetUrl(assetPath, baseUrlOverride = null) {
 async function request(path, options = {}, baseUrlOverride = null) {
   const requestBaseUrl = normalizeBaseUrl(baseUrlOverride);
   const url = `${requestBaseUrl}${path}`;
+  const { timeoutMs = 0, ...fetchOptions } = options;
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  let timeoutId = null;
 
   try {
+    if (controller) {
+      timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
-        ...(options.headers || {}),
+        ...(fetchOptions.headers || {}),
       },
-      ...options,
+      ...fetchOptions,
+      signal: controller?.signal,
     });
 
     const contentType = response.headers.get("content-type") || "";
@@ -59,12 +67,25 @@ async function request(path, options = {}, baseUrlOverride = null) {
       data,
     };
   } catch (error) {
+    if (error?.name === "AbortError") {
+      return {
+        ok: false,
+        status: 0,
+        error: "Request timed out",
+        data: null,
+      };
+    }
+
     return {
       ok: false,
       status: 0,
       error: error?.message || "Network error",
       data: null,
     };
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 export async function getHistogram({ baseUrl } = {}) {
@@ -113,6 +134,7 @@ export async function startSqlServer(config = {}) {
     body: JSON.stringify({
       target: config.target || "local",
     }),
+    timeoutMs: config.timeoutMs || 180000,
   }, config.baseUrl);
 }
 

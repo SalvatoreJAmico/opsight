@@ -62,26 +62,32 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
     setSqlStartupError("");
     setSqlStartupMessage("");
 
-    const requestBaseUrl = resolveBaseUrl(targetEnvironment);
-    const response = await startSqlServer({
-      baseUrl: requestBaseUrl,
-      target: targetEnvironment,
-    });
+    try {
+      const requestBaseUrl = resolveBaseUrl(targetEnvironment);
+      const response = await startSqlServer({
+        baseUrl: requestBaseUrl,
+        target: targetEnvironment,
+      });
+      const isSqlReady = response.data?.ready === true || response.data?.status === "ready";
 
-    if (!response.ok) {
+      if (!response.ok) {
+        setSqlReadiness("failed");
+        setSqlStartupError(formatSqlUserMessage(response.error, targetEnvironment === "cloud"));
+        return;
+      }
+
+      if (!isSqlReady) {
+        setSqlReadiness("failed");
+        setSqlStartupError(formatSqlUserMessage(response.data?.message, targetEnvironment === "cloud"));
+        return;
+      }
+
+      setSqlReadiness("ready");
+      setSqlStartupMessage(response.data?.message || "SQL Server is ready");
+    } catch (error) {
       setSqlReadiness("failed");
-      setSqlStartupError(formatSqlUserMessage(response.error, targetEnvironment === "cloud"));
-      return;
+      setSqlStartupError(formatSqlUserMessage(error?.message, targetEnvironment === "cloud"));
     }
-
-    if (!response.data?.ready) {
-      setSqlReadiness("failed");
-      setSqlStartupError(formatSqlUserMessage(response.data?.message, targetEnvironment === "cloud"));
-      return;
-    }
-
-    setSqlReadiness("ready");
-    setSqlStartupMessage(response.data?.message || "SQL Server is ready");
   }
 
   async function handleTrigger() {
