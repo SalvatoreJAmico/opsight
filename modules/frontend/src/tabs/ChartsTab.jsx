@@ -93,9 +93,11 @@ export default function ChartsTab({ activeDatasetId = null }) {
       return;
     }
 
+    const cacheBustedImageUrl = `${resolvedImageUrl}${resolvedImageUrl.includes("?") ? "&" : "?"}t=${Date.now()}`;
+
     setChartImages((prev) => ({
       ...prev,
-      [chartId]: resolvedImageUrl,
+      [chartId]: cacheBustedImageUrl,
     }));
   };
 

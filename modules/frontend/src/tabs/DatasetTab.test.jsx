@@ -207,6 +207,34 @@ describe("DatasetTab", () => {
     expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
   });
 
+  it("shows SQL startup progress while waiting", async () => {
+    let resolveStart;
+    startSqlServer.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStart = resolve;
+        }),
+    );
+
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_sql" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start SQL Server" }));
+
+    expect(screen.getByRole("button", { name: "Starting SQL Server..." })).toBeDisabled();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByText(/SQL startup in progress/)).toBeInTheDocument();
+
+    resolveStart({
+      ok: true,
+      status: 200,
+      error: null,
+      data: { ready: true, message: "SQL Server is ready" },
+    });
+
+    expect(await screen.findByText("SQL Server is ready")).toBeInTheDocument();
+  });
+
   it("does not show SQL start button for non-SQL datasets and allows Run as before", async () => {
     triggerPipeline.mockResolvedValue({
       ok: true,
@@ -248,5 +276,27 @@ describe("DatasetTab", () => {
 
     fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_sql" } });
     expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
+  });
+
+  it("does not reset SQL readiness when the same dataset value is reselected", async () => {
+    startSqlServer.mockResolvedValue({
+      ok: true,
+      status: 200,
+      error: null,
+      data: { status: "ready", message: "SQL Server is ready" },
+    });
+
+    render(<DatasetTab />);
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_sql" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start SQL Server" }));
+
+    expect(await screen.findByText("SQL Server is ready")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_sql" } });
+
+    expect(screen.getByText("SQL Server is ready")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
   });
 });

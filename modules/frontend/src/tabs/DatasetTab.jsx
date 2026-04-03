@@ -4,6 +4,12 @@ import { startSqlServer, triggerPipeline } from "../api/client";
 import { resolveBaseUrl } from "../config/env";
 import { DATASETS } from "../config/datasets";
 const isDev = import.meta.env.DEV;
+const SQL_START_MAX_WAIT_MS = 240000;
+const SQL_START_POLL_MS = 3000;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function getDatasetSourceLabel(sourceType) {
   if (sourceType === "blob") {
@@ -52,40 +58,88 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
   const [sqlReadiness, setSqlReadiness] = useState("idle");
   const [sqlStartupMessage, setSqlStartupMessage] = useState("");
   const [sqlStartupError, setSqlStartupError] = useState("");
+  const [sqlStartupProgress, setSqlStartupProgress] = useState(0);
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
   const isSalesSqlDataset = activeDataset === "sales_sql";
   const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
   const isRunDisabled = loading || !activeDataset || (isSalesSqlDataset && sqlReadiness !== "ready");
+  const isSqlStartInFlight = sqlReadiness === "starting";
+
+  function isSqlReadyResponse(response) {
+    return response?.data?.ready === true || response?.data?.status === "ready";
+  }
+
+  function isSqlTransientStartupResponse(response) {
+    if (!response?.ok || isSqlReadyResponse(response)) {
+      return false;
+    }
+
+    const status = response?.data?.status;
+    const message = (response?.data?.message || "").toLowerCase();
+
+    return (
+      status === "starting" ||
+      message.includes("still starting") ||
+      message.includes("startup was triggered") ||
+      message.includes("still unreachable")
+    );
+  }
 
   async function handleStartSqlServer() {
+    if (isSqlStartInFlight) {
+      return;
+    }
+
     setSqlReadiness("starting");
     setSqlStartupError("");
-    setSqlStartupMessage("");
+    setSqlStartupMessage("Starting SQL Server. This can take up to a few minutes.");
+    setSqlStartupProgress(3);
 
     try {
       const requestBaseUrl = resolveBaseUrl(targetEnvironment);
-      const response = await startSqlServer({
-        baseUrl: requestBaseUrl,
-        target: targetEnvironment,
-      });
-      const isSqlReady = response.data?.ready === true || response.data?.status === "ready";
+      const startedAt = Date.now();
 
-      if (!response.ok) {
-        setSqlReadiness("failed");
-        setSqlStartupError(formatSqlUserMessage(response.error, targetEnvironment === "cloud"));
-        return;
+      while (Date.now() - startedAt < SQL_START_MAX_WAIT_MS) {
+        const elapsed = Date.now() - startedAt;
+        const progress = Math.min(95, Math.max(3, Math.round((elapsed / SQL_START_MAX_WAIT_MS) * 95)));
+        setSqlStartupProgress(progress);
+
+        const response = await startSqlServer({
+          baseUrl: requestBaseUrl,
+          target: targetEnvironment,
+        });
+
+        if (!response.ok) {
+          setSqlReadiness("failed");
+          setSqlStartupProgress(0);
+          setSqlStartupError(formatSqlUserMessage(response.error, targetEnvironment === "cloud"));
+          return;
+        }
+
+        if (isSqlReadyResponse(response)) {
+          setSqlReadiness("ready");
+          setSqlStartupProgress(100);
+          setSqlStartupMessage(response.data?.message || "SQL Server is ready");
+          return;
+        }
+
+        if (!isSqlTransientStartupResponse(response)) {
+          setSqlReadiness("failed");
+          setSqlStartupProgress(0);
+          setSqlStartupError(formatSqlUserMessage(response.data?.message, targetEnvironment === "cloud"));
+          return;
+        }
+
+        setSqlStartupMessage(response.data?.message || "SQL Server is still starting...");
+        await sleep(SQL_START_POLL_MS);
       }
 
-      if (!isSqlReady) {
-        setSqlReadiness("failed");
-        setSqlStartupError(formatSqlUserMessage(response.data?.message, targetEnvironment === "cloud"));
-        return;
-      }
-
-      setSqlReadiness("ready");
-      setSqlStartupMessage(response.data?.message || "SQL Server is ready");
+      setSqlReadiness("failed");
+      setSqlStartupProgress(0);
+      setSqlStartupError("SQL Server is taking longer than expected. Please try again.");
     } catch (error) {
       setSqlReadiness("failed");
+      setSqlStartupProgress(0);
       setSqlStartupError(formatSqlUserMessage(error?.message, targetEnvironment === "cloud"));
     }
   }
@@ -160,7 +214,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
               <button
                 type="button"
                 onClick={() => setTargetEnvironment("local")}
-                disabled={loading}
+                disabled={loading || isSqlStartInFlight}
                 style={{
                   padding: "0.4rem 0.9rem",
                   borderRadius: "6px",
@@ -168,7 +222,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
                   fontWeight: targetEnvironment === "local" ? 700 : 400,
                   background: targetEnvironment === "local" ? "#e9d5ff" : "#1f2937",
                   color: targetEnvironment === "local" ? "#111827" : "#f3f4f6",
-                  cursor: loading ? "not-allowed" : "pointer",
+                  cursor: loading || isSqlStartInFlight ? "not-allowed" : "pointer",
                   fontSize: "0.9rem",
                 }}
               >
@@ -177,7 +231,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
               <button
                 type="button"
                 onClick={() => setTargetEnvironment("cloud")}
-                disabled={loading}
+                disabled={loading || isSqlStartInFlight}
                 style={{
                   padding: "0.4rem 0.9rem",
                   borderRadius: "6px",
@@ -185,7 +239,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
                   fontWeight: targetEnvironment === "cloud" ? 700 : 400,
                   background: targetEnvironment === "cloud" ? "#e9d5ff" : "#1f2937",
                   color: targetEnvironment === "cloud" ? "#111827" : "#f3f4f6",
-                  cursor: loading ? "not-allowed" : "pointer",
+                  cursor: loading || isSqlStartInFlight ? "not-allowed" : "pointer",
                   fontSize: "0.9rem",
                 }}
               >
@@ -211,9 +265,14 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
             color: "#f9fafb",
           }}
           value={activeDataset || ""}
+          disabled={isSqlStartInFlight}
           onChange={(e) => {
             const nextDataset = e.target.value || null;
             const hasChanged = nextDataset !== activeDataset;
+
+            if (!hasChanged) {
+              return;
+            }
 
             setActiveDataset(nextDataset);
             setError("");
@@ -222,10 +281,9 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
             setSqlReadiness("idle");
             setSqlStartupMessage("");
             setSqlStartupError("");
+            setSqlStartupProgress(0);
 
-            if (hasChanged) {
-              onDatasetChange?.(nextDataset);
-            }
+            onDatasetChange?.(nextDataset);
           }}
         >
           <option value="">Select dataset</option>
@@ -243,20 +301,51 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
             <button
               type="button"
               onClick={handleStartSqlServer}
-              disabled={sqlReadiness === "starting"}
+              disabled={isSqlStartInFlight}
               style={{
                 display: "block",
                 margin: "0 auto",
                 padding: "0.75rem 1.5rem",
                 borderRadius: "8px",
                 border: "1px solid #ccc",
-                cursor: sqlReadiness === "starting" ? "not-allowed" : "pointer",
+                cursor: isSqlStartInFlight ? "not-allowed" : "pointer",
                 fontWeight: 600,
                 fontSize: "1rem",
               }}
             >
-              {sqlReadiness === "starting" ? "Starting SQL Server..." : "Start SQL Server"}
+              {isSqlStartInFlight ? "Starting SQL Server..." : "Start SQL Server"}
             </button>
+            {isSqlStartInFlight ? (
+              <div style={{ marginTop: "0.6rem" }}>
+                <div
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={sqlStartupProgress}
+                  style={{
+                    width: "100%",
+                    maxWidth: "420px",
+                    height: "10px",
+                    margin: "0 auto",
+                    borderRadius: "999px",
+                    background: "#374151",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${sqlStartupProgress}%`,
+                      height: "100%",
+                      background: "#60a5fa",
+                      transition: "width 300ms ease",
+                    }}
+                  />
+                </div>
+                <p style={{ marginTop: "0.4rem", color: "#93c5fd", fontSize: "0.85rem" }}>
+                  SQL startup in progress: {sqlStartupProgress}%
+                </p>
+              </div>
+            ) : null}
             {sqlStartupMessage ? <p style={{ marginTop: "0.6rem", color: "#86efac" }}>{sqlStartupMessage}</p> : null}
             {sqlStartupError ? <p style={{ marginTop: "0.6rem", color: "#fca5a5" }}>{sqlStartupError}</p> : null}
           </div>
