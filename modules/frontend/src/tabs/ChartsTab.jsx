@@ -11,6 +11,18 @@ import {
 import { chartCatalog } from "../catalog/chartCatalog";
 import { resolveBaseUrl } from "../config/env";
 
+function downloadJson(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(objectUrl);
+}
+
 export default function ChartsTab({ activeDatasetId = null }) {
   const isDev = import.meta.env.DEV;
   const [target, setTarget] = useState(isDev ? "local" : "cloud");
@@ -65,6 +77,26 @@ export default function ChartsTab({ activeDatasetId = null }) {
       default:
         return { ok: false, error: "Unsupported chart selection." };
     }
+  };
+
+  const handleExportSummary = () => {
+    if (!overview) {
+      return;
+    }
+
+    const datasetName = overview.source_metadata?.dataset_id || activeDatasetId || "dataset";
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `${datasetName}-summary-${timestamp}.json`;
+
+    downloadJson(filename, {
+      source: overview.source,
+      source_metadata: overview.source_metadata,
+      shape: overview.shape,
+      fields: overview.fields,
+      missing_by_column: overview.missing_by_column,
+      numeric_summary: overview.numeric_summary,
+      categorical_summary: overview.categorical_summary,
+    });
   };
 
   const handleChartSelect = async (chartId) => {
@@ -200,11 +232,97 @@ const getChartContextEntries = (overview, chartId) => {
           {overview.variables != null && <p>Variables: {overview.variables}</p>}
           {overview.fields && <p>Fields: {overview.fields.join(", ")}</p>}
 
+          {overview.shape ? (
+            <p>
+              Shape: {overview.shape.rows} x {overview.shape.columns}
+            </p>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleExportSummary}
+            style={{
+              marginTop: "0.5rem",
+              marginBottom: "0.5rem",
+              padding: "0.45rem 0.8rem",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+            }}
+          >
+            Export Summary (JSON)
+          </button>
+
           <h3>Summary Statistics</h3>
           {overview.min != null && <p>Min: {overview.min}</p>}
           {overview.max != null && <p>Max: {overview.max}</p>}
           {overview.mean != null && <p>Mean: {overview.mean}</p>}
           {overview.count != null && <p>Count: {overview.count}</p>}
+
+          <h3>Missing Values By Column</h3>
+          {overview.missing_by_column ? (
+            <div>
+              {Object.entries(overview.missing_by_column).map(([field, missing]) => (
+                <p key={`missing-${field}`}>
+                  {field}: {missing}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p>No missing-value summary available.</p>
+          )}
+
+          <h3>Numeric Field Summary</h3>
+          {overview.numeric_summary?.length ? (
+            <div>
+              {overview.numeric_summary.map((item) => (
+                <div
+                  key={`numeric-${item.field}`}
+                  style={{ marginBottom: "0.65rem", paddingBottom: "0.65rem", borderBottom: "1px solid #eee" }}
+                >
+                  <p><strong>{item.field}</strong></p>
+                  <p>Count: {item.count} | Missing: {item.missing}</p>
+                  <p>
+                    Min: {item.min ?? "N/A"} | Max: {item.max ?? "N/A"} | Mean: {item.mean ?? "N/A"}
+                  </p>
+                  <p>
+                    Median: {item.median ?? "N/A"} | Std Dev: {item.std ?? "N/A"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No numeric summary available.</p>
+          )}
+
+          <h3>Categorical Frequency Summary</h3>
+          {overview.categorical_summary?.length ? (
+            <div>
+              {overview.categorical_summary.map((item) => (
+                <div
+                  key={`categorical-${item.field}`}
+                  style={{ marginBottom: "0.65rem", paddingBottom: "0.65rem", borderBottom: "1px solid #eee" }}
+                >
+                  <p>
+                    <strong>{item.field}</strong> (Unique: {item.unique}, Missing: {item.missing})
+                  </p>
+                  {item.top_values?.length ? (
+                    item.top_values.map((entry, index) => (
+                      <p key={`cat-${item.field}-${entry.value}-${index}`}>
+                        {entry.value}: {entry.count}
+                      </p>
+                    ))
+                  ) : (
+                    <p>No frequency data available.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No categorical summary available.</p>
+          )}
         </>
       ) : null}
 

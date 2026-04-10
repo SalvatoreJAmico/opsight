@@ -51,7 +51,37 @@ describe("ChartsTab", () => {
         },
         rows: 10,
         variables: 3,
+        shape: { rows: 10, columns: 3 },
         fields: ["entity_id", "metric_value", "category"],
+        missing_by_column: {
+          entity_id: 0,
+          metric_value: 1,
+          category: 2,
+        },
+        numeric_summary: [
+          {
+            field: "metric_value",
+            count: 9,
+            missing: 1,
+            min: 1,
+            max: 20,
+            mean: 10,
+            median: 9,
+            std: 3.5,
+          },
+        ],
+        categorical_summary: [
+          {
+            field: "category",
+            count: 8,
+            missing: 2,
+            unique: 2,
+            top_values: [
+              { value: "Furniture", count: 5 },
+              { value: "Office Supplies", count: 3 },
+            ],
+          },
+        ],
       },
     });
   });
@@ -166,5 +196,47 @@ describe("ChartsTab", () => {
     expect(await screen.findByText("Source: Superstore Sales Dataset")).toBeInTheDocument();
     expect(screen.getByText("Source Location: opsight-raw/csv/Sample - Superstore.csv")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final" })).toBeInTheDocument();
+    expect(screen.getByText("Shape: 10 x 3")).toBeInTheDocument();
+    expect(screen.getByText("entity_id: 0")).toBeInTheDocument();
+    expect(screen.getByText("metric_value: 1")).toBeInTheDocument();
+    expect(screen.getByText("category: 2")).toBeInTheDocument();
+    expect(screen.getByText("Furniture: 5")).toBeInTheDocument();
+    expect(screen.getByText("Office Supplies: 3")).toBeInTheDocument();
+  });
+
+  it("exports summary as json when export button is clicked", async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+
+    URL.createObjectURL = vi.fn(() => "blob:summary");
+    URL.revokeObjectURL = vi.fn(() => {});
+
+    const appendSpy = vi.spyOn(document.body, "appendChild");
+    const removeSpy = vi.spyOn(document.body, "removeChild");
+
+    const originalCreateElement = document.createElement.bind(document);
+    const clickSpy = vi.fn();
+    const createElementSpy = vi.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const element = originalCreateElement(tagName);
+      if (String(tagName).toLowerCase() === "a") {
+        element.click = clickSpy;
+      }
+      return element;
+    });
+
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+
+    const exportButton = await screen.findByRole("button", { name: "Export Summary (JSON)" });
+    fireEvent.click(exportButton);
+
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+    expect(appendSpy).toHaveBeenCalled();
+    expect(removeSpy).toHaveBeenCalled();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:summary");
+
+    createElementSpy.mockRestore();
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
   });
 });

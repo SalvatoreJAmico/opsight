@@ -602,6 +602,63 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "no runs recorded"})
 
+    def test_charts_overview_returns_complete_dataset_summary(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage_path = Path(tmp_dir) / "records.json"
+            local_storage = LocalStorage(storage_path=str(storage_path))
+            local_storage.save_records(
+                [
+                    {
+                        "entity_id": "1",
+                        "timestamp": "2026-01-01",
+                        "features": {"sales": 100.0, "profit": 20.0, "category": "Furniture"},
+                        "metadata": {},
+                    },
+                    {
+                        "entity_id": "2",
+                        "timestamp": "2026-01-02",
+                        "features": {"sales": 200.0, "profit": None, "category": "Office Supplies"},
+                        "metadata": {},
+                    },
+                    {
+                        "entity_id": "3",
+                        "timestamp": "2026-01-03",
+                        "features": {"sales": None, "profit": 15.0, "category": "Furniture"},
+                        "metadata": {},
+                    },
+                ]
+            )
+
+            session_state.set_active_dataset("sales_csv")
+            session_state.set_dataset_source_metadata(
+                {
+                    "dataset_id": "sales_csv",
+                    "source_type": "blob",
+                    "source_name": "Superstore Sales Dataset",
+                    "source_url": "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final",
+                    "source_location": "opsight-raw/csv/Sample - Superstore.csv",
+                }
+            )
+
+            with patch("modules.api.app.StorageConfig") as mocked_storage_config:
+                mocked_storage_config.return_value.storage_path = str(storage_path)
+                response = self.client.get("/charts/overview")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["shape"], {"rows": 3, "columns": 4})
+        self.assertEqual(body["source"], "Superstore Sales Dataset")
+        self.assertEqual(body["missing_by_column"]["sales"], 1)
+        self.assertEqual(body["missing_by_column"]["profit"], 1)
+
+        numeric_fields = {item["field"] for item in body["numeric_summary"]}
+        self.assertIn("sales", numeric_fields)
+        self.assertIn("profit", numeric_fields)
+
+        categorical = next(item for item in body["categorical_summary"] if item["field"] == "category")
+        self.assertEqual(categorical["unique"], 2)
+        self.assertEqual(categorical["top_values"][0]["value"], "Furniture")
+
     def test_kmeans_anomaly_endpoint_returns_summary_from_persisted_records(self):
         mocked_records = [
             {"entity_id": "1", "timestamp": "2026-03-01", "value": 10.0},
