@@ -345,6 +345,8 @@ def charts_overview():
     def _round_if_number(value):
         if pd.isna(value):
             return None
+        if hasattr(value, "item"):
+            value = value.item()
         if isinstance(value, (int, float)):
             return round(float(value), 4)
         return value
@@ -360,17 +362,18 @@ def charts_overview():
     ]
 
     missing_by_column = {
-        col: int(df[col].isna().sum())
+        str(col): int(df[col].isna().sum())
         for col in df.columns
     }
 
     numeric_summary = []
     for col in num_cols:
+        col_name = str(col)
         series = df[col]
         non_null = series.dropna()
         numeric_summary.append(
             {
-                "field": col,
+                "field": col_name,
                 "count": int(non_null.count()),
                 "missing": int(series.isna().sum()),
                 "min": _round_if_number(non_null.min()) if len(non_null) > 0 else None,
@@ -383,19 +386,20 @@ def charts_overview():
 
     categorical_summary = []
     for col in cat_cols:
+        col_name = str(col)
         series = df[col]
         non_null = series.dropna()
         value_counts = non_null.astype(str).value_counts().head(10)
         top_values = [
             {
-                "value": value,
+                "value": str(value),
                 "count": int(count),
             }
             for value, count in value_counts.items()
         ]
         categorical_summary.append(
             {
-                "field": col,
+                "field": col_name,
                 "count": int(non_null.count()),
                 "missing": int(series.isna().sum()),
                 "unique": int(non_null.nunique()),
@@ -404,16 +408,24 @@ def charts_overview():
         )
 
     stats: dict = {}
-    if numeric_summary:
-        first_numeric = numeric_summary[0]
-        series = df[first_numeric["field"]].dropna()
+    if num_cols:
+        first_numeric_col = num_cols[0]
+        series = df[first_numeric_col].dropna()
         if len(series) > 0:
             stats = {
-                "min": first_numeric["min"],
-                "max": first_numeric["max"],
-                "mean": first_numeric["mean"],
+                "min": _round_if_number(series.min()),
+                "max": _round_if_number(series.max()),
+                "mean": _round_if_number(series.mean()),
                 "count": int(len(series)),
             }
+
+    chart_context = {
+        chart_id: {
+            role: str(field_name) if field_name is not None else None
+            for role, field_name in fields.items()
+        }
+        for chart_id, fields in _build_chart_context(df).items()
+    }
 
     return {
         "source": source_metadata.get("source_name") or active_dataset,
@@ -424,11 +436,11 @@ def charts_overview():
             "rows": total_rows,
             "columns": total_columns,
         },
-        "fields": list(df.columns),
+        "fields": [str(col) for col in df.columns],
         "missing_by_column": missing_by_column,
         "numeric_summary": numeric_summary,
         "categorical_summary": categorical_summary,
-        "chart_context": _build_chart_context(df),
+        "chart_context": chart_context,
         **stats,
     }
 
