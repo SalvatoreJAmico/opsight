@@ -11,6 +11,48 @@ import {
 import { chartCatalog } from "../catalog/chartCatalog";
 import { resolveBaseUrl } from "../config/env";
 
+const DEFAULT_TARGET_VARIABLE = "Sales";
+const FALLBACK_TARGET_OPTIONS = [DEFAULT_TARGET_VARIABLE];
+const FALLBACK_COMPARE_OPTIONS = ["Profit", "Quantity", "Discount", "Category", "Order Date"];
+const summaryCardStyle = {
+  border: "1px solid #374151",
+  borderRadius: "12px",
+  padding: "1rem",
+  background: "#111827",
+  color: "#f9fafb",
+  textAlign: "center",
+  minHeight: "100%",
+  width: "100%",
+  boxSizing: "border-box",
+  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.18)",
+};
+const summaryCardTitleStyle = {
+  marginTop: 0,
+  marginBottom: "0.75rem",
+  fontSize: "0.95rem",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "#e5e7eb",
+};
+const summaryMetricStyle = {
+  margin: "0.3rem 0",
+  color: "#d1d5db",
+};
+const summaryDividerStyle = {
+  border: 0,
+  borderTop: "1px solid #374151",
+  margin: "0.8rem 0",
+};
+
+function normalizeFieldName(fieldName) {
+  return String(fieldName || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ");
+}
+
 function downloadJson(filename, payload) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const objectUrl = URL.createObjectURL(blob);
@@ -33,6 +75,8 @@ export default function ChartsTab({ activeDatasetId = null }) {
   const [overview, setOverview] = useState(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState("");
+  const [targetVariable, setTargetVariable] = useState(DEFAULT_TARGET_VARIABLE);
+  const [compareVariable, setCompareVariable] = useState(FALLBACK_COMPARE_OPTIONS[0]);
 
   useEffect(() => {
     if (!activeDatasetId) {
@@ -61,19 +105,126 @@ export default function ChartsTab({ activeDatasetId = null }) {
     };
   }, [activeDatasetId, target]);
 
+  useEffect(() => {
+    const nextTarget = overview?.assignment_analysis?.target_variable || DEFAULT_TARGET_VARIABLE;
+    const nextCompareOptions = overview?.assignment_analysis?.compare_options || FALLBACK_COMPARE_OPTIONS;
+
+    if (targetVariable !== nextTarget) {
+      setTargetVariable(nextTarget);
+    }
+
+    if (!nextCompareOptions.includes(compareVariable)) {
+      setCompareVariable(nextCompareOptions[0] || FALLBACK_COMPARE_OPTIONS[0]);
+    }
+  }, [overview, targetVariable, compareVariable]);
+
+  const targetOptions = overview?.assignment_analysis?.target_options || FALLBACK_TARGET_OPTIONS;
+  const compareOptions = overview?.assignment_analysis?.compare_options || FALLBACK_COMPARE_OPTIONS;
+  const missingValueEntries = Object.entries(overview?.missing_by_column || {}).filter(([, missing]) =>
+    Number(missing) > 0,
+  );
+  const selectedVariables = Array.from(
+    new Set(
+      [targetVariable, compareVariable]
+        .filter(Boolean)
+        .map((fieldName) => normalizeFieldName(fieldName)),
+    ),
+  );
+  const filteredNumericSummary = (overview?.numeric_summary || []).filter((item) =>
+    selectedVariables.includes(normalizeFieldName(item.field)),
+  );
+  const dateFieldNames = new Set(
+    (overview?.date_summary || []).map((item) => normalizeFieldName(item.field)),
+  );
+  const filteredDateSummary = (overview?.date_summary || []).filter((item) =>
+    selectedVariables.includes(normalizeFieldName(item.field)),
+  );
+  const filteredCategoricalSummary = (overview?.categorical_summary || []).filter((item) =>
+    selectedVariables.includes(normalizeFieldName(item.field)) &&
+    !dateFieldNames.has(normalizeFieldName(item.field)),
+  );
+
+  const renderSummaryCardsForVariable = (normalizedFieldName) => (
+    <>
+      {filteredNumericSummary
+        .filter((item) => normalizeFieldName(item.field) === normalizedFieldName)
+        .map((item) => (
+          <div
+            key={`numeric-${item.field}`}
+            data-testid={`numeric-summary-card-${normalizeFieldName(item.field).replace(/\s+/g, "-")}`}
+            style={summaryCardStyle}
+          >
+            <p style={summaryCardTitleStyle}>{item.field}</p>
+            <p style={summaryMetricStyle}>Count: {item.count}</p>
+            <p style={summaryMetricStyle}>Missing: {item.missing}</p>
+            <hr style={summaryDividerStyle} />
+            <p style={summaryMetricStyle}>Min: {item.min ?? "N/A"}</p>
+            <p style={summaryMetricStyle}>Max: {item.max ?? "N/A"}</p>
+            <p style={summaryMetricStyle}>Mean: {item.mean ?? "N/A"}</p>
+            <p style={summaryMetricStyle}>Median: {item.median ?? "N/A"}</p>
+            <p style={summaryMetricStyle}>Std Dev: {item.std ?? "N/A"}</p>
+          </div>
+        ))}
+
+      {filteredDateSummary
+        .filter((item) => normalizeFieldName(item.field) === normalizedFieldName)
+        .map((item) => (
+          <div
+            key={`date-${item.field}`}
+            data-testid={`date-summary-card-${normalizeFieldName(item.field).replace(/\s+/g, "-")}`}
+            style={summaryCardStyle}
+          >
+            <p style={summaryCardTitleStyle}>{item.field}</p>
+            <p style={summaryMetricStyle}>Count: {item.count}</p>
+            <p style={summaryMetricStyle}>Missing: {item.missing}</p>
+            <hr style={summaryDividerStyle} />
+            <p style={summaryMetricStyle}>Min Date: {item.min_date ?? "N/A"}</p>
+            <p style={summaryMetricStyle}>Max Date: {item.max_date ?? "N/A"}</p>
+          </div>
+        ))}
+
+      {filteredCategoricalSummary
+        .filter((item) => normalizeFieldName(item.field) === normalizedFieldName)
+        .map((item) => (
+          <div
+            key={`categorical-${item.field}`}
+            data-testid={`categorical-summary-card-${normalizeFieldName(item.field).replace(/\s+/g, "-")}`}
+            style={summaryCardStyle}
+          >
+            <p style={summaryCardTitleStyle}>{item.field}</p>
+            <p style={summaryMetricStyle}>Unique: {item.unique}</p>
+            <p style={summaryMetricStyle}>Missing: {item.missing}</p>
+            <hr style={summaryDividerStyle} />
+            {item.top_values?.length ? (
+              <div>
+                {item.top_values.map((entry, index) => (
+                  <p
+                    key={`cat-${item.field}-${entry.value}-${index}`}
+                    style={summaryMetricStyle}
+                  >
+                    {entry.value}: {entry.count}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ))}
+    </>
+  );
+
   const loadChartById = async (chartId) => {
     const baseUrl = resolveBaseUrl(target);
     switch (chartId) {
       case "histogram":
-        return getHistogram({ baseUrl });
+        return getHistogram({ baseUrl, targetVariable });
       case "bar-category":
-        return getBarCategory({ baseUrl });
+        return getBarCategory({ baseUrl, targetVariable, compareVariable });
       case "boxplot":
-        return getBoxplot({ baseUrl });
+        return getBoxplot({ baseUrl, targetVariable });
       case "scatter":
-        return getScatter({ baseUrl });
+        return getScatter({ baseUrl, targetVariable, compareVariable });
       case "grouped-comparison":
-        return getGroupedComparison({ baseUrl });
+        return getGroupedComparison({ baseUrl, targetVariable, compareVariable });
       default:
         return { ok: false, error: "Unsupported chart selection." };
     }
@@ -93,8 +244,10 @@ export default function ChartsTab({ activeDatasetId = null }) {
       source_metadata: overview.source_metadata,
       shape: overview.shape,
       fields: overview.fields,
+      assignment_analysis: overview.assignment_analysis,
       missing_by_column: overview.missing_by_column,
       numeric_summary: overview.numeric_summary,
+      date_summary: overview.date_summary,
       categorical_summary: overview.categorical_summary,
     });
   };
@@ -186,9 +339,22 @@ const getChartExplainability = (chartId) => {
   }
 };
 
-const getChartContextEntries = (overview, chartId) => {
-  const context = overview?.chart_context?.[chartId] || {};
-  return Object.entries(context).filter(([, value]) => Boolean(value));
+const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
+  switch (chartId) {
+    case "histogram":
+    case "boxplot":
+      return [["target_variable", targetVariable]];
+    case "bar-category":
+      return [["compare_variable", compareVariable]];
+    case "scatter":
+    case "grouped-comparison":
+      return [
+        ["target_variable", targetVariable],
+        ["compare_variable", compareVariable],
+      ];
+    default:
+      return [];
+  }
 };
 
 
@@ -216,28 +382,6 @@ const getChartContextEntries = (overview, chartId) => {
               Note: charts show data from &ldquo;{overview.source}&rdquo;. Run the selected dataset to update.
             </p>
           )}
-          <p>Source: {overview.source}</p>
-          {overview.source_metadata?.source_location ? (
-            <p>Source Location: {overview.source_metadata.source_location}</p>
-          ) : null}
-          {overview.source_metadata?.source_url ? (
-            <p>
-              Source URL:{" "}
-              <a href={overview.source_metadata.source_url} target="_blank" rel="noreferrer">
-                {overview.source_metadata.source_url}
-              </a>
-            </p>
-          ) : null}
-          <p>Rows: {overview.rows}</p>
-          {overview.variables != null && <p>Variables: {overview.variables}</p>}
-          {overview.fields && <p>Fields: {overview.fields.join(", ")}</p>}
-
-          {overview.shape ? (
-            <p>
-              Shape: {overview.shape.rows} x {overview.shape.columns}
-            </p>
-          ) : null}
-
           <button
             type="button"
             onClick={handleExportSummary}
@@ -255,74 +399,109 @@ const getChartContextEntries = (overview, chartId) => {
             Export Summary (JSON)
           </button>
 
-          <h3>Summary Statistics</h3>
-          {overview.min != null && <p>Min: {overview.min}</p>}
-          {overview.max != null && <p>Max: {overview.max}</p>}
-          {overview.mean != null && <p>Mean: {overview.mean}</p>}
-          {overview.count != null && <p>Count: {overview.count}</p>}
-
-          <h3>Missing Values By Column</h3>
-          {overview.missing_by_column ? (
-            <div>
-              {Object.entries(overview.missing_by_column).map(([field, missing]) => (
-                <p key={`missing-${field}`}>
-                  {field}: {missing}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <p>No missing-value summary available.</p>
-          )}
-
-          <h3>Numeric Field Summary</h3>
-          {overview.numeric_summary?.length ? (
-            <div>
-              {overview.numeric_summary.map((item) => (
-                <div
-                  key={`numeric-${item.field}`}
-                  style={{ marginBottom: "0.65rem", paddingBottom: "0.65rem", borderBottom: "1px solid #eee" }}
-                >
-                  <p><strong>{item.field}</strong></p>
-                  <p>Count: {item.count} | Missing: {item.missing}</p>
-                  <p>
-                    Min: {item.min ?? "N/A"} | Max: {item.max ?? "N/A"} | Mean: {item.mean ?? "N/A"}
-                  </p>
-                  <p>
-                    Median: {item.median ?? "N/A"} | Std Dev: {item.std ?? "N/A"}
-                  </p>
+          <div className="summary-full">
+            <div style={summaryCardStyle}>
+              <p style={summaryCardTitleStyle}>Dataset Summary</p>
+              <p style={summaryMetricStyle}>Source: {overview.source}</p>
+              {overview.source_metadata?.source_location ? (
+                <p style={summaryMetricStyle}>Source Location: {overview.source_metadata.source_location}</p>
+              ) : null}
+              {overview.source_metadata?.source_url ? (
+                <p style={summaryMetricStyle}>Source URL: {overview.source_metadata.source_url}</p>
+              ) : null}
+              <hr style={summaryDividerStyle} />
+              <p style={summaryMetricStyle}>Rows: {overview.rows}</p>
+              {overview.shape ? (
+                <p style={summaryMetricStyle}>Columns: {overview.shape.columns}</p>
+              ) : null}
+              {overview.variables != null && <p style={summaryMetricStyle}>Analysis Variables: {overview.variables}</p>}
+              {overview.fields && <p style={summaryMetricStyle}>Analysis Fields: {overview.fields.join(", ")}</p>}
+              {overview.shape ? (
+                <p style={summaryMetricStyle}>Shape: {overview.shape.rows} x {overview.shape.columns}</p>
+              ) : null}
+              <hr style={summaryDividerStyle} />
+              {overview.min != null && <p style={summaryMetricStyle}>Min: {overview.min}</p>}
+              {overview.max != null && <p style={summaryMetricStyle}>Max: {overview.max}</p>}
+              {overview.mean != null && <p style={summaryMetricStyle}>Mean: {overview.mean}</p>}
+              {overview.count != null && <p style={summaryMetricStyle}>Count: {overview.count}</p>}
+              <hr style={summaryDividerStyle} />
+              {missingValueEntries.length ? (
+                <div>
+                  <p style={{ ...summaryMetricStyle, fontWeight: 600 }}>Missing Values:</p>
+                  {missingValueEntries.map(([field, missing]) => (
+                    <p key={`missing-${field}`} style={summaryMetricStyle}>
+                      {field}: {missing}
+                    </p>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <p style={summaryMetricStyle}>Missing Values: None detected</p>
+              )}
             </div>
-          ) : (
-            <p>No numeric summary available.</p>
-          )}
+          </div>
 
-          <h3>Categorical Frequency Summary</h3>
-          {overview.categorical_summary?.length ? (
-            <div>
-              {overview.categorical_summary.map((item) => (
-                <div
-                  key={`categorical-${item.field}`}
-                  style={{ marginBottom: "0.65rem", paddingBottom: "0.65rem", borderBottom: "1px solid #eee" }}
+          <h3>Analysis Variables</h3>
+          <div className="summary-grid">
+            <div className="summary-variable-column">
+              <label
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.35rem",
+                  fontWeight: 600,
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                }}
+              >
+                <span>Target Variable</span>
+                <select
+                  value={targetVariable}
+                  onChange={(event) => setTargetVariable(event.target.value)}
+                  disabled={!activeDatasetId || overviewLoading}
+                  style={{ minWidth: "12rem", padding: "0.45rem" }}
                 >
-                  <p>
-                    <strong>{item.field}</strong> (Unique: {item.unique}, Missing: {item.missing})
-                  </p>
-                  {item.top_values?.length ? (
-                    item.top_values.map((entry, index) => (
-                      <p key={`cat-${item.field}-${entry.value}-${index}`}>
-                        {entry.value}: {entry.count}
-                      </p>
-                    ))
-                  ) : (
-                    <p>No frequency data available.</p>
-                  )}
-                </div>
-              ))}
+                  {targetOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="summary-variable-cards">
+                {renderSummaryCardsForVariable(normalizeFieldName(targetVariable))}
+              </div>
             </div>
-          ) : (
-            <p>No categorical summary available.</p>
-          )}
+
+            <div className="summary-variable-column">
+              <label
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.35rem",
+                  fontWeight: 600,
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                }}
+              >
+                <span>Compare Variable</span>
+                <select
+                  value={compareVariable}
+                  onChange={(event) => setCompareVariable(event.target.value)}
+                  disabled={!activeDatasetId || overviewLoading || compareOptions.length === 0}
+                  style={{ minWidth: "12rem", padding: "0.45rem" }}
+                >
+                  {compareOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="summary-variable-cards">
+                {renderSummaryCardsForVariable(normalizeFieldName(compareVariable))}
+              </div>
+            </div>
+          </div>
         </>
       ) : null}
 
@@ -408,7 +587,7 @@ const getChartContextEntries = (overview, chartId) => {
       style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
     />
 
-    {getChartContextEntries(overview, chart.id).length > 0 ? (
+    {getChartContextEntries(chart.id, targetVariable, compareVariable).length > 0 ? (
       <div
         style={{
           marginTop: "0.75rem",
@@ -419,7 +598,7 @@ const getChartContextEntries = (overview, chartId) => {
         }}
       >
         <strong>Fields used</strong>
-        {getChartContextEntries(overview, chart.id).map(([role, field]) => (
+        {getChartContextEntries(chart.id, targetVariable, compareVariable).map(([role, field]) => (
           <p key={`${chart.id}-${role}`} style={{ marginTop: "0.35rem" }}>
             <strong>{role.replace(/_/g, " ")}:</strong> {field}
           </p>

@@ -26,69 +26,148 @@ from modules.visualization.plots import (
 )
 
 
-def _records_to_chart_df(records: list) -> pd.DataFrame:
-    """Flatten canonical records into a chart-ready DataFrame.
+ASSIGNMENT_TARGET_VARIABLE = "Sales"
+ASSIGNMENT_COMPARE_VARIABLES = ["Profit", "Quantity", "Discount", "Category", "Order Date"]
+ASSIGNMENT_ANALYSIS_FIELDS = [ASSIGNMENT_TARGET_VARIABLE, *ASSIGNMENT_COMPARE_VARIABLES]
+ASSIGNMENT_FIELD_CANDIDATES = {
+    "Sales": ("sales",),
+    "Profit": ("profit",),
+    "Quantity": ("quantity",),
+    "Discount": ("discount",),
+    "Category": ("category",),
+    "Order Date": ("order date", "order_date", "timestamp"),
+}
 
-    Maps the first numeric feature to ``metric_value``, the second to
-    ``secondary_metric``, and the first string feature to ``category``.
-    Falls back to ``entity_id`` when a column is not available.
-    """
+
+def _normalize_field_name(field_name) -> str:
+    return str(field_name).strip().lower().replace("_", " ")
+
+
+def _resolve_assignment_column(df: pd.DataFrame, label: str):
+    normalized_columns = {
+        _normalize_field_name(column): column
+        for column in df.columns
+    }
+
+    for candidate in ASSIGNMENT_FIELD_CANDIDATES[label]:
+        matched_column = normalized_columns.get(_normalize_field_name(candidate))
+        if matched_column is not None:
+            return matched_column
+
+    return None
+
+
+def _resolve_assignment_fields(df: pd.DataFrame) -> dict:
+    return {
+        label: column
+        for label in ASSIGNMENT_ANALYSIS_FIELDS
+        for column in [_resolve_assignment_column(df, label)]
+        if column is not None
+    }
+
+
+def _get_assignment_series(df: pd.DataFrame, column_name, label: str) -> pd.Series:
+    series = df[column_name]
+    if label == "Order Date":
+        return pd.to_datetime(series, errors="coerce")
+    return series
+
+
+def _validate_target_variable(target_variable: str) -> str:
+    if target_variable != ASSIGNMENT_TARGET_VARIABLE:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Target variable must be '{ASSIGNMENT_TARGET_VARIABLE}'.",
+        )
+
+    return target_variable
+
+
+def _validate_compare_variable(compare_variable: str) -> str:
+    if compare_variable not in ASSIGNMENT_COMPARE_VARIABLES:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Compare variable must be one of "
+                f"{', '.join(ASSIGNMENT_COMPARE_VARIABLES)}."
+            ),
+        )
+
+    return compare_variable
+
+
+def _resolve_chart_columns(
+    df: pd.DataFrame,
+    *,
+    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    compare_variable: str | None = None,
+):
+    resolved_fields = _resolve_assignment_fields(df)
+    target_label = _validate_target_variable(target_variable)
+    target_column = resolved_fields.get(target_label)
+
+    if target_column is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Target variable '{target_label}' is not available in the active dataset.",
+        )
+
+    compare_label = None
+    compare_column = None
+    if compare_variable is not None:
+        compare_label = _validate_compare_variable(compare_variable)
+        compare_column = resolved_fields.get(compare_label)
+        if compare_column is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Compare variable '{compare_label}' is not available in the active dataset.",
+            )
+
+    return target_column, compare_column, resolved_fields, target_label, compare_label
+
+
+def _records_to_chart_df(records: list) -> pd.DataFrame:
+    """Flatten canonical records into a chart-ready DataFrame."""
     rows = []
     for r in records:
-        row = {"entity_id": r.get("entity_id", "")}
+        row = {
+            "entity_id": r.get("entity_id", ""),
+            "timestamp": r.get("timestamp"),
+        }
         row.update(r.get("features", {}))
         rows.append(row)
 
-    df = pd.DataFrame(rows)
-
-    num_cols = [
-        c for c in df.columns
-        if c != "entity_id" and pd.api.types.is_numeric_dtype(df[c])
-    ]
-    str_cols = [
-        c for c in df.columns
-        if c != "entity_id" and not pd.api.types.is_numeric_dtype(df[c])
-    ]
-
-    df["metric_value"] = df[num_cols[0]] if len(num_cols) >= 1 else 0.0
-    df["secondary_metric"] = df[num_cols[1]] if len(num_cols) >= 2 else df["metric_value"]
-    df["category"] = df[str_cols[0]] if str_cols else df["entity_id"]
-
-    return df
+    return pd.DataFrame(rows)
 
 
-def _build_chart_context(df: pd.DataFrame) -> dict:
+def _build_chart_context(df: pd.DataFrame, compare_variable: str = "Profit") -> dict:
     """Return per-chart field-role context from the active dataset."""
-    num_cols = [
-        c for c in df.columns
-        if c != "entity_id" and pd.api.types.is_numeric_dtype(df[c])
-    ]
-    str_cols = [
-        c for c in df.columns
-        if c != "entity_id" and not pd.api.types.is_numeric_dtype(df[c])
-    ]
-
-    first_numeric = num_cols[0] if len(num_cols) >= 1 else None
-    second_numeric = num_cols[1] if len(num_cols) >= 2 else first_numeric
-    first_grouping = str_cols[0] if str_cols else "entity_id"
+    resolved_fields = _resolve_assignment_fields(df)
+    compare_label = compare_variable if compare_variable in resolved_fields else None
+    if compare_label is None:
+        compare_label = next(
+            (label for label in ASSIGNMENT_COMPARE_VARIABLES if label in resolved_fields),
+            None,
+        )
+    target_label = ASSIGNMENT_TARGET_VARIABLE if ASSIGNMENT_TARGET_VARIABLE in resolved_fields else None
 
     return {
         "histogram": {
-            "value": first_numeric,
+            "target_variable": target_label,
         },
         "bar-category": {
-            "grouping": first_grouping,
+            "compare_variable": compare_label,
         },
         "boxplot": {
-            "value": first_numeric,
+            "target_variable": target_label,
         },
         "scatter": {
-            "value": first_numeric,
-            "value_secondary": second_numeric,
+            "target_variable": target_label,
+            "compare_variable": compare_label,
         },
         "grouped-comparison": {
-            "value": first_numeric,
-            "grouping": first_grouping,
+            "target_variable": target_label,
+            "compare_variable": compare_label,
         },
     }
 
@@ -246,55 +325,113 @@ async def log_requests(request: Request, call_next):
     return response
 
 @app.get("/charts/histogram")
-def histogram():
+def histogram(target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
     try:
         df = get_chart_dataframe()
-        path = create_histogram(df)
+        target_column, _, _, target_label, _ = _resolve_chart_columns(
+            df,
+            target_variable=target_variable,
+        )
+        path = create_histogram(df, target_column=target_column, target_label=target_label)
         return {"image": path}
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Histogram generation failed: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.get("/charts/bar-category")
-def bar_category():
+def bar_category(
+    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    compare_variable: str = "Category",
+):
     try:
         df = get_chart_dataframe()
-        path = create_bar_category_chart(df)
+        _, compare_column, _, _, compare_label = _resolve_chart_columns(
+            df,
+            target_variable=target_variable,
+            compare_variable=compare_variable,
+        )
+        path = create_bar_category_chart(
+            df,
+            compare_column=compare_column,
+            compare_label=compare_label,
+        )
         return {"image": path}
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Bar chart generation failed: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.get("/charts/boxplot")
-def boxplot():
+def boxplot(target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
     try:
         df = get_chart_dataframe()
-        path = create_boxplot(df)
+        target_column, _, _, target_label, _ = _resolve_chart_columns(
+            df,
+            target_variable=target_variable,
+        )
+        path = create_boxplot(df, target_column=target_column, target_label=target_label)
         return {"image": path}
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Box plot generation failed: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.get("/charts/scatter")
-def scatter():
+def scatter(
+    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    compare_variable: str = "Profit",
+):
     try:
         df = get_chart_dataframe()
-        path = create_scatter_plot(df)
+        target_column, compare_column, _, target_label, compare_label = _resolve_chart_columns(
+            df,
+            target_variable=target_variable,
+            compare_variable=compare_variable,
+        )
+        path = create_scatter_plot(
+            df,
+            target_column=target_column,
+            compare_column=compare_column,
+            target_label=target_label,
+            compare_label=compare_label,
+        )
         return {"image": path}
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Scatter plot generation failed: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.get("/charts/grouped-comparison")
-def grouped_comparison():
+def grouped_comparison(
+    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    compare_variable: str = "Category",
+):
     try:
         df = get_chart_dataframe()
-        path = create_grouped_comparison_chart(df)
+        target_column, compare_column, _, target_label, compare_label = _resolve_chart_columns(
+            df,
+            target_variable=target_variable,
+            compare_variable=compare_variable,
+        )
+        path = create_grouped_comparison_chart(
+            df,
+            target_column=target_column,
+            compare_column=compare_column,
+            target_label=target_label,
+            compare_label=compare_label,
+        )
         return {"image": path}
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Grouped comparison chart generation failed: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc))
@@ -333,7 +470,10 @@ def charts_overview():
 
     rows = []
     for r in records:
-        row = {"entity_id": r.get("entity_id", "")}
+        row = {
+            "entity_id": r.get("entity_id", ""),
+            "timestamp": r.get("timestamp"),
+        }
         row.update(r.get("features", {}))
         rows.append(row)
 
@@ -341,6 +481,8 @@ def charts_overview():
 
     total_rows = len(df)
     total_columns = len(df.columns)
+    resolved_fields = _resolve_assignment_fields(df)
+    analysis_fields = list(resolved_fields.keys())
 
     def _round_if_number(value):
         if pd.isna(value):
@@ -351,29 +493,21 @@ def charts_overview():
             return round(float(value), 4)
         return value
 
-    num_cols = [
-        c for c in df.columns
-        if c != "entity_id" and pd.api.types.is_numeric_dtype(df[c])
-    ]
-
-    cat_cols = [
-        c for c in df.columns
-        if c != "entity_id" and not pd.api.types.is_numeric_dtype(df[c])
-    ]
-
     missing_by_column = {
-        str(col): int(df[col].isna().sum())
-        for col in df.columns
+        label: int(_get_assignment_series(df, column, label).isna().sum())
+        for label, column in resolved_fields.items()
     }
 
     numeric_summary = []
-    for col in num_cols:
-        col_name = str(col)
-        series = df[col]
+    for label in ["Sales", "Profit", "Quantity", "Discount"]:
+        column = resolved_fields.get(label)
+        if column is None:
+            continue
+        series = _get_assignment_series(df, column, label)
         non_null = series.dropna()
         numeric_summary.append(
             {
-                "field": col_name,
+                "field": label,
                 "count": int(non_null.count()),
                 "missing": int(series.isna().sum()),
                 "min": _round_if_number(non_null.min()) if len(non_null) > 0 else None,
@@ -384,10 +518,29 @@ def charts_overview():
             }
         )
 
+    date_summary = []
+    for label in ["Order Date"]:
+        column = resolved_fields.get(label)
+        if column is None:
+            continue
+        series = _get_assignment_series(df, column, label)
+        non_null = series.dropna()
+        date_summary.append(
+            {
+                "field": label,
+                "count": int(non_null.count()),
+                "missing": int(series.isna().sum()),
+                "min_date": str(non_null.min().date()) if len(non_null) > 0 else None,
+                "max_date": str(non_null.max().date()) if len(non_null) > 0 else None,
+            }
+        )
+
     categorical_summary = []
-    for col in cat_cols:
-        col_name = str(col)
-        series = df[col]
+    for label in ["Category"]:
+        column = resolved_fields.get(label)
+        if column is None:
+            continue
+        series = _get_assignment_series(df, column, label)
         non_null = series.dropna()
         value_counts = non_null.astype(str).value_counts().head(10)
         top_values = [
@@ -399,7 +552,7 @@ def charts_overview():
         ]
         categorical_summary.append(
             {
-                "field": col_name,
+                "field": label,
                 "count": int(non_null.count()),
                 "missing": int(series.isna().sum()),
                 "unique": int(non_null.nunique()),
@@ -408,9 +561,9 @@ def charts_overview():
         )
 
     stats: dict = {}
-    if num_cols:
-        first_numeric_col = num_cols[0]
-        series = df[first_numeric_col].dropna()
+    sales_column = resolved_fields.get(ASSIGNMENT_TARGET_VARIABLE)
+    if sales_column is not None:
+        series = _get_assignment_series(df, sales_column, ASSIGNMENT_TARGET_VARIABLE).dropna()
         if len(series) > 0:
             stats = {
                 "min": _round_if_number(series.min()),
@@ -431,16 +584,25 @@ def charts_overview():
         "source": source_metadata.get("source_name") or active_dataset,
         "source_metadata": source_metadata,
         "rows": total_rows,
-        "variables": total_columns,
+        "variables": len(analysis_fields),
         "shape": {
             "rows": total_rows,
             "columns": total_columns,
         },
-        "fields": [str(col) for col in df.columns],
+        "fields": analysis_fields,
         "missing_by_column": missing_by_column,
         "numeric_summary": numeric_summary,
+        "date_summary": date_summary,
         "categorical_summary": categorical_summary,
         "chart_context": chart_context,
+        "assignment_analysis": {
+            "target_variable": ASSIGNMENT_TARGET_VARIABLE,
+            "target_options": [ASSIGNMENT_TARGET_VARIABLE],
+            "compare_options": [
+                label for label in ASSIGNMENT_COMPARE_VARIABLES
+                if label in resolved_fields
+            ],
+        },
         **stats,
     }
 

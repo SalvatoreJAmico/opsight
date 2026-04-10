@@ -332,9 +332,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
             {sourceMetadata.sourceUrl ? (
               <p style={{ marginTop: "0.35rem", marginBottom: 0, color: "#d1d5db" }}>
                 <strong>Source URL:</strong>{" "}
-                <a href={sourceMetadata.sourceUrl} target="_blank" rel="noreferrer">
-                  {sourceMetadata.sourceUrl}
-                </a>
+                <span>{sourceMetadata.sourceUrl}</span>
               </p>
             ) : null}
           </div>
@@ -481,9 +479,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
               {result.dataset_source_url ? (
                 <p style={{ marginTop: 0, marginBottom: "0.25rem", color: "#d1d5db" }}>
                   Source URL:{" "}
-                  <a href={result.dataset_source_url} target="_blank" rel="noreferrer">
-                    {result.dataset_source_url}
-                  </a>
+                  <span>{result.dataset_source_url}</span>
                 </p>
               ) : null}
               {result.dataset_source_type === "blob" && result.dataset_path ? (

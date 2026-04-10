@@ -39,17 +39,34 @@ def _style_category_axis(ax, labels: list[str]) -> None:
                 tick.set_visible(False)
 
 
-def create_histogram(df: pd.DataFrame) -> str:
+def _get_plot_series(df: pd.DataFrame, column_name, field_label: str) -> pd.Series:
+    series = df[column_name]
+    if field_label == "Order Date":
+        return pd.to_datetime(series, errors="coerce")
+    return series
+
+
+def _get_scatter_axis_series(df: pd.DataFrame, column_name, field_label: str) -> tuple[pd.Series, str]:
+    series = _get_plot_series(df, column_name, field_label)
+
+    if pd.api.types.is_numeric_dtype(series) or pd.api.types.is_datetime64_any_dtype(series):
+        return series, field_label
+
+    encoded_values, _ = pd.factorize(series.fillna("Missing").astype(str))
+    return pd.Series(encoded_values, index=series.index), f"{field_label} (encoded)"
+
+
+def create_histogram(df: pd.DataFrame, target_column, target_label: str) -> str:
     _ensure_plot_dir()
     filename = "hist_metric.png"
     full_path = os.path.join(PLOT_DIR, filename)
 
-    column = "metric_value"
+    series = _get_plot_series(df, target_column, target_label).dropna()
 
     plt.figure(figsize=(5, 3))
-    df[column].dropna().hist()
-    plt.title(f"Distribution of {column}")
-    plt.xlabel(column)
+    series.hist()
+    plt.title(f"Distribution of {target_label}")
+    plt.xlabel(target_label)
     plt.ylabel("Frequency")
     plt.grid(True)
 
@@ -59,19 +76,19 @@ def create_histogram(df: pd.DataFrame) -> str:
     return f"/static/plots/{filename}"
 
 
-def create_bar_category_chart(df: pd.DataFrame) -> str:
+def create_bar_category_chart(df: pd.DataFrame, compare_column, compare_label: str) -> str:
     _ensure_plot_dir()
     filename = "bar_category.png"
     full_path = os.path.join(PLOT_DIR, filename)
 
-    counts = df["category"].value_counts().sort_index()
+    counts = _get_plot_series(df, compare_column, compare_label).dropna().astype(str).value_counts().sort_index()
 
     labels = counts.index.astype(str).tolist()
 
     fig, ax = plt.subplots(figsize=(10, 5.5))
     ax.bar(range(len(labels)), counts.values)
-    ax.set_title("Category Counts")
-    ax.set_xlabel("Category")
+    ax.set_title(f"{compare_label} Counts")
+    ax.set_xlabel(compare_label)
     ax.set_ylabel("Count")
     ax.grid(True, axis="y")
     _style_category_axis(ax, labels)
@@ -83,15 +100,17 @@ def create_bar_category_chart(df: pd.DataFrame) -> str:
     return f"/static/plots/{filename}"
 
 
-def create_boxplot(df: pd.DataFrame) -> str:
+def create_boxplot(df: pd.DataFrame, target_column, target_label: str) -> str:
     _ensure_plot_dir()
     filename = "boxplot_metric.png"
     full_path = os.path.join(PLOT_DIR, filename)
 
+    series = _get_plot_series(df, target_column, target_label).dropna()
+
     plt.figure(figsize=(5, 3))
-    plt.boxplot(df["metric_value"].dropna())
-    plt.title("Box Plot of metric_value")
-    plt.ylabel("metric_value")
+    plt.boxplot(series)
+    plt.title(f"Box Plot of {target_label}")
+    plt.ylabel(target_label)
     plt.grid(True, axis="y")
 
     plt.savefig(full_path, dpi=80, bbox_inches="tight")
@@ -100,16 +119,26 @@ def create_boxplot(df: pd.DataFrame) -> str:
     return f"/static/plots/{filename}"
 
 
-def create_scatter_plot(df: pd.DataFrame) -> str:
+def create_scatter_plot(
+    df: pd.DataFrame,
+    target_column,
+    compare_column,
+    target_label: str,
+    compare_label: str,
+) -> str:
     _ensure_plot_dir()
     filename = "scatter_metric_secondary.png"
     full_path = os.path.join(PLOT_DIR, filename)
 
+    target_series, x_axis_label = _get_scatter_axis_series(df, target_column, target_label)
+    compare_series, y_axis_label = _get_scatter_axis_series(df, compare_column, compare_label)
+    plot_frame = pd.DataFrame({"x": target_series, "y": compare_series}).dropna()
+
     plt.figure(figsize=(5, 3))
-    plt.scatter(df["metric_value"], df["secondary_metric"])
-    plt.title("metric_value vs secondary_metric")
-    plt.xlabel("metric_value")
-    plt.ylabel("secondary_metric")
+    plt.scatter(plot_frame["x"], plot_frame["y"])
+    plt.title(f"{target_label} vs {compare_label}")
+    plt.xlabel(x_axis_label)
+    plt.ylabel(y_axis_label)
     plt.grid(True)
 
     plt.savefig(full_path, dpi=80, bbox_inches="tight")
@@ -118,20 +147,32 @@ def create_scatter_plot(df: pd.DataFrame) -> str:
     return f"/static/plots/{filename}"
 
 
-def create_grouped_comparison_chart(df: pd.DataFrame) -> str:
+def create_grouped_comparison_chart(
+    df: pd.DataFrame,
+    target_column,
+    compare_column,
+    target_label: str,
+    compare_label: str,
+) -> str:
     _ensure_plot_dir()
     filename = "grouped_comparison.png"
     full_path = os.path.join(PLOT_DIR, filename)
 
-    grouped = df.groupby("category")["metric_value"].mean().sort_index()
+    plot_frame = pd.DataFrame(
+        {
+            "target": _get_plot_series(df, target_column, target_label),
+            "compare": _get_plot_series(df, compare_column, compare_label),
+        }
+    ).dropna()
+    grouped = plot_frame.groupby("compare")["target"].mean().sort_index()
 
     labels = grouped.index.astype(str).tolist()
 
     fig, ax = plt.subplots(figsize=(10, 5.5))
     ax.bar(range(len(labels)), grouped.values)
-    ax.set_title("Average metric_value by Category")
-    ax.set_xlabel("Category")
-    ax.set_ylabel("Average metric_value")
+    ax.set_title(f"Average {target_label} by {compare_label}")
+    ax.set_xlabel(compare_label)
+    ax.set_ylabel(f"Average {target_label}")
     ax.grid(True, axis="y")
     _style_category_axis(ax, labels)
     fig.tight_layout()

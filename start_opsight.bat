@@ -34,7 +34,14 @@ if "%API_READY%"=="0" (
 
 REM Start frontend dev server
 echo [3/3] Starting frontend dev server (npm)...
-start "Opsight Frontend" cmd /c "cd /d ""%~dp0modules\frontend"" && npm run dev"
+set FRONTEND_RUNNING=0
+powershell -NoProfile -Command "$listener = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue; if ($listener) { exit 0 } else { exit 1 }" >nul 2>&1
+if not errorlevel 1 (
+	set FRONTEND_RUNNING=1
+	echo Frontend already running on port 5173. Skipping duplicate startup.
+) else (
+	start "Opsight Frontend" cmd /c "cd /d ""%~dp0modules\frontend"" && npm run dev -- --host 127.0.0.1 --port 5173 --strictPort"
+)
 
 REM Wait for frontend to initialize
 echo Waiting for frontend to start (6 seconds)...
@@ -44,10 +51,15 @@ REM Wait for services to start
 echo Finalizing startup (2 seconds)...
 timeout /t 2 >nul
 
-echo.
-echo Opening Opsight in browser...
-timeout /t 2 >nul
-start "" "http://localhost:5173"
+if "%FRONTEND_RUNNING%"=="1" (
+	echo.
+	echo Frontend already running. Skipping browser auto-open.
+) else (
+	echo.
+	echo Opening Opsight in browser...
+	timeout /t 2 >nul
+	start "" "http://localhost:5173"
+)
 
 echo.
 echo ========== Opsight Started ==========

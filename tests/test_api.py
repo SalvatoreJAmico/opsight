@@ -646,16 +646,27 @@ class TestApiLayer(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["shape"], {"rows": 3, "columns": 4})
+        self.assertEqual(body["shape"], {"rows": 3, "columns": 5})
         self.assertEqual(body["source"], "Superstore Sales Dataset")
-        self.assertEqual(body["missing_by_column"]["sales"], 1)
-        self.assertEqual(body["missing_by_column"]["profit"], 1)
+        self.assertEqual(body["missing_by_column"]["Sales"], 1)
+        self.assertEqual(body["missing_by_column"]["Profit"], 1)
+        self.assertEqual(body["fields"], ["Sales", "Profit", "Category", "Order Date"])
+        self.assertEqual(body["assignment_analysis"]["target_variable"], "Sales")
+        self.assertEqual(
+            body["assignment_analysis"]["compare_options"],
+            ["Profit", "Category", "Order Date"],
+        )
 
         numeric_fields = {item["field"] for item in body["numeric_summary"]}
-        self.assertIn("sales", numeric_fields)
-        self.assertIn("profit", numeric_fields)
+        self.assertIn("Sales", numeric_fields)
+        self.assertIn("Profit", numeric_fields)
 
-        categorical = next(item for item in body["categorical_summary"] if item["field"] == "category")
+        date_summary = next(item for item in body["date_summary"] if item["field"] == "Order Date")
+        self.assertEqual(date_summary["count"], 3)
+        self.assertEqual(date_summary["min_date"], "2026-01-01")
+        self.assertEqual(date_summary["max_date"], "2026-01-03")
+
+        categorical = next(item for item in body["categorical_summary"] if item["field"] == "Category")
         self.assertEqual(categorical["unique"], 2)
         self.assertEqual(categorical["top_values"][0]["value"], "Furniture")
 

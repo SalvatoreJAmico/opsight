@@ -88,24 +88,67 @@ async function request(path, options = {}, baseUrlOverride = null) {
     }
   }
 }
-export async function getHistogram({ baseUrl } = {}) {
-  return request("/charts/histogram", { method: "GET" }, baseUrl);
+
+function buildChartPath(path, params = {}) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value != null && value !== "") {
+      query.set(key, value);
+    }
+  });
+
+  const queryString = query.toString();
+  return queryString ? `${path}?${queryString}` : path;
 }
 
-export async function getBarCategory({ baseUrl } = {}) {
-  return request("/charts/bar-category", { method: "GET" }, baseUrl);
+export async function getHistogram({ baseUrl, targetVariable } = {}) {
+  return request(
+    buildChartPath("/charts/histogram", { target_variable: targetVariable }),
+    { method: "GET" },
+    baseUrl,
+  );
 }
 
-export async function getBoxplot({ baseUrl } = {}) {
-  return request("/charts/boxplot", { method: "GET" }, baseUrl);
+export async function getBarCategory({ baseUrl, targetVariable, compareVariable } = {}) {
+  return request(
+    buildChartPath("/charts/bar-category", {
+      target_variable: targetVariable,
+      compare_variable: compareVariable,
+    }),
+    { method: "GET" },
+    baseUrl,
+  );
 }
 
-export async function getScatter({ baseUrl } = {}) {
-  return request("/charts/scatter", { method: "GET" }, baseUrl);
+export async function getBoxplot({ baseUrl, targetVariable } = {}) {
+  return request(
+    buildChartPath("/charts/boxplot", { target_variable: targetVariable }),
+    { method: "GET" },
+    baseUrl,
+  );
 }
 
-export async function getGroupedComparison({ baseUrl } = {}) {
-  return request("/charts/grouped-comparison", { method: "GET" }, baseUrl);
+export async function getScatter({ baseUrl, targetVariable, compareVariable } = {}) {
+  return request(
+    buildChartPath("/charts/scatter", {
+      target_variable: targetVariable,
+      compare_variable: compareVariable,
+    }),
+    { method: "GET" },
+    baseUrl,
+  );
+}
+
+export async function getGroupedComparison({ baseUrl, targetVariable, compareVariable } = {}) {
+  return request(
+    buildChartPath("/charts/grouped-comparison", {
+      target_variable: targetVariable,
+      compare_variable: compareVariable,
+    }),
+    { method: "GET" },
+    baseUrl,
+  );
 }
 export async function getChartOverview({ baseUrl } = {}) {
   return request(ENDPOINTS.CHARTS_OVERVIEW, { method: "GET" }, baseUrl);

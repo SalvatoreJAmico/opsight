@@ -95,6 +95,35 @@ p {
   margin: 0;
 }
 
+.summary-full {
+  margin-bottom: 16px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.summary-variable-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.summary-variable-cards {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 code,
 .counter {
   font-family: var(--mono);

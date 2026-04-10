@@ -29,10 +29,30 @@ import modules.api.app as api_app_module
 client = TestClient(api_app_module.app)
 
 _TEST_RECORDS = [
-    {"entity_id": "A", "features": {"metric_value": 10, "secondary_metric": 8, "category": "X"}, "metadata": {}},
-    {"entity_id": "B", "features": {"metric_value": 20, "secondary_metric": 18, "category": "Y"}, "metadata": {}},
-    {"entity_id": "C", "features": {"metric_value": 15, "secondary_metric": 12, "category": "X"}, "metadata": {}},
-    {"entity_id": "D", "features": {"metric_value": 30, "secondary_metric": 25, "category": "Z"}, "metadata": {}},
+    {
+        "entity_id": "A",
+        "timestamp": "2026-01-01",
+        "features": {"sales": 10, "profit": 8, "quantity": 1, "discount": 0.0, "category": "X"},
+        "metadata": {},
+    },
+    {
+        "entity_id": "B",
+        "timestamp": "2026-01-02",
+        "features": {"sales": 20, "profit": 18, "quantity": 2, "discount": 0.1, "category": "Y"},
+        "metadata": {},
+    },
+    {
+        "entity_id": "C",
+        "timestamp": "2026-01-03",
+        "features": {"sales": 15, "profit": 12, "quantity": 3, "discount": 0.0, "category": "X"},
+        "metadata": {},
+    },
+    {
+        "entity_id": "D",
+        "timestamp": "2026-01-04",
+        "features": {"sales": 30, "profit": 25, "quantity": 4, "discount": 0.2, "category": "Z"},
+        "metadata": {},
+    },
 ]
 
 _STORAGE_PATH = Path("data/test-records.json")
@@ -51,7 +71,7 @@ def seed_test_records():
 CHART_ENDPOINTS = {
     "/charts/histogram": {
         "plot_function": "create_histogram",
-        "required_fields": {"metric_value"},
+        "required_fields": {"sales"},
     },
     "/charts/bar-category": {
         "plot_function": "create_bar_category_chart",
@@ -59,15 +79,15 @@ CHART_ENDPOINTS = {
     },
     "/charts/boxplot": {
         "plot_function": "create_boxplot",
-        "required_fields": {"metric_value"},
+        "required_fields": {"sales"},
     },
     "/charts/scatter": {
         "plot_function": "create_scatter_plot",
-        "required_fields": {"metric_value", "secondary_metric"},
+        "required_fields": {"sales", "profit"},
     },
     "/charts/grouped-comparison": {
         "plot_function": "create_grouped_comparison_chart",
-        "required_fields": {"metric_value", "category"},
+        "required_fields": {"sales", "category"},
     },
 }
 
@@ -105,7 +125,7 @@ def test_chart_endpoints_return_500_with_error_detail_on_plotting_failure(monkey
     expected_message = "forced plotting failure"
 
     for endpoint, metadata in CHART_ENDPOINTS.items():
-        def _raise_plot_error(_df):
+        def _raise_plot_error(*_args, **_kwargs):
             raise RuntimeError(expected_message)
 
         monkeypatch.setattr(api_app_module, metadata["plot_function"], _raise_plot_error)
@@ -115,7 +135,7 @@ def test_chart_endpoints_return_500_with_error_detail_on_plotting_failure(monkey
         assert response.json().get("detail") == expected_message
 
 
-def test_chart_endpoints_return_500_for_malformed_data(monkeypatch):
+def test_chart_endpoints_return_422_for_malformed_data(monkeypatch):
     malformed_df = pd.DataFrame([
         {"entity_id": "A", "unexpected": 1},
         {"entity_id": "B", "unexpected": 2},
@@ -125,14 +145,14 @@ def test_chart_endpoints_return_500_for_malformed_data(monkeypatch):
 
     for endpoint in CHART_ENDPOINTS:
         response = client.get(endpoint)
-        assert response.status_code == 500
+        assert response.status_code == 422
         detail = str(response.json().get("detail", "")).lower()
         assert detail
 
 
 def test_chart_data_fields_are_consistent_per_chart(monkeypatch):
     for endpoint, metadata in CHART_ENDPOINTS.items():
-        def _assert_fields(df):
+        def _assert_fields(df, *_args, **_kwargs):
             assert metadata["required_fields"].issubset(set(df.columns))
             return "/static/plots/phase12_field_check.png"
 
