@@ -320,6 +320,8 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         state = session_state.get_session_state()
         self.assertEqual(state["active_dataset"], "sales_csv")
+        self.assertEqual(state["dataset_source_metadata"]["dataset_id"], "sales_csv")
+        self.assertEqual(state["dataset_source_metadata"]["source_type"], "blob")
         self.assertEqual(state["pipeline_status"], "completed")
 
     def test_pipeline_trigger_failure_updates_session_pipeline_status_failed(self):
@@ -344,6 +346,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(response.status_code, 500)
         state = session_state.get_session_state()
         self.assertEqual(state["active_dataset"], "sales_csv")
+        self.assertEqual(state["dataset_source_metadata"], None)
         self.assertEqual(state["pipeline_status"], "failed")
 
     def test_pipeline_trigger_rejects_unknown_dataset_id(self):
@@ -382,8 +385,11 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(body["dataset_source_type"], "sql")
         self.assertEqual(body["dataset_schema"], "dbo")
         self.assertEqual(body["dataset_table"], "Orders")
+        self.assertEqual(body["dataset_source_name"], "Northwind Orders Table")
+        self.assertEqual(body["dataset_source_location"], "sql://Northwind/dbo/Orders")
         state = session_state.get_session_state()
         self.assertEqual(state["active_dataset"], "sales_sql")
+        self.assertEqual(state["dataset_source_metadata"]["dataset_id"], "sales_sql")
         self.assertEqual(state["pipeline_status"], "completed")
 
     def test_session_state_endpoint_returns_current_state(self):
@@ -399,6 +405,7 @@ class TestApiLayer(unittest.TestCase):
             response.json(),
             {
                 "active_dataset": "transactions_json",
+                "dataset_source_metadata": None,
                 "pipeline_status": "running",
                 "anomaly_status": "completed",
                 "prediction_status": "running",
@@ -500,6 +507,7 @@ class TestApiLayer(unittest.TestCase):
             body["session"],
             {
                 "active_dataset": None,
+                "dataset_source_metadata": None,
                 "pipeline_status": "not_run",
                 "anomaly_status": "idle",
                 "prediction_status": "idle",

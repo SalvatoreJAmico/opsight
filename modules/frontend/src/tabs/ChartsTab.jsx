@@ -185,6 +185,17 @@ const getChartContextEntries = (overview, chartId) => {
             </p>
           )}
           <p>Source: {overview.source}</p>
+          {overview.source_metadata?.source_location ? (
+            <p>Source Location: {overview.source_metadata.source_location}</p>
+          ) : null}
+          {overview.source_metadata?.source_url ? (
+            <p>
+              Source URL:{" "}
+              <a href={overview.source_metadata.source_url} target="_blank" rel="noreferrer">
+                {overview.source_metadata.source_url}
+              </a>
+            </p>
+          ) : null}
           <p>Rows: {overview.rows}</p>
           {overview.variables != null && <p>Variables: {overview.variables}</p>}
           {overview.fields && <p>Fields: {overview.fields.join(", ")}</p>}

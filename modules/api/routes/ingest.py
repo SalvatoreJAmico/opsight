@@ -7,6 +7,7 @@ from modules.api.access_control import require_upload_access_code
 from modules.api.dataset_config import DATASET_MAP
 from modules.api.session_state import (
     get_session_state,
+    set_dataset_source_metadata,
     set_active_dataset,
     set_pipeline_status,
 )
@@ -71,6 +72,23 @@ def _run_pipeline_for_payload(payload: dict, use_default_source: bool = False, s
         raise HTTPException(status_code=500, detail=f"Pipeline failure: {str(exc)}")
 
 
+def _build_dataset_source_metadata(dataset_id: str, dataset: dict) -> dict:
+    source_location = dataset.get("source_location")
+    if not source_location:
+        if dataset.get("source_type") == "sql":
+            source_location = f"sql://{dataset.get('database')}/{dataset.get('schema')}/{dataset.get('table')}"
+        else:
+            source_location = dataset.get("path")
+
+    return {
+        "dataset_id": dataset_id,
+        "source_type": dataset.get("source_type"),
+        "source_name": dataset.get("source_name") or dataset_id,
+        "source_url": dataset.get("source_url"),
+        "source_location": source_location,
+    }
+
+
 @router.post("/data")
 async def ingest_data_endpoint(payload: dict, request: Request):
     await require_upload_access_code(request=request, payload=payload)
@@ -124,9 +142,14 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
         except Exception:
             set_pipeline_status("failed")
             raise
+        source_metadata = _build_dataset_source_metadata(payload.dataset_id, dataset)
+        set_dataset_source_metadata(source_metadata)
         response["dataset_id"] = payload.dataset_id
         response["dataset_source_type"] = selected_source["source_type"]
         response["dataset_path"] = selected_source["path"]
+        response["dataset_source_name"] = source_metadata["source_name"]
+        response["dataset_source_url"] = source_metadata["source_url"]
+        response["dataset_source_location"] = source_metadata["source_location"]
         return response
 
     if source_type == "sql":
@@ -156,11 +179,17 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
             set_pipeline_status("failed")
             raise
 
+        source_metadata = _build_dataset_source_metadata(payload.dataset_id, dataset)
+        set_dataset_source_metadata(source_metadata)
+
         response["dataset_id"] = payload.dataset_id
         response["dataset_source_type"] = selected_source["source_type"]
         response["dataset_database"] = selected_source["database"]
         response["dataset_schema"] = selected_source["schema"]
         response["dataset_table"] = selected_source["table"]
+        response["dataset_source_name"] = source_metadata["source_name"]
+        response["dataset_source_url"] = source_metadata["source_url"]
+        response["dataset_source_location"] = source_metadata["source_location"]
         return response
 
     raise HTTPException(status_code=400, detail="Unsupported dataset source_type")

@@ -59,6 +59,9 @@ describe("DatasetTab", () => {
         status: "processed",
         dataset_id: "sales_csv",
         dataset_source_type: "blob",
+        dataset_source_name: "Superstore Sales Dataset",
+        dataset_source_url: "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final",
+        dataset_source_location: "opsight-raw/csv/Sample - Superstore.csv",
         dataset_path: "opsight-raw/csv/Sample - Superstore.csv",
         records_ingested: 3,
       },
@@ -75,6 +78,11 @@ describe("DatasetTab", () => {
     expect(screen.getByText("Dataset Execution")).toBeInTheDocument();
     expect(screen.getByText(/Dataset:/)).toBeInTheDocument();
     expect(screen.getByText(/Source:/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Source Name:/)).toHaveLength(2);
+    expect(screen.getAllByText(/Source Location:/)).toHaveLength(2);
+    expect(
+      screen.getAllByRole("link", { name: "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final" }),
+    ).toHaveLength(2);
     expect(screen.getByText(/File:/)).toBeInTheDocument();
     expect(screen.getByText(/records_ingested/)).toBeInTheDocument();
     expect(triggerPipeline).toHaveBeenCalledWith(
