@@ -29,6 +29,18 @@ function getFilename(path) {
   return segments[segments.length - 1] || path;
 }
 
+function getSourceMetadata(activeDatasetConfig, result) {
+  const sourceName = result?.dataset_source_name || activeDatasetConfig?.sourceName || "Unknown source";
+  const sourceUrl = result?.dataset_source_url || activeDatasetConfig?.sourceUrl || null;
+  const sourceLocation = result?.dataset_source_location || activeDatasetConfig?.location || null;
+
+  return {
+    sourceName,
+    sourceUrl,
+    sourceLocation,
+  };
+}
+
 function formatSqlUserMessage(message, isCloudTarget) {
   const text = (message || "").toLowerCase();
 
@@ -62,6 +74,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
   const activeDatasetConfig = DATASETS.find((d) => d.id === activeDataset) || null;
   const isSalesSqlDataset = activeDataset === "sales_sql";
   const datasetSummaryLabel = activeDatasetConfig?.label || result?.dataset_id || "Unknown dataset";
+  const sourceMetadata = getSourceMetadata(activeDatasetConfig, result);
   const isRunDisabled = loading || !activeDataset || (isSalesSqlDataset && sqlReadiness !== "ready");
   const isSqlStartInFlight = sqlReadiness === "starting";
 
@@ -294,7 +307,38 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
           ))}
         </select>
 
-        {activeDataset && <p style={{ marginBottom: "1rem" }}>Loaded: {activeDatasetConfig?.label}</p>}
+        {activeDataset ? (
+          <div
+            style={{
+              marginBottom: "1rem",
+              padding: "0.75rem",
+              border: "1px solid #374151",
+              borderRadius: "8px",
+              background: "#0b1220",
+              textAlign: "left",
+            }}
+          >
+            <p style={{ margin: 0, color: "#f9fafb" }}>
+              <strong>Loaded:</strong> {activeDatasetConfig?.label}
+            </p>
+            <p style={{ marginTop: "0.35rem", marginBottom: 0, color: "#d1d5db" }}>
+              <strong>Source Name:</strong> {sourceMetadata.sourceName}
+            </p>
+            {sourceMetadata.sourceLocation ? (
+              <p style={{ marginTop: "0.35rem", marginBottom: 0, color: "#d1d5db" }}>
+                <strong>Source Location:</strong> {sourceMetadata.sourceLocation}
+              </p>
+            ) : null}
+            {sourceMetadata.sourceUrl ? (
+              <p style={{ marginTop: "0.35rem", marginBottom: 0, color: "#d1d5db" }}>
+                <strong>Source URL:</strong>{" "}
+                <a href={sourceMetadata.sourceUrl} target="_blank" rel="noreferrer">
+                  {sourceMetadata.sourceUrl}
+                </a>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {isSalesSqlDataset ? (
           <div style={{ marginBottom: "1rem" }}>
@@ -424,6 +468,24 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
               <p style={{ marginTop: 0, marginBottom: "0.25rem", color: "#d1d5db" }}>
                 Source: {getDatasetSourceLabel(result.dataset_source_type)}
               </p>
+              {result.dataset_source_name ? (
+                <p style={{ marginTop: 0, marginBottom: "0.25rem", color: "#d1d5db" }}>
+                  Source Name: {result.dataset_source_name}
+                </p>
+              ) : null}
+              {result.dataset_source_location ? (
+                <p style={{ marginTop: 0, marginBottom: "0.25rem", color: "#d1d5db" }}>
+                  Source Location: {result.dataset_source_location}
+                </p>
+              ) : null}
+              {result.dataset_source_url ? (
+                <p style={{ marginTop: 0, marginBottom: "0.25rem", color: "#d1d5db" }}>
+                  Source URL:{" "}
+                  <a href={result.dataset_source_url} target="_blank" rel="noreferrer">
+                    {result.dataset_source_url}
+                  </a>
+                </p>
+              ) : null}
               {result.dataset_source_type === "blob" && result.dataset_path ? (
                 <p style={{ marginTop: 0, color: "#d1d5db" }}>File: {getFilename(result.dataset_path)}</p>
               ) : null}

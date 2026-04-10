@@ -8,6 +8,7 @@ import {
   getBoxplot,
   getScatter,
   getGroupedComparison,
+  getChartOverview,
   resolveApiAssetUrl,
 } from "../api/client";
 
@@ -37,6 +38,22 @@ describe("ChartsTab", () => {
     getBoxplot.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/boxplot_metric.png"));
     getScatter.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/scatter_metric_secondary.png"));
     getGroupedComparison.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/grouped_comparison.png"));
+    getChartOverview.mockResolvedValue({
+      ok: true,
+      status: 200,
+      error: null,
+      data: {
+        source: "Superstore Sales Dataset",
+        source_metadata: {
+          source_name: "Superstore Sales Dataset",
+          source_location: "opsight-raw/csv/Sample - Superstore.csv",
+          source_url: "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final",
+        },
+        rows: 10,
+        variables: 3,
+        fields: ["entity_id", "metric_value", "category"],
+      },
+    });
   });
 
   it("allows only one chart selection and shows only the active chart", async () => {
@@ -141,5 +158,13 @@ describe("ChartsTab", () => {
     await waitFor(() => {
       expect(resolveApiAssetUrl).toHaveBeenCalledWith("/static/plots/grouped_comparison.png", "/api-local");
     });
+  });
+
+  it("shows dataset source metadata in overview when available", async () => {
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+
+    expect(await screen.findByText("Source: Superstore Sales Dataset")).toBeInTheDocument();
+    expect(screen.getByText("Source Location: opsight-raw/csv/Sample - Superstore.csv")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final" })).toBeInTheDocument();
   });
 });

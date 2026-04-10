@@ -323,6 +323,13 @@ def charts_overview():
 
     session = get_session_state()
     active_dataset = session.get("active_dataset") or "unknown"
+    source_metadata = session.get("dataset_source_metadata") or {
+        "dataset_id": active_dataset,
+        "source_type": None,
+        "source_name": active_dataset,
+        "source_url": None,
+        "source_location": None,
+    }
 
     rows = []
     for r in records:
@@ -349,7 +356,8 @@ def charts_overview():
             }
 
     return {
-        "source": active_dataset,
+        "source": source_metadata.get("source_name") or active_dataset,
+        "source_metadata": source_metadata,
         "rows": len(df),
         "variables": len(df.columns),
         "fields": list(df.columns),

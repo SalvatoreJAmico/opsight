@@ -5,6 +5,8 @@ export const DATASETS = [
     sourceType: "blob",
     format: "csv",
     location: "opsight-raw/csv/Sample - Superstore.csv",
+    sourceName: "Superstore Sales Dataset",
+    sourceUrl: "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final",
   },
   {
     id: "transactions_json",
@@ -12,6 +14,8 @@ export const DATASETS = [
     sourceType: "blob",
     format: "json",
     location: "opsight-raw/json/mock-transactions.json",
+    sourceName: "Opsight Mock Transactions",
+    sourceUrl: null,
   },
   {
     id: "userdata_parquet",
@@ -19,6 +23,8 @@ export const DATASETS = [
     sourceType: "blob",
     format: "parquet",
     location: "opsight-raw/parquet/userdata1.parquet",
+    sourceName: "User Data Parquet Sample",
+    sourceUrl: null,
   },
   {
     id: "employee_xlsx",
@@ -26,14 +32,18 @@ export const DATASETS = [
     sourceType: "blob",
     format: "xlsx",
     location: "opsight-raw/xlsx/Employee-Management-Sample-Data.xlsx",
+    sourceName: "Employee Management Sample",
+    sourceUrl: null,
   },
   {
-  id: "sales_sql",
-  label: "Sales SQL",
-  sourceType: "sql",
-  format: "sql",
-  location: "Northwind",
-  schema: "dbo",
-  table: "Orders"
-}
+    id: "sales_sql",
+    label: "Sales SQL",
+    sourceType: "sql",
+    format: "sql",
+    location: "sql://Northwind/dbo/Orders",
+    schema: "dbo",
+    table: "Orders",
+    sourceName: "Northwind Orders Table",
+    sourceUrl: null,
+  },
 ];
