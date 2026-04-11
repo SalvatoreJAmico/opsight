@@ -8,6 +8,8 @@ import {
   getBoxplot,
   getScatter,
   getGroupedComparison,
+  getGroupedBoxplot,
+  getTimeLine,
   getChartOverview,
   getVariableSelection,
   saveVariableSelection,
@@ -20,6 +22,8 @@ vi.mock("../api/client", () => ({
   getBoxplot: vi.fn(),
   getScatter: vi.fn(),
   getGroupedComparison: vi.fn(),
+  getGroupedBoxplot: vi.fn(),
+  getTimeLine: vi.fn(),
   getChartOverview: vi.fn(),
   getVariableSelection: vi.fn(),
   saveVariableSelection: vi.fn(),
@@ -42,6 +46,8 @@ describe("ChartsTab", () => {
     getBoxplot.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/boxplot_metric.png"));
     getScatter.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/scatter_metric_secondary.png"));
     getGroupedComparison.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/grouped_comparison.png"));
+    getGroupedBoxplot.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/grouped_boxplot.png"));
+    getTimeLine.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/time_line.png"));
     getVariableSelection.mockResolvedValue({ ok: false, data: null });
     saveVariableSelection.mockResolvedValue({ ok: true, data: {} });
     getChartOverview.mockResolvedValue({
@@ -569,10 +575,30 @@ describe("ChartsTab", () => {
     expect(payload).toHaveProperty("selected_variables");
     expect(payload.selected_variables).toHaveProperty("target", "Sales");
     expect(Array.isArray(payload.selected_variables.compare)).toBe(true);
+    expect(Array.isArray(payload.relationship_chart_list)).toBe(true);
 
     createElementSpy.mockRestore();
     vi.unstubAllGlobals();
     URL.createObjectURL = originalCreateObjectURL;
     URL.revokeObjectURL = originalRevokeObjectURL;
+  });
+
+  it("runs relationship analysis in sequence and stores generated chart evidence", async () => {
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+
+    const compareSelect = await screen.findByLabelText("Compare Variable");
+    fireEvent.change(compareSelect, { target: { value: "Order Date" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Run Guided Relationship Analysis" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Relationship charts generated:/)).toBeInTheDocument();
+    });
+
+    expect(getScatter).toHaveBeenCalled();
+    expect(getGroupedBoxplot).toHaveBeenCalled();
+    expect(getTimeLine).toHaveBeenCalledWith(
+      expect.objectContaining({ compareVariable: "Order Date" }),
+    );
   });
 });

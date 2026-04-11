@@ -25,6 +25,8 @@ from modules.visualization.plots import (
     create_boxplot,
     create_scatter_plot,
     create_grouped_comparison_chart,
+    create_grouped_boxplot_chart,
+    create_time_line_chart,
 )
 from modules.ingestion.ingestion import ingest_data
 from modules.adapter.adapter import adapt_records
@@ -211,6 +213,14 @@ def _build_chart_context(df: pd.DataFrame, compare_variable: str = "Profit") -> 
         "grouped-comparison": {
             "target_variable": target_label,
             "compare_variable": compare_label,
+        },
+        "grouped-boxplot": {
+            "target_variable": target_label,
+            "compare_variable": compare_label,
+        },
+        "time-line": {
+            "target_variable": target_label,
+            "compare_variable": "Order Date" if "Order Date" in resolved_fields else None,
         },
     }
 
@@ -477,6 +487,67 @@ def grouped_comparison(
         raise
     except Exception as exc:
         logger.error(f"Grouped comparison chart generation failed: {str(exc)}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/charts/grouped-boxplot")
+def grouped_boxplot(
+    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    compare_variable: str = "Category",
+):
+    try:
+        df = get_chart_dataframe()
+        target_column, compare_column, _, target_label, compare_label = _resolve_chart_columns(
+            df,
+            target_variable=target_variable,
+            compare_variable=compare_variable,
+        )
+        path = create_grouped_boxplot_chart(
+            df,
+            target_column=target_column,
+            compare_column=compare_column,
+            target_label=target_label,
+            compare_label=compare_label,
+        )
+        return {"image": path}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Grouped box plot generation failed: {str(exc)}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/charts/time-line")
+def time_line_chart(
+    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    compare_variable: str = "Order Date",
+):
+    try:
+        df = get_chart_dataframe()
+        target_column, compare_column, _, target_label, compare_label = _resolve_chart_columns(
+            df,
+            target_variable=target_variable,
+            compare_variable=compare_variable,
+        )
+
+        if compare_label != "Order Date":
+            raise HTTPException(
+                status_code=422,
+                detail="Time line chart requires compare variable 'Order Date'.",
+            )
+
+        path = create_time_line_chart(
+            df,
+            target_column=target_column,
+            compare_column=compare_column,
+            target_label=target_label,
+            compare_label=compare_label,
+        )
+        return {"image": path}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Time line chart generation failed: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 

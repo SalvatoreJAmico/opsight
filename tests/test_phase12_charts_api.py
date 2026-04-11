@@ -89,6 +89,14 @@ CHART_ENDPOINTS = {
         "plot_function": "create_grouped_comparison_chart",
         "required_fields": {"sales", "category"},
     },
+    "/charts/grouped-boxplot": {
+        "plot_function": "create_grouped_boxplot_chart",
+        "required_fields": {"sales", "category"},
+    },
+    "/charts/time-line": {
+        "plot_function": "create_time_line_chart",
+        "required_fields": {"sales", "timestamp"},
+    },
 }
 
 
@@ -161,6 +169,12 @@ def test_chart_data_fields_are_consistent_per_chart(monkeypatch):
         response = client.get(endpoint)
         assert response.status_code == 200
         assert response.json()["image"] == "/static/plots/phase12_field_check.png"
+
+
+def test_time_line_requires_order_date_compare_variable():
+    response = client.get("/charts/time-line?compare_variable=Category")
+    assert response.status_code == 422
+    assert "Order Date" in response.json().get("detail", "")
 
 
 def test_chart_generation_performance_and_image_size_are_reasonable():

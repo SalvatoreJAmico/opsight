@@ -181,3 +181,89 @@ def create_grouped_comparison_chart(
     plt.close(fig)
 
     return f"/static/plots/{filename}"
+
+
+def create_grouped_boxplot_chart(
+    df: pd.DataFrame,
+    target_column,
+    compare_column,
+    target_label: str,
+    compare_label: str,
+) -> str:
+    _ensure_plot_dir()
+    filename = "grouped_boxplot.png"
+    full_path = os.path.join(PLOT_DIR, filename)
+
+    plot_frame = pd.DataFrame(
+        {
+            "target": _get_plot_series(df, target_column, target_label),
+            "compare": _get_plot_series(df, compare_column, compare_label),
+        }
+    ).dropna()
+
+    if plot_frame.empty:
+        raise ValueError("No valid rows available for grouped box plot.")
+
+    grouped_series = []
+    labels = []
+    for category, category_rows in plot_frame.groupby("compare"):
+        values = pd.to_numeric(category_rows["target"], errors="coerce").dropna()
+        if values.empty:
+            continue
+        grouped_series.append(values.values)
+        labels.append(str(category))
+
+    if not grouped_series:
+        raise ValueError("Grouped box plot requires numeric target values.")
+
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    ax.boxplot(grouped_series)
+    ax.set_title(f"{target_label} Distribution by {compare_label}")
+    ax.set_xlabel(compare_label)
+    ax.set_ylabel(target_label)
+    ax.grid(True, axis="y")
+    _style_category_axis(ax, labels)
+    fig.tight_layout()
+
+    fig.savefig(full_path, dpi=100, bbox_inches="tight")
+    plt.close(fig)
+
+    return f"/static/plots/{filename}"
+
+
+def create_time_line_chart(
+    df: pd.DataFrame,
+    target_column,
+    compare_column,
+    target_label: str,
+    compare_label: str,
+) -> str:
+    _ensure_plot_dir()
+    filename = "time_line.png"
+    full_path = os.path.join(PLOT_DIR, filename)
+
+    target_series = pd.to_numeric(_get_plot_series(df, target_column, target_label), errors="coerce")
+    compare_series = pd.to_datetime(_get_plot_series(df, compare_column, compare_label), errors="coerce")
+
+    plot_frame = pd.DataFrame({"target": target_series, "compare": compare_series}).dropna()
+    if plot_frame.empty:
+        raise ValueError("Time line chart requires numeric values and a valid date/time field.")
+
+    plot_frame = plot_frame.sort_values("compare")
+    plot_frame = plot_frame.set_index("compare").resample("D")["target"].mean().dropna()
+    if plot_frame.empty:
+        raise ValueError("Time line chart has no plottable points after date aggregation.")
+
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    ax.plot(plot_frame.index, plot_frame.values, marker="o", linewidth=1.8)
+    ax.set_title(f"{target_label} Trend by {compare_label}")
+    ax.set_xlabel(compare_label)
+    ax.set_ylabel(f"Average {target_label}")
+    ax.grid(True)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+
+    fig.savefig(full_path, dpi=100, bbox_inches="tight")
+    plt.close(fig)
+
+    return f"/static/plots/{filename}"
