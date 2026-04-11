@@ -153,6 +153,11 @@ export async function getGroupedComparison({ baseUrl, targetVariable, compareVar
 export async function getChartOverview({ baseUrl } = {}) {
   return request(ENDPOINTS.CHARTS_OVERVIEW, { method: "GET" }, baseUrl);
 }
+
+export async function getCleaningAudit({ baseUrl } = {}) {
+  return request(ENDPOINTS.CLEANING_AUDIT, { method: "GET" }, baseUrl);
+}
+
 export async function getHealth() {
   return request(ENDPOINTS.HEALTH, {
     method: "GET",

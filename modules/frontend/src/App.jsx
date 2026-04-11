@@ -4,6 +4,7 @@ import GlobalStatusBar from "./components/GlobalStatusBar";
 import DatasetTab from "./tabs/DatasetTab";
 import MetricsTab from "./tabs/MetricsTab";
 import ChartsTab from "./tabs/ChartsTab";
+import CleaningAuditTab from "./tabs/CleaningAuditTab";
 import AnomalyDetectionTab from "./tabs/AnomalyDetectionTab";
 import PredictionTab from "./tabs/PredictionTab";
 
@@ -24,6 +25,7 @@ const tabs = [
   { id: "dataset", label: "Dataset" },
   { id: "metrics", label: "Metrics" },
   { id: "charts", label: "Charts" },
+  { id: "cleaning-audit", label: "Cleaning Audit" },
   { id: "anomaly-detection", label: "Anomaly Detection" },
   { id: "prediction", label: "Prediction" },
 ];
@@ -129,6 +131,8 @@ export default function App() {
         return <MetricsTab key={panelKey} pipelineResult={pipelineResult} />;
       case "charts":
         return <ChartsTab key={panelKey} activeDatasetId={activeDatasetIdentity} />;
+      case "cleaning-audit":
+        return <CleaningAuditTab key={panelKey} activeDatasetId={activeDatasetIdentity} />;
       case "anomaly-detection":
         return <AnomalyDetectionTab key={panelKey} onAction={refreshSessionState} hasDataset={hasDataset} />;
       case "prediction":

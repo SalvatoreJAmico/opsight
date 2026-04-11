@@ -42,6 +42,12 @@ vi.mock("./tabs/ChartsTab", () => ({
   },
 }));
 
+vi.mock("./tabs/CleaningAuditTab", () => ({
+  default: function MockCleaningAuditTab() {
+    return <div>Cleaning Audit</div>;
+  },
+}));
+
 vi.mock("./tabs/AnomalyDetectionTab", () => ({
   default: function MockAnomalyDetectionTab() {
     return <div>Anomaly Detection</div>;

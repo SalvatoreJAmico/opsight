@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+import pandas as pd
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -669,6 +670,62 @@ class TestApiLayer(unittest.TestCase):
         categorical = next(item for item in body["categorical_summary"] if item["field"] == "Category")
         self.assertEqual(categorical["unique"], 2)
         self.assertEqual(categorical["top_values"][0]["value"], "Furniture")
+
+    def test_cleaning_audit_returns_before_after_metrics(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage_path = Path(tmp_dir) / "records.json"
+            local_storage = LocalStorage(storage_path=str(storage_path))
+            local_storage.save_records(
+                [
+                    {
+                        "entity_id": "1",
+                        "timestamp": "2026-01-01",
+                        "features": {"sales": 100.0, "profit": 20.0, "category": "Furniture"},
+                        "metadata": {},
+                    },
+                    {
+                        "entity_id": "2",
+                        "timestamp": "2026-01-03",
+                        "features": {"sales": 300.0, "profit": 40.0, "category": "Office Supplies"},
+                        "metadata": {},
+                    },
+                ]
+            )
+
+            raw_dataframe = pd.DataFrame(
+                [
+                    {"id": "1", "order_date": "2026-01-01", "sales": 100.0, "profit": 20.0, "category": "Furniture"},
+                    {"id": "1", "order_date": "2026-01-01", "sales": 100.0, "profit": 20.0, "category": "Furniture"},
+                    {"id": "2", "order_date": None, "sales": 300.0, "profit": 40.0, "category": "Office Supplies"},
+                    {"id": "3", "order_date": "2026-01-05", "sales": 500.0, "profit": None, "category": "Technology"},
+                ]
+            )
+
+            session_state.set_active_dataset("sales_csv")
+            session_state.set_dataset_source_metadata(
+                {
+                    "dataset_id": "sales_csv",
+                    "source_type": "blob",
+                    "source_name": "Superstore Sales Dataset",
+                    "source_url": "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final",
+                    "source_location": "opsight-raw/csv/Sample - Superstore.csv",
+                }
+            )
+
+            with patch("modules.api.app.StorageConfig") as mocked_storage_config, patch(
+                "modules.api.app.ingest_data",
+                return_value=raw_dataframe,
+            ):
+                mocked_storage_config.return_value.storage_path = str(storage_path)
+                response = self.client.get("/cleaning/audit")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["row_counts"], {"before": 4, "after": 2})
+        self.assertEqual(body["duplicates"]["before"], 1)
+        self.assertEqual(body["duplicates"]["after"], 0)
+        self.assertEqual(body["invalid_rows_removed"]["count"], 1)
+        self.assertIn("Missing timestamp", body["invalid_rows_removed"]["reason_counts"])
 
     def test_kmeans_anomaly_endpoint_returns_summary_from_persisted_records(self):
         mocked_records = [

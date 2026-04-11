@@ -5,6 +5,7 @@ export const ENDPOINTS = {
   SQL_START: "/sql/start",
   CHARTS_HISTOGRAM: "/charts/histogram",
   CHARTS_OVERVIEW: "/charts/overview",
+  CLEANING_AUDIT: "/cleaning/audit",
   PIPELINE_TRIGGER: "/pipeline/trigger",
   PIPELINE_RUN: "/pipeline/run",
   ANOMALY_DETECTION_ZSCORE: "/ml/anomaly/zscore",

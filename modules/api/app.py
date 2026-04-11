@@ -2,6 +2,7 @@ import logging
 import time
 import pandas as pd
 from pathlib import Path
+from collections import Counter
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -24,6 +25,10 @@ from modules.visualization.plots import (
     create_scatter_plot,
     create_grouped_comparison_chart,
 )
+from modules.ingestion.ingestion import ingest_data
+from modules.adapter.adapter import adapt_records
+from modules.validation.validator import validate_canonical_record
+from modules.validation.duplicate_check import detect_duplicates
 
 
 ASSIGNMENT_TARGET_VARIABLE = "Sales"
@@ -138,6 +143,43 @@ def _records_to_chart_df(records: list) -> pd.DataFrame:
         rows.append(row)
 
     return pd.DataFrame(rows)
+
+
+def _infer_data_format(source_path: str | None, source_type: str | None) -> str | None:
+    if source_type == "sql" or (source_path and str(source_path).startswith("sql://")):
+        return "sql"
+
+    suffix = Path(str(source_path or "")).suffix.lower()
+    if suffix in {".csv", ".json", ".parquet", ".xlsx", ".xls"}:
+        return suffix.lstrip(".")
+
+    return None
+
+
+def _flatten_canonical_records(records: list[dict]) -> pd.DataFrame:
+    rows = []
+    for record in records:
+        row = {
+            "entity_id": record.get("entity_id", ""),
+            "timestamp": record.get("timestamp"),
+        }
+        row.update(record.get("features", {}))
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def _missing_counts(records: list[dict]) -> dict:
+    if not records:
+        return {}
+
+    dataframe = _flatten_canonical_records(records)
+    if dataframe.empty:
+        return {}
+
+    return {
+        str(column): int(dataframe[column].isna().sum())
+        for column in dataframe.columns
+    }
 
 
 def _build_chart_context(df: pd.DataFrame, compare_variable: str = "Profit") -> dict:
@@ -604,5 +646,82 @@ def charts_overview():
             ],
         },
         **stats,
+    }
+
+
+@app.get("/cleaning/audit")
+def cleaning_audit_overview():
+    config = StorageConfig()
+    storage = LocalStorage(storage_path=config.storage_path)
+    cleaned_records = storage.load_records()
+
+    if not cleaned_records:
+        raise HTTPException(
+            status_code=422,
+            detail="No dataset loaded. Select and run a dataset to view the cleaning audit.",
+        )
+
+    session = get_session_state()
+    source_metadata = session.get("dataset_source_metadata") or {}
+    source_path = source_metadata.get("source_location")
+    source_type = source_metadata.get("source_type")
+
+    if not source_path:
+        raise HTTPException(
+            status_code=422,
+            detail="Dataset source metadata is unavailable. Re-run the dataset to generate a cleaning audit.",
+        )
+
+    source_format = _infer_data_format(source_path, source_type)
+
+    try:
+        raw_dataframe = ingest_data(source_path=source_path, source_mode=None, data_format=source_format)
+        canonical_records = adapt_records(raw_dataframe)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unable to build cleaning audit from source data: {exc}",
+        ) from exc
+
+    invalid_reason_counter = Counter()
+    valid_records = []
+    invalid_records = []
+
+    for record in canonical_records:
+        validation_result = validate_canonical_record(record)
+        if validation_result.get("status") == "valid":
+            valid_records.append(record)
+        else:
+            invalid_records.append(record)
+            for error in validation_result.get("errors", []):
+                invalid_reason_counter[str(error)] += 1
+
+    duplicate_before = detect_duplicates(canonical_records)
+    duplicate_after = detect_duplicates(cleaned_records)
+
+    return {
+        "source": {
+            "dataset_id": source_metadata.get("dataset_id"),
+            "source_name": source_metadata.get("source_name"),
+            "source_type": source_type,
+            "source_location": source_path,
+        },
+        "row_counts": {
+            "before": len(canonical_records),
+            "after": len(cleaned_records),
+        },
+        "missing_by_column": {
+            "before": _missing_counts(canonical_records),
+            "after": _missing_counts(cleaned_records),
+        },
+        "duplicates": {
+            "before": len(duplicate_before.get("duplicate_records", [])),
+            "after": len(duplicate_after.get("duplicate_records", [])),
+        },
+        "invalid_rows_removed": {
+            "count": len(invalid_records),
+            "reason_counts": dict(invalid_reason_counter),
+        },
+        "records_valid_before_cleaning": len(valid_records),
     }
 
