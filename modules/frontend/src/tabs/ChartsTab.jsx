@@ -18,6 +18,16 @@ import { resolveBaseUrl } from "../config/env";
 const DEFAULT_TARGET_VARIABLE = "Sales";
 const FALLBACK_TARGET_OPTIONS = [DEFAULT_TARGET_VARIABLE];
 const FALLBACK_COMPARE_OPTIONS = ["Profit", "Quantity", "Discount", "Category", "Order Date"];
+const DEFAULT_CHART_ENHANCEMENTS = {
+  title: "",
+  subtitle: "",
+  xLabel: "",
+  yLabel: "",
+  showLegend: false,
+  showGrid: true,
+  color: "",
+  annotation: "",
+};
 const summaryCardStyle = {
   border: "1px solid #374151",
   borderRadius: "12px",
@@ -81,6 +91,8 @@ export default function ChartsTab({ activeDatasetId = null }) {
   const [overviewError, setOverviewError] = useState("");
   const [targetVariable, setTargetVariable] = useState(DEFAULT_TARGET_VARIABLE);
   const [compareVariables, setCompareVariables] = useState([FALLBACK_COMPARE_OPTIONS[0]]);
+  const [chartEnhancements, setChartEnhancements] = useState(DEFAULT_CHART_ENHANCEMENTS);
+  const [chartMetadata, setChartMetadata] = useState({});
   const [relationshipRuns, setRelationshipRuns] = useState([]);
   const [relationshipLoading, setRelationshipLoading] = useState(false);
   const [relationshipError, setRelationshipError] = useState("");
@@ -155,6 +167,17 @@ export default function ChartsTab({ activeDatasetId = null }) {
   const targetOptions = overview?.assignment_analysis?.target_options || FALLBACK_TARGET_OPTIONS;
   const compareOptions = overview?.assignment_analysis?.compare_options || FALLBACK_COMPARE_OPTIONS;
   const compareVariable = compareVariables[0] ?? FALLBACK_COMPARE_OPTIONS[0];
+
+  const buildEnhancementPayload = () => ({
+    title: chartEnhancements.title,
+    subtitle: chartEnhancements.subtitle,
+    xLabel: chartEnhancements.xLabel,
+    yLabel: chartEnhancements.yLabel,
+    showLegend: chartEnhancements.showLegend,
+    showGrid: chartEnhancements.showGrid,
+    color: chartEnhancements.color,
+    annotation: chartEnhancements.annotation,
+  });
 
   const handleTargetChange = (newTarget) => {
     setTargetVariable(newTarget);
@@ -261,21 +284,22 @@ export default function ChartsTab({ activeDatasetId = null }) {
 
   const loadChartById = async (chartId) => {
     const baseUrl = resolveBaseUrl(target);
+    const enhancements = buildEnhancementPayload();
     switch (chartId) {
       case "histogram":
-        return getHistogram({ baseUrl, targetVariable });
+        return getHistogram({ baseUrl, targetVariable, enhancements });
       case "bar-category":
-        return getBarCategory({ baseUrl, targetVariable, compareVariable });
+        return getBarCategory({ baseUrl, targetVariable, compareVariable, enhancements });
       case "boxplot":
-        return getBoxplot({ baseUrl, targetVariable });
+        return getBoxplot({ baseUrl, targetVariable, enhancements });
       case "scatter":
-        return getScatter({ baseUrl, targetVariable, compareVariable });
+        return getScatter({ baseUrl, targetVariable, compareVariable, enhancements });
       case "grouped-comparison":
-        return getGroupedComparison({ baseUrl, targetVariable, compareVariable });
+        return getGroupedComparison({ baseUrl, targetVariable, compareVariable, enhancements });
       case "grouped-boxplot":
-        return getGroupedBoxplot({ baseUrl, targetVariable, compareVariable });
+        return getGroupedBoxplot({ baseUrl, targetVariable, compareVariable, enhancements });
       case "time-line":
-        return getTimeLine({ baseUrl, targetVariable, compareVariable });
+        return getTimeLine({ baseUrl, targetVariable, compareVariable, enhancements });
       default:
         return { ok: false, error: "Unsupported chart selection." };
     }
@@ -305,9 +329,14 @@ export default function ChartsTab({ activeDatasetId = null }) {
         chart_title: entry.chartTitle,
         target_variable: entry.targetVariable,
         compare_variable: entry.compareVariable,
+        enhancement_metadata: entry.enhancementMetadata,
         image: entry.image,
         generated_at: entry.generatedAt,
       })),
+      chart_enhancement_controls: {
+        ...chartEnhancements,
+      },
+      chart_metadata: chartMetadata,
       missing_by_column: overview.missing_by_column,
       numeric_summary: overview.numeric_summary,
       date_summary: overview.date_summary,
@@ -347,6 +376,11 @@ export default function ChartsTab({ activeDatasetId = null }) {
       ...prev,
       [chartId]: cacheBustedImageUrl,
     }));
+
+    setChartMetadata((prev) => ({
+      ...prev,
+      [chartId]: response.data?.chart_metadata || { enhancements: buildEnhancementPayload() },
+    }));
   };
 
   const handleRunRelationshipAnalysis = async () => {
@@ -366,11 +400,26 @@ export default function ChartsTab({ activeDatasetId = null }) {
         const baseUrl = resolveBaseUrl(target);
         let response;
         if (chartId === "scatter") {
-          response = await getScatter({ baseUrl, targetVariable, compareVariable: compareVariableCandidate });
+          response = await getScatter({
+            baseUrl,
+            targetVariable,
+            compareVariable: compareVariableCandidate,
+            enhancements: buildEnhancementPayload(),
+          });
         } else if (chartId === "grouped-boxplot") {
-          response = await getGroupedBoxplot({ baseUrl, targetVariable, compareVariable: compareVariableCandidate });
+          response = await getGroupedBoxplot({
+            baseUrl,
+            targetVariable,
+            compareVariable: compareVariableCandidate,
+            enhancements: buildEnhancementPayload(),
+          });
         } else {
-          response = await getTimeLine({ baseUrl, targetVariable, compareVariable: compareVariableCandidate });
+          response = await getTimeLine({
+            baseUrl,
+            targetVariable,
+            compareVariable: compareVariableCandidate,
+            enhancements: buildEnhancementPayload(),
+          });
         }
 
         if (!response.ok) {
@@ -396,6 +445,7 @@ export default function ChartsTab({ activeDatasetId = null }) {
           chartTitle: chartMeta?.title || chartId,
           targetVariable,
           compareVariable: compareVariableCandidate,
+          enhancementMetadata: response.data?.chart_metadata?.enhancements || buildEnhancementPayload(),
           image: `${resolvedImageUrl}${resolvedImageUrl.includes("?") ? "&" : "?"}t=${Date.now()}`,
           generatedAt: new Date().toISOString(),
         });
@@ -658,6 +708,86 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
         Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.
       </p>
 
+      <h3>Advanced Graph Enhancement Controls</h3>
+      <div
+        style={{
+          border: "1px solid #ddd",
+          borderRadius: "10px",
+          padding: "0.9rem",
+          marginBottom: "1rem",
+          background: "#fafafa",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "0.65rem",
+        }}
+      >
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Title
+          <input
+            aria-label="Chart Title"
+            value={chartEnhancements.title}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, title: event.target.value }))}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Subtitle
+          <input
+            aria-label="Chart Subtitle"
+            value={chartEnhancements.subtitle}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, subtitle: event.target.value }))}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          X Axis Label
+          <input
+            aria-label="X Axis Label"
+            value={chartEnhancements.xLabel}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, xLabel: event.target.value }))}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Y Axis Label
+          <input
+            aria-label="Y Axis Label"
+            value={chartEnhancements.yLabel}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, yLabel: event.target.value }))}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Color
+          <input
+            aria-label="Color Theme"
+            placeholder="e.g. teal, #1f77b4"
+            value={chartEnhancements.color}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, color: event.target.value }))}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Annotation
+          <input
+            aria-label="Annotation"
+            value={chartEnhancements.annotation}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, annotation: event.target.value }))}
+          />
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          <input
+            type="checkbox"
+            checked={chartEnhancements.showLegend}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, showLegend: event.target.checked }))}
+          />
+          Show Legend
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          <input
+            type="checkbox"
+            checked={chartEnhancements.showGrid}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, showGrid: event.target.checked }))}
+          />
+          Show Gridlines
+        </label>
+      </div>
+
       <h3>Relationship Analysis Mode</h3>
       <p style={{ marginBottom: "0.5rem", opacity: 0.85 }}>
         Run scatter, grouped box plot, and time-based line charts in sequence for each selected compare variable.
@@ -697,6 +827,9 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
               <p style={{ margin: 0, fontWeight: 700 }}>{entry.chartTitle}</p>
               <p style={{ margin: "0.35rem 0" }}>
                 <strong>target variable:</strong> {entry.targetVariable} | <strong>compare variable:</strong> {entry.compareVariable}
+              </p>
+              <p style={{ margin: "0.35rem 0" }}>
+                <strong>enhancements:</strong> {JSON.stringify(entry.enhancementMetadata)}
               </p>
               <img
                 src={entry.image}
@@ -815,6 +948,11 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
       }}
     >
       <strong>How to read this chart</strong>
+              {chartMetadata[chart.id]?.enhancements ? (
+                <p style={{ marginTop: "0.5rem", marginBottom: "0.35rem" }}>
+                  <strong>Enhancements:</strong> {JSON.stringify(chartMetadata[chart.id].enhancements)}
+                </p>
+              ) : null}
       <p style={{ marginTop: "0.5rem", marginBottom: "0.35rem" }}>
         <strong>What this output shows:</strong> {getChartExplainability(chart.id).what}
       </p>

@@ -102,72 +102,116 @@ function buildChartPath(path, params = {}) {
   return queryString ? `${path}?${queryString}` : path;
 }
 
-export async function getHistogram({ baseUrl, targetVariable } = {}) {
+function withEnhancementParams(params = {}, enhancements = {}) {
+  return {
+    ...params,
+    chart_title: enhancements.title,
+    chart_subtitle: enhancements.subtitle,
+    x_label: enhancements.xLabel,
+    y_label: enhancements.yLabel,
+    show_legend: enhancements.showLegend,
+    show_grid: enhancements.showGrid,
+    color_theme: enhancements.color,
+    annotation: enhancements.annotation,
+  };
+}
+
+export async function getHistogram({ baseUrl, targetVariable, enhancements } = {}) {
   return request(
-    buildChartPath("/charts/histogram", { target_variable: targetVariable }),
+    buildChartPath("/charts/histogram", withEnhancementParams({ target_variable: targetVariable }, enhancements)),
     { method: "GET" },
     baseUrl,
   );
 }
 
-export async function getBarCategory({ baseUrl, targetVariable, compareVariable } = {}) {
+export async function getBarCategory({ baseUrl, targetVariable, compareVariable, enhancements } = {}) {
   return request(
-    buildChartPath("/charts/bar-category", {
-      target_variable: targetVariable,
-      compare_variable: compareVariable,
-    }),
+    buildChartPath(
+      "/charts/bar-category",
+      withEnhancementParams(
+        {
+          target_variable: targetVariable,
+          compare_variable: compareVariable,
+        },
+        enhancements,
+      ),
+    ),
     { method: "GET" },
     baseUrl,
   );
 }
 
-export async function getBoxplot({ baseUrl, targetVariable } = {}) {
+export async function getBoxplot({ baseUrl, targetVariable, enhancements } = {}) {
   return request(
-    buildChartPath("/charts/boxplot", { target_variable: targetVariable }),
+    buildChartPath("/charts/boxplot", withEnhancementParams({ target_variable: targetVariable }, enhancements)),
     { method: "GET" },
     baseUrl,
   );
 }
 
-export async function getScatter({ baseUrl, targetVariable, compareVariable } = {}) {
+export async function getScatter({ baseUrl, targetVariable, compareVariable, enhancements } = {}) {
   return request(
-    buildChartPath("/charts/scatter", {
-      target_variable: targetVariable,
-      compare_variable: compareVariable,
-    }),
+    buildChartPath(
+      "/charts/scatter",
+      withEnhancementParams(
+        {
+          target_variable: targetVariable,
+          compare_variable: compareVariable,
+        },
+        enhancements,
+      ),
+    ),
     { method: "GET" },
     baseUrl,
   );
 }
 
-export async function getGroupedComparison({ baseUrl, targetVariable, compareVariable } = {}) {
+export async function getGroupedComparison({ baseUrl, targetVariable, compareVariable, enhancements } = {}) {
   return request(
-    buildChartPath("/charts/grouped-comparison", {
-      target_variable: targetVariable,
-      compare_variable: compareVariable,
-    }),
+    buildChartPath(
+      "/charts/grouped-comparison",
+      withEnhancementParams(
+        {
+          target_variable: targetVariable,
+          compare_variable: compareVariable,
+        },
+        enhancements,
+      ),
+    ),
     { method: "GET" },
     baseUrl,
   );
 }
 
-export async function getGroupedBoxplot({ baseUrl, targetVariable, compareVariable } = {}) {
+export async function getGroupedBoxplot({ baseUrl, targetVariable, compareVariable, enhancements } = {}) {
   return request(
-    buildChartPath("/charts/grouped-boxplot", {
-      target_variable: targetVariable,
-      compare_variable: compareVariable,
-    }),
+    buildChartPath(
+      "/charts/grouped-boxplot",
+      withEnhancementParams(
+        {
+          target_variable: targetVariable,
+          compare_variable: compareVariable,
+        },
+        enhancements,
+      ),
+    ),
     { method: "GET" },
     baseUrl,
   );
 }
 
-export async function getTimeLine({ baseUrl, targetVariable, compareVariable } = {}) {
+export async function getTimeLine({ baseUrl, targetVariable, compareVariable, enhancements } = {}) {
   return request(
-    buildChartPath("/charts/time-line", {
-      target_variable: targetVariable,
-      compare_variable: compareVariable,
-    }),
+    buildChartPath(
+      "/charts/time-line",
+      withEnhancementParams(
+        {
+          target_variable: targetVariable,
+          compare_variable: compareVariable,
+        },
+        enhancements,
+      ),
+    ),
     { method: "GET" },
     baseUrl,
   );

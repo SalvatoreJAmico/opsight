@@ -108,6 +108,8 @@ def test_chart_endpoints_return_200_and_valid_image_paths():
         payload = response.json()
         assert isinstance(payload.get("image"), str)
         assert payload["image"].startswith("/static/plots/")
+        assert isinstance(payload.get("chart_metadata"), dict)
+        assert isinstance(payload["chart_metadata"].get("enhancements"), dict)
 
 
 def test_chart_assets_are_saved_and_served_via_static_routes():
@@ -175,6 +177,29 @@ def test_time_line_requires_order_date_compare_variable():
     response = client.get("/charts/time-line?compare_variable=Category")
     assert response.status_code == 422
     assert "Order Date" in response.json().get("detail", "")
+
+
+def test_chart_enhancement_params_are_recorded_and_forwarded(monkeypatch):
+    captured = {}
+
+    def _capture_enhancements(*_args, **kwargs):
+        captured.update(kwargs.get("enhancements", {}))
+        return "/static/plots/phase12_enhancement_check.png"
+
+    monkeypatch.setattr(api_app_module, "create_histogram", _capture_enhancements)
+
+    response = client.get(
+        "/charts/histogram?chart_title=My+Title&chart_subtitle=Sub&x_label=X&y_label=Y"
+        "&show_legend=true&show_grid=false&color_theme=teal&annotation=callout"
+    )
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["image"] == "/static/plots/phase12_enhancement_check.png"
+    assert payload["chart_metadata"]["enhancements"]["title"] == "My Title"
+    assert payload["chart_metadata"]["enhancements"]["show_legend"] is True
+    assert payload["chart_metadata"]["enhancements"]["show_grid"] is False
+    assert captured.get("annotation") == "callout"
 
 
 def test_chart_generation_performance_and_image_size_are_reasonable():

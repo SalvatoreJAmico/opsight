@@ -30,11 +30,14 @@ vi.mock("../api/client", () => ({
   resolveApiAssetUrl: vi.fn((imagePath) => imagePath),
 }));
 
-const SUCCESS_RESPONSE = (image) => ({
+const SUCCESS_RESPONSE = (image, chartMetadata = null) => ({
   ok: true,
   status: 200,
   error: null,
-  data: { image },
+  data: {
+    image,
+    ...(chartMetadata ? { chart_metadata: chartMetadata } : {}),
+  },
 });
 
 describe("ChartsTab", () => {
@@ -576,6 +579,8 @@ describe("ChartsTab", () => {
     expect(payload.selected_variables).toHaveProperty("target", "Sales");
     expect(Array.isArray(payload.selected_variables.compare)).toBe(true);
     expect(Array.isArray(payload.relationship_chart_list)).toBe(true);
+    expect(payload).toHaveProperty("chart_enhancement_controls");
+    expect(payload).toHaveProperty("chart_metadata");
 
     createElementSpy.mockRestore();
     vi.unstubAllGlobals();
@@ -600,5 +605,54 @@ describe("ChartsTab", () => {
     expect(getTimeLine).toHaveBeenCalledWith(
       expect.objectContaining({ compareVariable: "Order Date" }),
     );
+  });
+
+  it("sends advanced enhancement controls with chart requests", async () => {
+    getHistogram.mockResolvedValueOnce(
+      SUCCESS_RESPONSE("/static/plots/hist_metric.png", {
+        enhancements: {
+          title: "Custom Histogram",
+          subtitle: "Story subtitle",
+          x_label: "Sales Value",
+          y_label: "Frequency",
+          show_legend: true,
+          show_grid: false,
+          color: "teal",
+          annotation: "Peak near median",
+        },
+      }),
+    );
+
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+
+    fireEvent.change(await screen.findByLabelText("Chart Title"), { target: { value: "Custom Histogram" } });
+    fireEvent.change(screen.getByLabelText("Chart Subtitle"), { target: { value: "Story subtitle" } });
+    fireEvent.change(screen.getByLabelText("X Axis Label"), { target: { value: "Sales Value" } });
+    fireEvent.change(screen.getByLabelText("Y Axis Label"), { target: { value: "Frequency" } });
+    fireEvent.change(screen.getByLabelText("Color Theme"), { target: { value: "teal" } });
+    fireEvent.change(screen.getByLabelText("Annotation"), { target: { value: "Peak near median" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Show Legend" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Show Gridlines" }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+
+    await waitFor(() => {
+      expect(getHistogram).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enhancements: {
+            title: "Custom Histogram",
+            subtitle: "Story subtitle",
+            xLabel: "Sales Value",
+            yLabel: "Frequency",
+            showLegend: true,
+            showGrid: false,
+            color: "teal",
+            annotation: "Peak near median",
+          },
+        }),
+      );
+    });
+
+    expect(await screen.findByText(/Enhancements:/)).toBeInTheDocument();
   });
 });
