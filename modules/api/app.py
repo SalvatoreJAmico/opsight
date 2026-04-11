@@ -249,8 +249,28 @@ def _parse_bool_query_param(value, *, default: bool) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _parse_float_query_param(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text == "":
+        return None
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return None
+
+
 def _extract_chart_enhancements(request: Request) -> dict:
     query = request.query_params
+    clip_mode = (query.get("clip_mode") or "none").strip().lower()
+    if clip_mode not in {"none", "percentile", "manual"}:
+        clip_mode = "none"
+
+    zoom_preset = (query.get("zoom_preset") or "full_range").strip().lower()
+    if zoom_preset not in {"full_range", "focus_low_range", "iqr"}:
+        zoom_preset = "full_range"
+
     return {
         "title": query.get("chart_title") or None,
         "subtitle": query.get("chart_subtitle") or None,
@@ -260,6 +280,16 @@ def _extract_chart_enhancements(request: Request) -> dict:
         "show_grid": _parse_bool_query_param(query.get("show_grid"), default=True),
         "color": query.get("color_theme") or None,
         "annotation": query.get("annotation") or None,
+        "x_min": query.get("x_min") or None,
+        "x_max": query.get("x_max") or None,
+        "y_min": query.get("y_min") or None,
+        "y_max": query.get("y_max") or None,
+        "log_scale_x": _parse_bool_query_param(query.get("log_scale_x"), default=False),
+        "log_scale_y": _parse_bool_query_param(query.get("log_scale_y"), default=False),
+        "clip_mode": clip_mode,
+        "clip_percentile": _parse_float_query_param(query.get("clip_percentile")),
+        "clip_max": _parse_float_query_param(query.get("clip_max")),
+        "zoom_preset": zoom_preset,
     }
 
 

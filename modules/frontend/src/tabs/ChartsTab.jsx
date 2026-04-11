@@ -27,6 +27,16 @@ const DEFAULT_CHART_ENHANCEMENTS = {
   showGrid: true,
   color: "",
   annotation: "",
+  xMin: "",
+  xMax: "",
+  yMin: "",
+  yMax: "",
+  logScaleX: false,
+  logScaleY: false,
+  clipMode: "none",
+  clipPercentile: "95",
+  clipMax: "",
+  zoomPreset: "full_range",
 };
 const summaryCardStyle = {
   border: "1px solid #374151",
@@ -177,6 +187,16 @@ export default function ChartsTab({ activeDatasetId = null }) {
     showGrid: chartEnhancements.showGrid,
     color: chartEnhancements.color,
     annotation: chartEnhancements.annotation,
+    xMin: chartEnhancements.xMin,
+    xMax: chartEnhancements.xMax,
+    yMin: chartEnhancements.yMin,
+    yMax: chartEnhancements.yMax,
+    logScaleX: chartEnhancements.logScaleX,
+    logScaleY: chartEnhancements.logScaleY,
+    clipMode: chartEnhancements.clipMode,
+    clipPercentile: chartEnhancements.clipPercentile,
+    clipMax: chartEnhancements.clipMax,
+    zoomPreset: chartEnhancements.zoomPreset,
   });
 
   const handleTargetChange = (newTarget) => {
@@ -721,6 +741,7 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
           gap: "0.65rem",
         }}
       >
+        <div style={{ gridColumn: "1 / -1", fontWeight: 700, marginBottom: "0.15rem" }}>Axis Controls</div>
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
           Title
           <input
@@ -770,6 +791,47 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
             onChange={(event) => setChartEnhancements((prev) => ({ ...prev, annotation: event.target.value }))}
           />
         </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          X-axis Min
+          <input
+            aria-label="X-axis Min"
+            type="number"
+            value={chartEnhancements.xMin}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, xMin: event.target.value }))}
+            placeholder="auto"
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          X-axis Max
+          <input
+            aria-label="X-axis Max"
+            type="number"
+            value={chartEnhancements.xMax}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, xMax: event.target.value }))}
+            placeholder="auto"
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Y-axis Min
+          <input
+            aria-label="Y-axis Min"
+            type="number"
+            value={chartEnhancements.yMin}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, yMin: event.target.value }))}
+            placeholder="auto"
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Y-axis Max
+          <input
+            aria-label="Y-axis Max"
+            type="number"
+            value={chartEnhancements.yMax}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, yMax: event.target.value }))}
+            placeholder="auto"
+          />
+        </label>
+        <div style={{ gridColumn: "1 / -1", fontWeight: 700, marginTop: "0.15rem", marginBottom: "0.15rem" }}>Scaling</div>
         <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
           <input
             type="checkbox"
@@ -785,6 +847,72 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
             onChange={(event) => setChartEnhancements((prev) => ({ ...prev, showGrid: event.target.checked }))}
           />
           Show Gridlines
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          <input
+            type="checkbox"
+            checked={chartEnhancements.logScaleX}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, logScaleX: event.target.checked }))}
+          />
+          Use Log Scale (X-axis)
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          <input
+            type="checkbox"
+            checked={chartEnhancements.logScaleY}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, logScaleY: event.target.checked }))}
+          />
+          Use Log Scale (Y-axis)
+        </label>
+        <div style={{ gridColumn: "1 / -1", fontWeight: 700, marginTop: "0.15rem", marginBottom: "0.15rem" }}>Clipping</div>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Clip extreme values
+          <select
+            aria-label="Clip extreme values"
+            value={chartEnhancements.clipMode}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, clipMode: event.target.value }))}
+          >
+            <option value="none">None</option>
+            <option value="percentile">Percentile-based</option>
+            <option value="manual">Manual threshold</option>
+          </select>
+        </label>
+        {chartEnhancements.clipMode === "percentile" ? (
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+            Clip Percentile
+            <select
+              aria-label="Clip Percentile"
+              value={chartEnhancements.clipPercentile}
+              onChange={(event) => setChartEnhancements((prev) => ({ ...prev, clipPercentile: event.target.value }))}
+            >
+              <option value="95">95th percentile</option>
+              <option value="99">99th percentile</option>
+            </select>
+          </label>
+        ) : null}
+        {chartEnhancements.clipMode === "manual" ? (
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+            Manual Clip Max
+            <input
+              aria-label="Manual Clip Max"
+              type="number"
+              value={chartEnhancements.clipMax}
+              onChange={(event) => setChartEnhancements((prev) => ({ ...prev, clipMax: event.target.value }))}
+              placeholder="e.g. 5000"
+            />
+          </label>
+        ) : null}
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Zoom Preset
+          <select
+            aria-label="Zoom Preset"
+            value={chartEnhancements.zoomPreset}
+            onChange={(event) => setChartEnhancements((prev) => ({ ...prev, zoomPreset: event.target.value }))}
+          >
+            <option value="full_range">Full Range</option>
+            <option value="focus_low_range">Focus Low Range</option>
+            <option value="iqr">Interquartile Range (IQR)</option>
+          </select>
         </label>
       </div>
 

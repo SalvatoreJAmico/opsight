@@ -191,6 +191,10 @@ def test_chart_enhancement_params_are_recorded_and_forwarded(monkeypatch):
     response = client.get(
         "/charts/histogram?chart_title=My+Title&chart_subtitle=Sub&x_label=X&y_label=Y"
         "&show_legend=true&show_grid=false&color_theme=teal&annotation=callout"
+        "&x_min=10&x_max=500&y_min=0&y_max=100"
+        "&log_scale_x=true&log_scale_y=false"
+        "&clip_mode=percentile&clip_percentile=99"
+        "&zoom_preset=iqr"
     )
     assert response.status_code == 200
     payload = response.json()
@@ -199,6 +203,12 @@ def test_chart_enhancement_params_are_recorded_and_forwarded(monkeypatch):
     assert payload["chart_metadata"]["enhancements"]["title"] == "My Title"
     assert payload["chart_metadata"]["enhancements"]["show_legend"] is True
     assert payload["chart_metadata"]["enhancements"]["show_grid"] is False
+    assert payload["chart_metadata"]["enhancements"]["x_min"] == "10"
+    assert payload["chart_metadata"]["enhancements"]["x_max"] == "500"
+    assert payload["chart_metadata"]["enhancements"]["log_scale_x"] is True
+    assert payload["chart_metadata"]["enhancements"]["clip_mode"] == "percentile"
+    assert payload["chart_metadata"]["enhancements"]["clip_percentile"] == 99.0
+    assert payload["chart_metadata"]["enhancements"]["zoom_preset"] == "iqr"
     assert captured.get("annotation") == "callout"
 
 

@@ -619,6 +619,16 @@ describe("ChartsTab", () => {
           show_grid: false,
           color: "teal",
           annotation: "Peak near median",
+          x_min: "0",
+          x_max: "5000",
+          y_min: "0",
+          y_max: "100",
+          log_scale_x: true,
+          log_scale_y: false,
+          clip_mode: "percentile",
+          clip_percentile: 99,
+          clip_max: null,
+          zoom_preset: "iqr",
         },
       }),
     );
@@ -631,15 +641,23 @@ describe("ChartsTab", () => {
     fireEvent.change(screen.getByLabelText("Y Axis Label"), { target: { value: "Frequency" } });
     fireEvent.change(screen.getByLabelText("Color Theme"), { target: { value: "teal" } });
     fireEvent.change(screen.getByLabelText("Annotation"), { target: { value: "Peak near median" } });
+    fireEvent.change(screen.getByLabelText("X-axis Min"), { target: { value: "0" } });
+    fireEvent.change(screen.getByLabelText("X-axis Max"), { target: { value: "5000" } });
+    fireEvent.change(screen.getByLabelText("Y-axis Min"), { target: { value: "0" } });
+    fireEvent.change(screen.getByLabelText("Y-axis Max"), { target: { value: "100" } });
     fireEvent.click(screen.getByRole("checkbox", { name: "Show Legend" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Show Gridlines" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Use Log Scale (X-axis)" }));
+    fireEvent.change(screen.getByLabelText("Clip extreme values"), { target: { value: "percentile" } });
+    fireEvent.change(screen.getByLabelText("Clip Percentile"), { target: { value: "99" } });
+    fireEvent.change(screen.getByLabelText("Zoom Preset"), { target: { value: "iqr" } });
 
     fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
 
     await waitFor(() => {
       expect(getHistogram).toHaveBeenCalledWith(
         expect.objectContaining({
-          enhancements: {
+          enhancements: expect.objectContaining({
             title: "Custom Histogram",
             subtitle: "Story subtitle",
             xLabel: "Sales Value",
@@ -648,7 +666,16 @@ describe("ChartsTab", () => {
             showGrid: false,
             color: "teal",
             annotation: "Peak near median",
-          },
+            xMin: "0",
+            xMax: "5000",
+            yMin: "0",
+            yMax: "100",
+            logScaleX: true,
+            logScaleY: false,
+            clipMode: "percentile",
+            clipPercentile: "99",
+            zoomPreset: "iqr",
+          }),
         }),
       );
     });

@@ -113,6 +113,16 @@ function withEnhancementParams(params = {}, enhancements = {}) {
     show_grid: enhancements.showGrid,
     color_theme: enhancements.color,
     annotation: enhancements.annotation,
+    x_min: enhancements.xMin,
+    x_max: enhancements.xMax,
+    y_min: enhancements.yMin,
+    y_max: enhancements.yMax,
+    log_scale_x: enhancements.logScaleX,
+    log_scale_y: enhancements.logScaleY,
+    clip_mode: enhancements.clipMode,
+    clip_percentile: enhancements.clipPercentile,
+    clip_max: enhancements.clipMax,
+    zoom_preset: enhancements.zoomPreset,
   };
 }
 
