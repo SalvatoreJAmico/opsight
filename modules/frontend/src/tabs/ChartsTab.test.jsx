@@ -9,6 +9,8 @@ import {
   getScatter,
   getGroupedComparison,
   getChartOverview,
+  getVariableSelection,
+  saveVariableSelection,
   resolveApiAssetUrl,
 } from "../api/client";
 
@@ -19,6 +21,8 @@ vi.mock("../api/client", () => ({
   getScatter: vi.fn(),
   getGroupedComparison: vi.fn(),
   getChartOverview: vi.fn(),
+  getVariableSelection: vi.fn(),
+  saveVariableSelection: vi.fn(),
   resolveApiAssetUrl: vi.fn((imagePath) => imagePath),
 }));
 
@@ -38,6 +42,8 @@ describe("ChartsTab", () => {
     getBoxplot.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/boxplot_metric.png"));
     getScatter.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/scatter_metric_secondary.png"));
     getGroupedComparison.mockResolvedValue(SUCCESS_RESPONSE("/static/plots/grouped_comparison.png"));
+    getVariableSelection.mockResolvedValue({ ok: false, data: null });
+    saveVariableSelection.mockResolvedValue({ ok: true, data: {} });
     getChartOverview.mockResolvedValue({
       ok: true,
       status: 200,
@@ -499,6 +505,73 @@ describe("ChartsTab", () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:summary");
 
     createElementSpy.mockRestore();
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
+  });
+
+  it("restores saved variable selection from session on dataset load", async () => {
+    getVariableSelection.mockResolvedValueOnce({
+      ok: true,
+      data: { target: "Sales", compare: ["Quantity", "Discount"] },
+    });
+
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+
+    expect(await screen.findByTestId("numeric-summary-card-sales")).toBeInTheDocument();
+    expect(await screen.findByTestId("numeric-summary-card-quantity")).toBeInTheDocument();
+    expect(screen.queryByTestId("numeric-summary-card-profit")).not.toBeInTheDocument();
+  });
+
+  it("saves variable selection when user changes compare dropdown", async () => {
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+
+    await screen.findByLabelText("Compare Variable");
+
+    fireEvent.change(screen.getByLabelText("Compare Variable"), { target: { value: "Category" } });
+
+    await waitFor(() => {
+      expect(saveVariableSelection).toHaveBeenCalledWith(
+        expect.objectContaining({ target: "Sales", compare: ["Category"] }),
+      );
+    });
+  });
+
+  it("includes selected_variables in exported summary json", async () => {
+    const blobCalls = [];
+    const OrigBlob = global.Blob;
+    vi.stubGlobal("Blob", function MockBlob(parts, opts) {
+      blobCalls.push(parts);
+      return new OrigBlob(parts, opts);
+    });
+
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = vi.fn(() => "blob:sel-export");
+    URL.revokeObjectURL = vi.fn(() => {});
+
+    const originalCreateElement = document.createElement.bind(document);
+    const createElementSpy = vi.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const element = originalCreateElement(tagName);
+      if (String(tagName).toLowerCase() === "a") {
+        element.click = vi.fn();
+      }
+      return element;
+    });
+
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+
+    const exportButton = await screen.findByRole("button", { name: "Export Summary (JSON)" });
+    fireEvent.click(exportButton);
+
+    await waitFor(() => expect(blobCalls.length).toBeGreaterThan(0));
+
+    const payload = JSON.parse(blobCalls[0][0]);
+    expect(payload).toHaveProperty("selected_variables");
+    expect(payload.selected_variables).toHaveProperty("target", "Sales");
+    expect(Array.isArray(payload.selected_variables.compare)).toBe(true);
+
+    createElementSpy.mockRestore();
+    vi.unstubAllGlobals();
     URL.createObjectURL = originalCreateObjectURL;
     URL.revokeObjectURL = originalRevokeObjectURL;
   });

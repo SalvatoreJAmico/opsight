@@ -13,6 +13,7 @@ from modules.config.logging_config import setup_logging
 from modules.config.runtime_config import load_runtime_config
 from modules.api.session_state import reset_session_state
 from modules.api.session_state import get_session_state
+from modules.api.session_state import set_selected_variables
 from modules.api.errors import register_error_handlers
 from modules.persistence.persistence_manager import PersistenceManager
 from fastapi.staticfiles import StaticFiles
@@ -725,3 +726,25 @@ def cleaning_audit_overview():
         "records_valid_before_cleaning": len(valid_records),
     }
 
+
+@app.get("/variables/selection")
+def get_variable_selection():
+    state = get_session_state()
+    return state.get("selected_variables", {"target": None, "compare": []})
+
+
+@app.post("/variables/selection")
+async def save_variable_selection(request: Request):
+    body = await request.json()
+    target = body.get("target")
+    compare = body.get("compare", [])
+
+    if target is not None and not isinstance(target, str):
+        raise HTTPException(status_code=422, detail="target must be a string or null")
+    if not isinstance(compare, list):
+        raise HTTPException(status_code=422, detail="compare must be a list")
+    if not all(isinstance(v, str) for v in compare):
+        raise HTTPException(status_code=422, detail="each compare value must be a string")
+
+    set_selected_variables(target, compare)
+    return get_session_state()["selected_variables"]
