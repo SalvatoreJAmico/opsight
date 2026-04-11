@@ -52,4 +52,24 @@ export const chartCatalog = [
       "Recommended because category and metric_value support grouped mean comparison.",
     endpoint: "/charts/grouped-comparison",
   },
+  {
+    id: "grouped-boxplot",
+    title: "Grouped Box Plot",
+    purpose: "Compares distribution spread for a metric across groups.",
+    whenToUse: "Use when you want quartile and outlier comparisons by category.",
+    recommended: true,
+    recommendationReason:
+      "Recommended because grouped box plots are useful for relationship analysis between a metric and group field.",
+    endpoint: "/charts/grouped-boxplot",
+  },
+  {
+    id: "time-line",
+    title: "Time-based Line Chart",
+    purpose: "Shows trend movement of a metric over time.",
+    whenToUse: "Use when a valid date field is available and you need temporal pattern analysis.",
+    recommended: true,
+    recommendationReason:
+      "Recommended when Order Date is available for assignment-aligned time-based relationship analysis.",
+    endpoint: "/charts/time-line",
+  },
 ];

@@ -150,6 +150,28 @@ export async function getGroupedComparison({ baseUrl, targetVariable, compareVar
     baseUrl,
   );
 }
+
+export async function getGroupedBoxplot({ baseUrl, targetVariable, compareVariable } = {}) {
+  return request(
+    buildChartPath("/charts/grouped-boxplot", {
+      target_variable: targetVariable,
+      compare_variable: compareVariable,
+    }),
+    { method: "GET" },
+    baseUrl,
+  );
+}
+
+export async function getTimeLine({ baseUrl, targetVariable, compareVariable } = {}) {
+  return request(
+    buildChartPath("/charts/time-line", {
+      target_variable: targetVariable,
+      compare_variable: compareVariable,
+    }),
+    { method: "GET" },
+    baseUrl,
+  );
+}
 export async function getChartOverview({ baseUrl } = {}) {
   return request(ENDPOINTS.CHARTS_OVERVIEW, { method: "GET" }, baseUrl);
 }

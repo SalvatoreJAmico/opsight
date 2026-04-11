@@ -5,6 +5,8 @@ import {
   getBoxplot,
   getScatter,
   getGroupedComparison,
+  getGroupedBoxplot,
+  getTimeLine,
   getChartOverview,
   getVariableSelection,
   saveVariableSelection,
@@ -79,6 +81,9 @@ export default function ChartsTab({ activeDatasetId = null }) {
   const [overviewError, setOverviewError] = useState("");
   const [targetVariable, setTargetVariable] = useState(DEFAULT_TARGET_VARIABLE);
   const [compareVariables, setCompareVariables] = useState([FALLBACK_COMPARE_OPTIONS[0]]);
+  const [relationshipRuns, setRelationshipRuns] = useState([]);
+  const [relationshipLoading, setRelationshipLoading] = useState(false);
+  const [relationshipError, setRelationshipError] = useState("");
   const selectionLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -267,6 +272,10 @@ export default function ChartsTab({ activeDatasetId = null }) {
         return getScatter({ baseUrl, targetVariable, compareVariable });
       case "grouped-comparison":
         return getGroupedComparison({ baseUrl, targetVariable, compareVariable });
+      case "grouped-boxplot":
+        return getGroupedBoxplot({ baseUrl, targetVariable, compareVariable });
+      case "time-line":
+        return getTimeLine({ baseUrl, targetVariable, compareVariable });
       default:
         return { ok: false, error: "Unsupported chart selection." };
     }
@@ -291,6 +300,14 @@ export default function ChartsTab({ activeDatasetId = null }) {
         compare: compareVariables,
       },
       assignment_analysis: overview.assignment_analysis,
+      relationship_chart_list: relationshipRuns.map((entry) => ({
+        chart_id: entry.chartId,
+        chart_title: entry.chartTitle,
+        target_variable: entry.targetVariable,
+        compare_variable: entry.compareVariable,
+        image: entry.image,
+        generated_at: entry.generatedAt,
+      })),
       missing_by_column: overview.missing_by_column,
       numeric_summary: overview.numeric_summary,
       date_summary: overview.date_summary,
@@ -330,6 +347,63 @@ export default function ChartsTab({ activeDatasetId = null }) {
       ...prev,
       [chartId]: cacheBustedImageUrl,
     }));
+  };
+
+  const handleRunRelationshipAnalysis = async () => {
+    setRelationshipError("");
+    setRelationshipLoading(true);
+
+    const relationshipChartIds = ["scatter", "grouped-boxplot"];
+    const runEntries = [];
+
+    for (const compareVariableCandidate of compareVariables) {
+      const chartIdsForVariable = [...relationshipChartIds];
+      if (normalizeFieldName(compareVariableCandidate) === "order date") {
+        chartIdsForVariable.push("time-line");
+      }
+
+      for (const chartId of chartIdsForVariable) {
+        const baseUrl = resolveBaseUrl(target);
+        let response;
+        if (chartId === "scatter") {
+          response = await getScatter({ baseUrl, targetVariable, compareVariable: compareVariableCandidate });
+        } else if (chartId === "grouped-boxplot") {
+          response = await getGroupedBoxplot({ baseUrl, targetVariable, compareVariable: compareVariableCandidate });
+        } else {
+          response = await getTimeLine({ baseUrl, targetVariable, compareVariable: compareVariableCandidate });
+        }
+
+        if (!response.ok) {
+          setRelationshipLoading(false);
+          setRelationshipError(response.error || "Relationship analysis request failed.");
+          return;
+        }
+
+        const resolvedImageUrl = resolveApiAssetUrl(
+          response.data?.image,
+          baseUrl,
+        );
+
+        if (!resolvedImageUrl) {
+          setRelationshipLoading(false);
+          setRelationshipError("Relationship analysis response did not include an image path.");
+          return;
+        }
+
+        const chartMeta = chartCatalog.find((chart) => chart.id === chartId);
+        runEntries.push({
+          chartId,
+          chartTitle: chartMeta?.title || chartId,
+          targetVariable,
+          compareVariable: compareVariableCandidate,
+          image: `${resolvedImageUrl}${resolvedImageUrl.includes("?") ? "&" : "?"}t=${Date.now()}`,
+          generatedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    setRelationshipRuns(runEntries);
+    setRelationshipLoading(false);
   };
 
 
@@ -375,6 +449,22 @@ const getChartExplainability = (chartId) => {
         where: "The chart image above is the result.",
       };
 
+    case "grouped-boxplot":
+      return {
+        what: "This chart compares quartiles, spread, and outliers across groups.",
+        time: "Time is not used. Group distributions are compared across the full dataset.",
+        comparison: "It compares per-group distribution shapes for the selected metric.",
+        where: "The chart image above is the result.",
+      };
+
+    case "time-line":
+      return {
+        what: "This chart shows the trend of the selected metric over time.",
+        time: "Time is central. Values are aggregated across date intervals.",
+        comparison: "It compares how the metric changes across time points.",
+        where: "The chart image above is the result.",
+      };
+
     default:
       return {
         what: "No explanation is available for this chart yet.",
@@ -394,6 +484,8 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
       return [["compare_variable", compareVariable]];
     case "scatter":
     case "grouped-comparison":
+    case "grouped-boxplot":
+    case "time-line":
       return [
         ["target_variable", targetVariable],
         ["compare_variable", compareVariable],
@@ -551,9 +643,11 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
                 <span style={{ fontSize: "0.78rem", opacity: 0.65 }}>Hold Ctrl / Cmd to select multiple</span>
               </label>
               <div className="summary-variable-cards">
-                {compareVariables.map((cv) =>
-                  renderSummaryCardsForVariable(normalizeFieldName(cv)),
-                )}
+                {compareVariables.map((cv) => (
+                  <React.Fragment key={`summary-${normalizeFieldName(cv)}`}>
+                    {renderSummaryCardsForVariable(normalizeFieldName(cv))}
+                  </React.Fragment>
+                ))}
               </div>
             </div>
           </div>
@@ -563,6 +657,56 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
       <p style={{ marginBottom: "1rem", opacity: 0.85 }}>
         Each chart includes guidance on what it shows, when to use it, and whether it is recommended for the current dataset.
       </p>
+
+      <h3>Relationship Analysis Mode</h3>
+      <p style={{ marginBottom: "0.5rem", opacity: 0.85 }}>
+        Run scatter, grouped box plot, and time-based line charts in sequence for each selected compare variable.
+      </p>
+      <button
+        type="button"
+        onClick={handleRunRelationshipAnalysis}
+        disabled={!activeDatasetId || overviewLoading || relationshipLoading || compareVariables.length === 0}
+        style={{
+          marginBottom: "0.75rem",
+          padding: "0.45rem 0.85rem",
+          borderRadius: "6px",
+          border: "1px solid #ccc",
+          cursor: "pointer",
+          fontWeight: 600,
+        }}
+      >
+        {relationshipLoading ? "Running Relationship Analysis..." : "Run Guided Relationship Analysis"}
+      </button>
+      {relationshipError ? <p style={{ color: "#c00" }}>{relationshipError}</p> : null}
+      {relationshipRuns.length > 0 ? (
+        <div style={{ marginBottom: "1rem" }}>
+          <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
+            Relationship charts generated: {relationshipRuns.length}
+          </p>
+          {relationshipRuns.map((entry, index) => (
+            <div
+              key={`${entry.chartId}-${entry.compareVariable}-${index}`}
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                padding: "0.75rem",
+                marginBottom: "0.75rem",
+                background: "#fafafa",
+              }}
+            >
+              <p style={{ margin: 0, fontWeight: 700 }}>{entry.chartTitle}</p>
+              <p style={{ margin: "0.35rem 0" }}>
+                <strong>target variable:</strong> {entry.targetVariable} | <strong>compare variable:</strong> {entry.compareVariable}
+              </p>
+              <img
+                src={entry.image}
+                alt={`${entry.chartTitle} relationship visualization`}
+                style={{ maxWidth: "100%", border: "1px solid #ccc", borderRadius: "8px" }}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div style={{ marginBottom: "1.25rem" }}>
         {isDev && (
