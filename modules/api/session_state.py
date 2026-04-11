@@ -14,6 +14,7 @@ def _default_session_state() -> Dict[str, Any]:
         "pipeline_status": "not_run",
         "anomaly_status": "idle",
         "prediction_status": "idle",
+        "selected_variables": {"target": None, "compare": []},
     }
 
 
@@ -34,6 +35,7 @@ def reset_processing_state() -> Dict[str, Any]:
 def reset_session_state() -> Dict[str, Any]:
     _SESSION_STATE["active_dataset"] = None
     _SESSION_STATE["dataset_source_metadata"] = None
+    _SESSION_STATE["selected_variables"] = {"target": None, "compare": []}
     return reset_processing_state()
 
 
@@ -68,4 +70,9 @@ def set_prediction_status(status: str) -> Dict[str, Any]:
     if status not in MODEL_STATUS_ALLOWED:
         raise ValueError(f"Invalid prediction status: {status}")
     _SESSION_STATE["prediction_status"] = status
+    return get_session_state()
+
+
+def set_selected_variables(target: str | None, compare: list) -> Dict[str, Any]:
+    _SESSION_STATE["selected_variables"] = {"target": target, "compare": list(compare)}
     return get_session_state()

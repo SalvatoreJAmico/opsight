@@ -6,6 +6,7 @@ export const ENDPOINTS = {
   CHARTS_HISTOGRAM: "/charts/histogram",
   CHARTS_OVERVIEW: "/charts/overview",
   CLEANING_AUDIT: "/cleaning/audit",
+  VARIABLE_SELECTION: "/variables/selection",
   PIPELINE_TRIGGER: "/pipeline/trigger",
   PIPELINE_RUN: "/pipeline/run",
   ANOMALY_DETECTION_ZSCORE: "/ml/anomaly/zscore",

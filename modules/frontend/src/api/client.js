@@ -158,6 +158,18 @@ export async function getCleaningAudit({ baseUrl } = {}) {
   return request(ENDPOINTS.CLEANING_AUDIT, { method: "GET" }, baseUrl);
 }
 
+export async function getVariableSelection({ baseUrl } = {}) {
+  return request(ENDPOINTS.VARIABLE_SELECTION, { method: "GET" }, baseUrl);
+}
+
+export async function saveVariableSelection({ baseUrl, target, compare } = {}) {
+  return request(
+    ENDPOINTS.VARIABLE_SELECTION,
+    { method: "POST", body: JSON.stringify({ target: target ?? null, compare: compare ?? [] }) },
+    baseUrl,
+  );
+}
+
 export async function getHealth() {
   return request(ENDPOINTS.HEALTH, {
     method: "GET",

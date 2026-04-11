@@ -878,6 +878,47 @@ class TestApiLayer(unittest.TestCase):
                         import math
                         self.assertFalse(math.isnan(value))
 
+    def test_variable_selection_get_returns_empty_default(self):
+        response = self.client.get("/variables/selection")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIsNone(body["target"])
+        self.assertEqual(body["compare"], [])
+
+    def test_variable_selection_post_saves_and_returns_selection(self):
+        payload = {"target": "Sales", "compare": ["Profit", "Quantity"]}
+        response = self.client.post("/variables/selection", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["target"], "Sales")
+        self.assertEqual(body["compare"], ["Profit", "Quantity"])
+
+        get_response = self.client.get("/variables/selection")
+        get_body = get_response.json()
+        self.assertEqual(get_body["target"], "Sales")
+        self.assertEqual(get_body["compare"], ["Profit", "Quantity"])
+
+    def test_variable_selection_post_rejects_invalid_compare_type(self):
+        response = self.client.post("/variables/selection", json={"target": "Sales", "compare": "Profit"})
+
+        self.assertEqual(response.status_code, 422)
+
+    def test_variable_selection_post_rejects_non_string_target(self):
+        response = self.client.post("/variables/selection", json={"target": 42, "compare": []})
+
+        self.assertEqual(response.status_code, 422)
+
+    def test_variable_selection_is_reset_with_session(self):
+        self.client.post("/variables/selection", json={"target": "Sales", "compare": ["Profit"]})
+        self.client.post("/session/reset")
+
+        response = self.client.get("/variables/selection")
+        body = response.json()
+        self.assertIsNone(body["target"])
+        self.assertEqual(body["compare"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

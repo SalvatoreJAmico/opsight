@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   getHistogram,
   getBarCategory,
@@ -6,6 +6,8 @@ import {
   getScatter,
   getGroupedComparison,
   getChartOverview,
+  getVariableSelection,
+  saveVariableSelection,
   resolveApiAssetUrl,
 } from "../api/client";
 import { chartCatalog } from "../catalog/chartCatalog";
@@ -76,12 +78,14 @@ export default function ChartsTab({ activeDatasetId = null }) {
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState("");
   const [targetVariable, setTargetVariable] = useState(DEFAULT_TARGET_VARIABLE);
-  const [compareVariable, setCompareVariable] = useState(FALLBACK_COMPARE_OPTIONS[0]);
+  const [compareVariables, setCompareVariables] = useState([FALLBACK_COMPARE_OPTIONS[0]]);
+  const selectionLoadedRef = useRef(false);
 
   useEffect(() => {
     if (!activeDatasetId) {
       setOverview(null);
       setOverviewError("");
+      selectionLoadedRef.current = false;
       return;
     }
 
@@ -106,6 +110,31 @@ export default function ChartsTab({ activeDatasetId = null }) {
   }, [activeDatasetId, target]);
 
   useEffect(() => {
+    if (!activeDatasetId) return;
+
+    let cancelled = false;
+    const baseUrl = resolveBaseUrl(target);
+
+    getVariableSelection({ baseUrl }).then((result) => {
+      if (cancelled) return;
+      if (result.ok && result.data?.target) {
+        setTargetVariable(result.data.target);
+        setCompareVariables(
+          Array.isArray(result.data.compare) && result.data.compare.length > 0
+            ? result.data.compare
+            : [FALLBACK_COMPARE_OPTIONS[0]],
+        );
+        selectionLoadedRef.current = true;
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDatasetId, target]);
+
+  useEffect(() => {
+    if (selectionLoadedRef.current) return;
     const nextTarget = overview?.assignment_analysis?.target_variable || DEFAULT_TARGET_VARIABLE;
     const nextCompareOptions = overview?.assignment_analysis?.compare_options || FALLBACK_COMPARE_OPTIONS;
 
@@ -113,19 +142,32 @@ export default function ChartsTab({ activeDatasetId = null }) {
       setTargetVariable(nextTarget);
     }
 
-    if (!nextCompareOptions.includes(compareVariable)) {
-      setCompareVariable(nextCompareOptions[0] || FALLBACK_COMPARE_OPTIONS[0]);
+    if (!nextCompareOptions.includes(compareVariables[0])) {
+      setCompareVariables([nextCompareOptions[0] || FALLBACK_COMPARE_OPTIONS[0]]);
     }
-  }, [overview, targetVariable, compareVariable]);
+  }, [overview, targetVariable, compareVariables]);
 
   const targetOptions = overview?.assignment_analysis?.target_options || FALLBACK_TARGET_OPTIONS;
   const compareOptions = overview?.assignment_analysis?.compare_options || FALLBACK_COMPARE_OPTIONS;
+  const compareVariable = compareVariables[0] ?? FALLBACK_COMPARE_OPTIONS[0];
+
+  const handleTargetChange = (newTarget) => {
+    setTargetVariable(newTarget);
+    const baseUrl = resolveBaseUrl(target);
+    saveVariableSelection({ baseUrl, target: newTarget, compare: compareVariables });
+  };
+
+  const handleCompareChange = (newCompareArr) => {
+    setCompareVariables(newCompareArr);
+    const baseUrl = resolveBaseUrl(target);
+    saveVariableSelection({ baseUrl, target: targetVariable, compare: newCompareArr });
+  };
   const missingValueEntries = Object.entries(overview?.missing_by_column || {}).filter(([, missing]) =>
     Number(missing) > 0,
   );
   const selectedVariables = Array.from(
     new Set(
-      [targetVariable, compareVariable]
+      [targetVariable, ...compareVariables]
         .filter(Boolean)
         .map((fieldName) => normalizeFieldName(fieldName)),
     ),
@@ -244,6 +286,10 @@ export default function ChartsTab({ activeDatasetId = null }) {
       source_metadata: overview.source_metadata,
       shape: overview.shape,
       fields: overview.fields,
+      selected_variables: {
+        target: targetVariable,
+        compare: compareVariables,
+      },
       assignment_analysis: overview.assignment_analysis,
       missing_by_column: overview.missing_by_column,
       numeric_summary: overview.numeric_summary,
@@ -456,7 +502,7 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
                 <span>Target Variable</span>
                 <select
                   value={targetVariable}
-                  onChange={(event) => setTargetVariable(event.target.value)}
+                  onChange={(event) => handleTargetChange(event.target.value)}
                   disabled={!activeDatasetId || overviewLoading}
                   style={{ minWidth: "12rem", padding: "0.45rem" }}
                 >
@@ -485,10 +531,16 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
               >
                 <span>Compare Variable</span>
                 <select
-                  value={compareVariable}
-                  onChange={(event) => setCompareVariable(event.target.value)}
+                  multiple
+                  aria-label="Compare Variable"
+                  value={compareVariables}
+                  onChange={(event) => {
+                    const selected = Array.from(event.target.selectedOptions || []).map((o) => o.value);
+                    const result = selected.length > 0 ? selected : [event.target.value].filter(Boolean);
+                    if (result.length > 0) handleCompareChange(result);
+                  }}
                   disabled={!activeDatasetId || overviewLoading || compareOptions.length === 0}
-                  style={{ minWidth: "12rem", padding: "0.45rem" }}
+                  style={{ minWidth: "12rem", padding: "0.45rem", minHeight: "6rem" }}
                 >
                   {compareOptions.map((option) => (
                     <option key={option} value={option}>
@@ -496,9 +548,12 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
                     </option>
                   ))}
                 </select>
+                <span style={{ fontSize: "0.78rem", opacity: 0.65 }}>Hold Ctrl / Cmd to select multiple</span>
               </label>
               <div className="summary-variable-cards">
-                {renderSummaryCardsForVariable(normalizeFieldName(compareVariable))}
+                {compareVariables.map((cv) =>
+                  renderSummaryCardsForVariable(normalizeFieldName(cv)),
+                )}
               </div>
             </div>
           </div>
