@@ -24,6 +24,7 @@ class TestSessionState(unittest.TestCase):
                 "pipeline_status": "not_run",
                 "anomaly_status": "idle",
                 "prediction_status": "idle",
+                "selected_variables": {"target": None, "compare": []},
             },
         )
 
@@ -43,6 +44,7 @@ class TestSessionState(unittest.TestCase):
                 "pipeline_status": "not_run",
                 "anomaly_status": "idle",
                 "prediction_status": "idle",
+                "selected_variables": {"target": None, "compare": []},
             },
         )
 

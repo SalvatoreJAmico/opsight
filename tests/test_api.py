@@ -46,17 +46,19 @@ class TestApiLayer(unittest.TestCase):
         session_state.reset_session_state()
 
     def test_service_starts_and_health_endpoint_is_available(self):
-        response = self.client.get("/health")
+        # The .env file has SQL configured, so we patch it to test the no-SQL case
+        with patch("modules.api.app.SQL_CONFIGURED", False):
+            response = self.client.get("/health")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.json(),
-            {
-                "status": "ok",
-                "version": os.environ["APP_VERSION"],
-                "sql_configured": False,
-            },
-        )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.json(),
+                {
+                    "status": "ok",
+                    "version": os.environ["APP_VERSION"],
+                    "sql_configured": False,
+                },
+            )
 
     def test_preflight_request_returns_cors_headers_for_allowed_origin(self):
         response = self.client.options(
@@ -410,6 +412,7 @@ class TestApiLayer(unittest.TestCase):
                 "pipeline_status": "running",
                 "anomaly_status": "completed",
                 "prediction_status": "running",
+                "selected_variables": {"target": None, "compare": []},
             },
         )
 
@@ -512,6 +515,7 @@ class TestApiLayer(unittest.TestCase):
                 "pipeline_status": "not_run",
                 "anomaly_status": "idle",
                 "prediction_status": "idle",
+                "selected_variables": {"target": None, "compare": []},
             },
         )
 
