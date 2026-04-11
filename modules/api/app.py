@@ -243,6 +243,35 @@ def get_chart_dataframe() -> pd.DataFrame:
     return _records_to_chart_df(records)
 
 
+def _parse_bool_query_param(value, *, default: bool) -> bool:
+    if value is None:
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _extract_chart_enhancements(request: Request) -> dict:
+    query = request.query_params
+    return {
+        "title": query.get("chart_title") or None,
+        "subtitle": query.get("chart_subtitle") or None,
+        "x_label": query.get("x_label") or None,
+        "y_label": query.get("y_label") or None,
+        "show_legend": _parse_bool_query_param(query.get("show_legend"), default=False),
+        "show_grid": _parse_bool_query_param(query.get("show_grid"), default=True),
+        "color": query.get("color_theme") or None,
+        "annotation": query.get("annotation") or None,
+    }
+
+
+def _build_chart_response(path: str, enhancements: dict) -> dict:
+    return {
+        "image": path,
+        "chart_metadata": {
+            "enhancements": enhancements,
+        },
+    }
+
+
 setup_logging(service_name="opsight.api")
 logger = logging.getLogger("opsight.api")
 
@@ -378,15 +407,21 @@ async def log_requests(request: Request, call_next):
     return response
 
 @app.get("/charts/histogram")
-def histogram(target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
+def histogram(request: Request, target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
     try:
+        enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
         target_column, _, _, target_label, _ = _resolve_chart_columns(
             df,
             target_variable=target_variable,
         )
-        path = create_histogram(df, target_column=target_column, target_label=target_label)
-        return {"image": path}
+        path = create_histogram(
+            df,
+            target_column=target_column,
+            target_label=target_label,
+            enhancements=enhancements,
+        )
+        return _build_chart_response(path, enhancements)
     except HTTPException:
         raise
     except Exception as exc:
@@ -396,10 +431,12 @@ def histogram(target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
 
 @app.get("/charts/bar-category")
 def bar_category(
+    request: Request,
     target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
     compare_variable: str = "Category",
 ):
     try:
+        enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
         _, compare_column, _, _, compare_label = _resolve_chart_columns(
             df,
@@ -410,8 +447,9 @@ def bar_category(
             df,
             compare_column=compare_column,
             compare_label=compare_label,
+            enhancements=enhancements,
         )
-        return {"image": path}
+        return _build_chart_response(path, enhancements)
     except HTTPException:
         raise
     except Exception as exc:
@@ -420,15 +458,21 @@ def bar_category(
 
 
 @app.get("/charts/boxplot")
-def boxplot(target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
+def boxplot(request: Request, target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
     try:
+        enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
         target_column, _, _, target_label, _ = _resolve_chart_columns(
             df,
             target_variable=target_variable,
         )
-        path = create_boxplot(df, target_column=target_column, target_label=target_label)
-        return {"image": path}
+        path = create_boxplot(
+            df,
+            target_column=target_column,
+            target_label=target_label,
+            enhancements=enhancements,
+        )
+        return _build_chart_response(path, enhancements)
     except HTTPException:
         raise
     except Exception as exc:
@@ -438,10 +482,12 @@ def boxplot(target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
 
 @app.get("/charts/scatter")
 def scatter(
+    request: Request,
     target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
     compare_variable: str = "Profit",
 ):
     try:
+        enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
         target_column, compare_column, _, target_label, compare_label = _resolve_chart_columns(
             df,
@@ -454,8 +500,9 @@ def scatter(
             compare_column=compare_column,
             target_label=target_label,
             compare_label=compare_label,
+            enhancements=enhancements,
         )
-        return {"image": path}
+        return _build_chart_response(path, enhancements)
     except HTTPException:
         raise
     except Exception as exc:
@@ -465,10 +512,12 @@ def scatter(
 
 @app.get("/charts/grouped-comparison")
 def grouped_comparison(
+    request: Request,
     target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
     compare_variable: str = "Category",
 ):
     try:
+        enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
         target_column, compare_column, _, target_label, compare_label = _resolve_chart_columns(
             df,
@@ -481,8 +530,9 @@ def grouped_comparison(
             compare_column=compare_column,
             target_label=target_label,
             compare_label=compare_label,
+            enhancements=enhancements,
         )
-        return {"image": path}
+        return _build_chart_response(path, enhancements)
     except HTTPException:
         raise
     except Exception as exc:
@@ -492,10 +542,12 @@ def grouped_comparison(
 
 @app.get("/charts/grouped-boxplot")
 def grouped_boxplot(
+    request: Request,
     target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
     compare_variable: str = "Category",
 ):
     try:
+        enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
         target_column, compare_column, _, target_label, compare_label = _resolve_chart_columns(
             df,
@@ -508,8 +560,9 @@ def grouped_boxplot(
             compare_column=compare_column,
             target_label=target_label,
             compare_label=compare_label,
+            enhancements=enhancements,
         )
-        return {"image": path}
+        return _build_chart_response(path, enhancements)
     except HTTPException:
         raise
     except Exception as exc:
@@ -519,10 +572,12 @@ def grouped_boxplot(
 
 @app.get("/charts/time-line")
 def time_line_chart(
+    request: Request,
     target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
     compare_variable: str = "Order Date",
 ):
     try:
+        enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
         target_column, compare_column, _, target_label, compare_label = _resolve_chart_columns(
             df,
@@ -542,8 +597,9 @@ def time_line_chart(
             compare_column=compare_column,
             target_label=target_label,
             compare_label=compare_label,
+            enhancements=enhancements,
         )
-        return {"image": path}
+        return _build_chart_response(path, enhancements)
     except HTTPException:
         raise
     except Exception as exc:
