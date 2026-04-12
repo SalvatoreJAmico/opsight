@@ -118,6 +118,14 @@ p {
   width: 100%;
 }
 
+.chart-container {
+  width: 100%;
+  max-width: 700px;
+  height: 400px;
+  margin: 0 auto;
+  position: relative;
+}
+
 @media (max-width: 768px) {
   .summary-grid {
     grid-template-columns: 1fr;

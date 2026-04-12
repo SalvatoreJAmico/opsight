@@ -639,19 +639,13 @@ describe("ChartsTab", () => {
     fireEvent.change(screen.getByLabelText("Chart Subtitle"), { target: { value: "Story subtitle" } });
     fireEvent.change(screen.getByLabelText("X Axis Label"), { target: { value: "Sales Value" } });
     fireEvent.change(screen.getByLabelText("Y Axis Label"), { target: { value: "Frequency" } });
-    fireEvent.change(screen.getByLabelText("Color Theme"), { target: { value: "teal" } });
+    fireEvent.change(screen.getByLabelText("Color Theme"), { target: { value: "#16a34a" } });
     fireEvent.change(screen.getByLabelText("Annotation"), { target: { value: "Peak near median" } });
-    fireEvent.change(screen.getByLabelText("X-axis Min"), { target: { value: "0" } });
-    fireEvent.change(screen.getByLabelText("X-axis Max"), { target: { value: "5000" } });
-    fireEvent.change(screen.getByLabelText("Y-axis Min"), { target: { value: "0" } });
-    fireEvent.change(screen.getByLabelText("Y-axis Max"), { target: { value: "100" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Show Legend" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Show Gridlines" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Use Log Scale (X-axis)" }));
-    fireEvent.change(screen.getByLabelText("Clip extreme values"), { target: { value: "percentile" } });
-    fireEvent.change(screen.getByLabelText("Clip Percentile"), { target: { value: "99" } });
-    fireEvent.change(screen.getByLabelText("Zoom Preset"), { target: { value: "iqr" } });
 
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+    fireEvent.change(screen.getByLabelText("X-axis Min Slider"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("X-axis Max Slider"), { target: { value: "18" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply X-axis Range" }));
     fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
 
     await waitFor(() => {
@@ -662,24 +656,15 @@ describe("ChartsTab", () => {
             subtitle: "Story subtitle",
             xLabel: "Sales Value",
             yLabel: "Frequency",
-            showLegend: true,
-            showGrid: false,
-            color: "teal",
+            color: "#16a34a",
             annotation: "Peak near median",
-            xMin: "0",
-            xMax: "5000",
-            yMin: "0",
-            yMax: "100",
-            logScaleX: true,
-            logScaleY: false,
-            clipMode: "percentile",
-            clipPercentile: "99",
-            zoomPreset: "iqr",
+            xMin: "2",
+            xMax: "18",
           }),
         }),
       );
     });
 
-    expect(await screen.findByText(/Enhancements:/)).toBeInTheDocument();
+    expect(await screen.findByText(/Enhancements Applied:/)).toBeInTheDocument();
   });
 });
