@@ -1,3 +1,15 @@
+import pandas as pd
+
+
+def _is_missing(value) -> bool:
+    if value is None:
+        return True
+    try:
+        return bool(pd.isna(value))
+    except Exception:
+        return False
+
+
 def validate_canonical_record(record):
     if not isinstance(record, dict):
         return {
@@ -10,22 +22,22 @@ def validate_canonical_record(record):
         "errors": [],
     }
 
-    if record.get("entity_id") is None:
+    if _is_missing(record.get("entity_id")):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Missing entity_id")
 
-    if record.get("timestamp") is None:
+    if _is_missing(record.get("timestamp")):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Missing timestamp")
 
-    if record.get("features") is None:
+    if _is_missing(record.get("features")):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Missing features")
     elif not isinstance(record.get("features"), dict):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Features must be a dictionary")
 
-    if record.get("metadata") is None:
+    if _is_missing(record.get("metadata")):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Missing metadata")
 
