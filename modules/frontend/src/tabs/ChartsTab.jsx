@@ -114,17 +114,25 @@ export default function ChartsTab({ activeDatasetId = null }) {
   const [relationshipRuns, setRelationshipRuns] = useState([]);
   const [relationshipLoading, setRelationshipLoading] = useState(false);
   const [relationshipError, setRelationshipError] = useState("");
+  const [defaultSettings, setDefaultSettings] = useState({
+    xMin: "",
+    xMax: "",
+    yMin: "",
+    yMax: "",
+    logScaleX: DEFAULT_CHART_ENHANCEMENTS.logScaleX,
+    logScaleY: DEFAULT_CHART_ENHANCEMENTS.logScaleY,
+    color: DEFAULT_CHART_ENHANCEMENTS.color,
+    clipMode: DEFAULT_CHART_ENHANCEMENTS.clipMode,
+    clipPercentile: DEFAULT_CHART_ENHANCEMENTS.clipPercentile,
+    clipMax: DEFAULT_CHART_ENHANCEMENTS.clipMax,
+    zoomPreset: DEFAULT_CHART_ENHANCEMENTS.zoomPreset,
+  });
   const [axisSlider, setAxisSlider] = useState({
     xMin: 0,
     xMax: 0,
     yMin: 0,
     yMax: 0,
-    xTouched: false,
-    yTouched: false,
   });
-  const [dragSelection, setDragSelection] = useState(null);
-  const dragStartRef = useRef(null);
-  const chartContainerRef = useRef(null);
   const selectionLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -201,6 +209,24 @@ export default function ChartsTab({ activeDatasetId = null }) {
     [activeChart, overview, targetVariable, compareVariable],
   );
 
+  const currentSettings = useMemo(
+    () => ({
+      xMin: chartEnhancements.xMin || "",
+      xMax: chartEnhancements.xMax || "",
+      yMin: chartEnhancements.yMin || "",
+      yMax: chartEnhancements.yMax || "",
+      logScaleX: chartEnhancements.logScaleX,
+      logScaleY: chartEnhancements.logScaleY,
+      color: chartEnhancements.color,
+      clipMode: chartEnhancements.clipMode,
+      clipPercentile: chartEnhancements.clipPercentile,
+      clipMax: chartEnhancements.clipMax || "",
+      zoomPreset: chartEnhancements.zoomPreset,
+    }),
+    [chartEnhancements],
+  );
+  const hasPendingChanges = JSON.stringify(currentSettings) !== JSON.stringify(defaultSettings);
+
   const buildEnhancementPayload = () => ({
     title: chartEnhancements.title,
     subtitle: chartEnhancements.subtitle,
@@ -231,8 +257,6 @@ export default function ChartsTab({ activeDatasetId = null }) {
       xMax: hasX ? axisContext.x.max : 0,
       yMin: hasY ? axisContext.y.min : 0,
       yMax: hasY ? axisContext.y.max : 0,
-      xTouched: false,
-      yTouched: false,
     }));
 
     setChartEnhancements((prev) => ({
@@ -242,28 +266,22 @@ export default function ChartsTab({ activeDatasetId = null }) {
       yMin: "",
       yMax: "",
     }));
+
+    setDefaultSettings((prev) => ({
+      ...prev,
+      xMin: "",
+      xMax: "",
+      yMin: "",
+      yMax: "",
+    }));
   }, [axisContext.x?.min, axisContext.x?.max, axisContext.y?.min, axisContext.y?.max]);
 
-  const applyAxisFromSlider = async (axis) => {
-    let nextEnhancements = chartEnhancements;
-    if (axis === "x") {
-      nextEnhancements = {
-        ...chartEnhancements,
-        xMin: String(axisSlider.xMin),
-        xMax: String(axisSlider.xMax),
-      };
-    } else {
-      nextEnhancements = {
-        ...chartEnhancements,
-        yMin: String(axisSlider.yMin),
-        yMax: String(axisSlider.yMax),
-      };
+  const applyAxisChanges = async () => {
+    if (!activeChart || !hasPendingChanges) {
+      return;
     }
-
-    setChartEnhancements(nextEnhancements);
-    if (activeChart) {
-      await handleChartSelect(activeChart, nextEnhancements);
-    }
+    await handleChartSelect(activeChart, chartEnhancements);
+    setDefaultSettings(currentSettings);
   };
 
   const handleTargetChange = (newTarget) => {
@@ -433,7 +451,6 @@ export default function ChartsTab({ activeDatasetId = null }) {
 
   const handleChartSelect = async (chartId, enhancementOverride = null) => {
     setError("");
-    setDragSelection(null);
     setActiveChart(chartId);
     setLoading(true);
     setChartImages({});
@@ -471,6 +488,21 @@ export default function ChartsTab({ activeDatasetId = null }) {
       ...prev,
       [chartId]: response.data?.chart_metadata || { enhancements: enhancementOverride || buildEnhancementPayload() },
     }));
+
+    const applied = enhancementOverride || buildEnhancementPayload();
+    setDefaultSettings({
+      xMin: applied.xMin || "",
+      xMax: applied.xMax || "",
+      yMin: applied.yMin || "",
+      yMax: applied.yMax || "",
+      logScaleX: applied.logScaleX,
+      logScaleY: applied.logScaleY,
+      color: applied.color,
+      clipMode: applied.clipMode,
+      clipPercentile: applied.clipPercentile,
+      clipMax: applied.clipMax || "",
+      zoomPreset: applied.zoomPreset,
+    });
   };
 
   const handleResetZoom = async () => {
@@ -663,105 +695,6 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
     default:
       return [];
   }
-};
-
-const getRangeFromEnhancement = (minText, maxText, fallback) => {
-  const min = Number(minText);
-  const max = Number(maxText);
-  if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
-    return { min, max };
-  }
-  return fallback;
-};
-
-const supportsDragZoom = ["histogram", "boxplot", "scatter"].includes(activeChart);
-
-const getEffectiveAxisRange = () => {
-  const xFallback = axisContext.x ? { min: axisContext.x.min, max: axisContext.x.max } : null;
-  const yFallback = axisContext.y ? { min: axisContext.y.min, max: axisContext.y.max } : null;
-
-  return {
-    x: xFallback
-      ? getRangeFromEnhancement(chartEnhancements.xMin, chartEnhancements.xMax, xFallback)
-      : null,
-    y: yFallback
-      ? getRangeFromEnhancement(chartEnhancements.yMin, chartEnhancements.yMax, yFallback)
-      : null,
-  };
-};
-
-const handleChartMouseDown = (event) => {
-  if (!supportsDragZoom || !chartContainerRef.current) {
-    return;
-  }
-
-  const rect = chartContainerRef.current.getBoundingClientRect();
-  dragStartRef.current = {
-    x: Math.max(0, Math.min(rect.width, event.clientX - rect.left)),
-    y: Math.max(0, Math.min(rect.height, event.clientY - rect.top)),
-    width: rect.width,
-    height: rect.height,
-  };
-  setDragSelection({ left: dragStartRef.current.x, top: dragStartRef.current.y, width: 0, height: 0 });
-};
-
-const handleChartMouseMove = (event) => {
-  if (!dragStartRef.current || !chartContainerRef.current) {
-    return;
-  }
-
-  const rect = chartContainerRef.current.getBoundingClientRect();
-  const currentX = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
-  const currentY = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
-  const left = Math.min(dragStartRef.current.x, currentX);
-  const top = Math.min(dragStartRef.current.y, currentY);
-  const width = Math.abs(currentX - dragStartRef.current.x);
-  const height = Math.abs(currentY - dragStartRef.current.y);
-  setDragSelection({ left, top, width, height });
-};
-
-const handleChartMouseUp = async () => {
-  if (!dragStartRef.current || !dragSelection) {
-    dragStartRef.current = null;
-    setDragSelection(null);
-    return;
-  }
-
-  const selectionTooSmall = dragSelection.width < 8 || dragSelection.height < 8;
-  const axisRange = getEffectiveAxisRange();
-  dragStartRef.current = null;
-
-  if (selectionTooSmall) {
-    setDragSelection(null);
-    return;
-  }
-
-  const start = dragSelection;
-  const width = chartContainerRef.current?.clientWidth || 1;
-  const height = chartContainerRef.current?.clientHeight || 1;
-
-  const x1Pct = start.left / width;
-  const x2Pct = (start.left + start.width) / width;
-  const yTopPct = start.top / height;
-  const yBottomPct = (start.top + start.height) / height;
-
-  const nextEnhancements = { ...chartEnhancements };
-  if (axisRange.x) {
-    const newXMin = axisRange.x.min + (axisRange.x.max - axisRange.x.min) * x1Pct;
-    const newXMax = axisRange.x.min + (axisRange.x.max - axisRange.x.min) * x2Pct;
-    nextEnhancements.xMin = String(Number(newXMin.toFixed(4)));
-    nextEnhancements.xMax = String(Number(newXMax.toFixed(4)));
-  }
-  if (axisRange.y) {
-    const newYMax = axisRange.y.max - (axisRange.y.max - axisRange.y.min) * yTopPct;
-    const newYMin = axisRange.y.max - (axisRange.y.max - axisRange.y.min) * yBottomPct;
-    nextEnhancements.yMin = String(Number(newYMin.toFixed(4)));
-    nextEnhancements.yMax = String(Number(newYMax.toFixed(4)));
-  }
-
-  setChartEnhancements(nextEnhancements);
-  setDragSelection(null);
-  await handleChartSelect(activeChart, nextEnhancements);
 };
 
 
@@ -1027,11 +960,12 @@ const handleChartMouseUp = async () => {
               value={axisSlider.xMin}
               onChange={(event) => {
                 const value = Number(event.target.value);
+                const nextXMin = Math.min(value, axisSlider.xMax - 0.0001);
                 setAxisSlider((prev) => ({
                   ...prev,
-                  xMin: Math.min(value, prev.xMax - 0.0001),
-                  xTouched: true,
+                  xMin: nextXMin,
                 }));
+                setChartEnhancements((prev) => ({ ...prev, xMin: String(nextXMin) }));
               }}
               style={{ width: "100%" }}
             />
@@ -1044,21 +978,15 @@ const handleChartMouseUp = async () => {
               value={axisSlider.xMax}
               onChange={(event) => {
                 const value = Number(event.target.value);
+                const nextXMax = Math.max(value, axisSlider.xMin + 0.0001);
                 setAxisSlider((prev) => ({
                   ...prev,
-                  xMax: Math.max(value, prev.xMin + 0.0001),
-                  xTouched: true,
+                  xMax: nextXMax,
                 }));
+                setChartEnhancements((prev) => ({ ...prev, xMax: String(nextXMax) }));
               }}
               style={{ width: "100%" }}
             />
-            <button
-              type="button"
-              onClick={() => applyAxisFromSlider("x")}
-              style={{ marginTop: "0.45rem", padding: "0.35rem 0.7rem", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer" }}
-            >
-              Apply X-axis Range
-            </button>
           </div>
         ) : null}
         {axisContext.y ? (
@@ -1075,11 +1003,12 @@ const handleChartMouseUp = async () => {
               value={axisSlider.yMin}
               onChange={(event) => {
                 const value = Number(event.target.value);
+                const nextYMin = Math.min(value, axisSlider.yMax - 0.0001);
                 setAxisSlider((prev) => ({
                   ...prev,
-                  yMin: Math.min(value, prev.yMax - 0.0001),
-                  yTouched: true,
+                  yMin: nextYMin,
                 }));
+                setChartEnhancements((prev) => ({ ...prev, yMin: String(nextYMin) }));
               }}
               style={{ width: "100%" }}
             />
@@ -1092,21 +1021,15 @@ const handleChartMouseUp = async () => {
               value={axisSlider.yMax}
               onChange={(event) => {
                 const value = Number(event.target.value);
+                const nextYMax = Math.max(value, axisSlider.yMin + 0.0001);
                 setAxisSlider((prev) => ({
                   ...prev,
-                  yMax: Math.max(value, prev.yMin + 0.0001),
-                  yTouched: true,
+                  yMax: nextYMax,
                 }));
+                setChartEnhancements((prev) => ({ ...prev, yMax: String(nextYMax) }));
               }}
               style={{ width: "100%" }}
             />
-            <button
-              type="button"
-              onClick={() => applyAxisFromSlider("y")}
-              style={{ marginTop: "0.45rem", padding: "0.35rem 0.7rem", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer" }}
-            >
-              Apply Y-axis Range
-            </button>
           </div>
         ) : null}
         <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
@@ -1176,6 +1099,23 @@ const handleChartMouseUp = async () => {
           </select>
         </label>
         <div style={{ gridColumn: "1 / -1", fontWeight: 700, marginTop: "0.15rem", marginBottom: "0.15rem" }}>Interaction</div>
+        <div style={{ gridColumn: "1 / -1", fontSize: "0.86rem", color: hasPendingChanges ? "#b45309" : "#6b7280" }}>
+          {hasPendingChanges ? "Unsaved changes" : "No pending changes"}
+        </div>
+        <button
+          type="button"
+          onClick={applyAxisChanges}
+          disabled={!activeChart || !hasPendingChanges}
+          style={{
+            padding: "0.4rem 0.8rem",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            cursor: !activeChart || !hasPendingChanges ? "not-allowed" : "pointer",
+            background: !activeChart || !hasPendingChanges ? "#e5e7eb" : "#dbeafe",
+          }}
+        >
+          Apply Changes
+        </button>
         <button
           type="button"
           onClick={handleResetZoom}
@@ -1328,34 +1268,12 @@ const handleChartMouseUp = async () => {
 
          {activeChart === chart.id && chartImages[chart.id] ? (
   <div style={{ marginTop: "0.75rem" }}>
-    <div
-      ref={chartContainerRef}
-      className="chart-container"
-      onMouseDown={handleChartMouseDown}
-      onMouseMove={handleChartMouseMove}
-      onMouseUp={handleChartMouseUp}
-      onMouseLeave={handleChartMouseUp}
-      style={{ cursor: supportsDragZoom ? "crosshair" : "default" }}
-    >
+    <div className="chart-container">
       <img
         src={chartImages[chart.id]}
         alt={`${chart.title} visualization`}
         style={{ width: "100%", height: "100%", objectFit: "contain", border: "1px solid #ccc", borderRadius: "8px" }}
       />
-      {dragSelection ? (
-        <div
-          style={{
-            position: "absolute",
-            left: `${dragSelection.left}px`,
-            top: `${dragSelection.top}px`,
-            width: `${dragSelection.width}px`,
-            height: `${dragSelection.height}px`,
-            border: "2px dashed #2563eb",
-            background: "rgba(37, 99, 235, 0.15)",
-            pointerEvents: "none",
-          }}
-        />
-      ) : null}
     </div>
 
     {getChartContextEntries(chart.id, targetVariable, compareVariable).length > 0 ? (

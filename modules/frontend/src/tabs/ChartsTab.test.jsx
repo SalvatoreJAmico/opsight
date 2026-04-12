@@ -645,7 +645,8 @@ describe("ChartsTab", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
     fireEvent.change(screen.getByLabelText("X-axis Min Slider"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("X-axis Max Slider"), { target: { value: "18" } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply X-axis Range" }));
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Apply Changes" }));
     fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
 
     await waitFor(() => {
