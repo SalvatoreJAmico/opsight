@@ -72,4 +72,39 @@ describe("AnomalyDetectionTab", () => {
     expect(screen.getByText("1 records were flagged as unusual out of 10.")).toBeInTheDocument();
     expect(screen.getByText("K-Means clustering using distance from centroid.")).toBeInTheDocument();
   });
+
+  it("renders top anomaly sample table for Isolation Forest when present", async () => {
+    runIsolationForestAnomaly.mockResolvedValue({
+      ok: true,
+      data: {
+        summary: { total_records: 100, anomaly_count: 10 },
+        anomaly_sample_top10: [
+          {
+            row_id: 1023,
+            Sales: 2000,
+            Profit: -500,
+            Discount: 0.8,
+            anomaly_score: -0.723456,
+          },
+        ],
+      },
+    });
+
+    render(<AnomalyDetectionTab hasDataset />);
+
+    fireEvent.click(screen.getByLabelText("Isolation Forest"));
+
+    await waitFor(() => {
+      expect(runIsolationForestAnomaly).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByText("Top 10 Anomalous Records")).toBeInTheDocument();
+    expect(screen.getByText("Row ID")).toBeInTheDocument();
+    expect(screen.getByText("Sales")).toBeInTheDocument();
+    expect(screen.getByText("Profit")).toBeInTheDocument();
+    expect(screen.getByText("Discount")).toBeInTheDocument();
+    expect(screen.getByText("Anomaly Score")).toBeInTheDocument();
+    expect(screen.getByText("1023")).toBeInTheDocument();
+    expect(screen.getByText("-0.7235")).toBeInTheDocument();
+  });
 });

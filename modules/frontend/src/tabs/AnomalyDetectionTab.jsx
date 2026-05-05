@@ -68,6 +68,13 @@ const MODEL_RUNNERS = {
   threshold: () => runZscoreAnomaly(),
 };
 
+function formatAnomalyScore(value) {
+  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
+    return "";
+  }
+  return value.toFixed(4);
+}
+
 export default function AnomalyDetectionTab({ onAction, hasDataset }) {
   const [selectedModels, setSelectedModels] = useState({});
   const [resultsByModel, setResultsByModel] = useState({});
@@ -159,6 +166,11 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
       {anomalyModels.map((model) => {
         const state = resultsByModel[model.key] || {};
         const summary = state.data?.summary;
+        const anomalySample = state.data?.anomaly_sample_top10;
+        const showIsolationSampleTable =
+          model.key === "isolation_forest" &&
+          Array.isArray(anomalySample) &&
+          anomalySample.length > 0;
         const result = summary
           ? {
               status: "Completed",
@@ -168,6 +180,45 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
               explanation: ANOMALY_EXPLANATIONS[model.key] || ANOMALY_EXPLANATIONS.zscore,
             }
           : null;
+
+        const resultFooter = showIsolationSampleTable ? (
+          <div
+            style={{
+              marginTop: "0.75rem",
+              padding: "0.6rem",
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+              background: "#fff",
+              overflowX: "auto",
+            }}
+          >
+            <h4 style={{ margin: "0 0 0.5rem 0" }}>Top 10 Anomalous Records</h4>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Row ID</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Sales</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Profit</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Discount</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Anomaly Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {anomalySample.map((row, index) => (
+                  <tr key={`${row.row_id ?? "row"}-${index}`}>
+                    <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>{row.row_id ?? ""}</td>
+                    <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>{row.Sales ?? ""}</td>
+                    <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>{row.Profit ?? ""}</td>
+                    <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>{row.Discount ?? ""}</td>
+                    <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>
+                      {formatAnomalyScore(row.anomaly_score)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null;
 
         return (
           <ModelCard
@@ -179,6 +230,7 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
             loading={state.loading || false}
             error={state.error || ""}
             result={result}
+            resultFooter={resultFooter}
           />
         );
       })}

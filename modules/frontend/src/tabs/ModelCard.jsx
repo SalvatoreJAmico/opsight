@@ -1,6 +1,15 @@
 import React from "react";
 
-export default function ModelCard({ model, checked, onToggle, disabled = false, loading = false, error = "", result = null }) {
+export default function ModelCard({
+  model,
+  checked,
+  onToggle,
+  disabled = false,
+  loading = false,
+  error = "",
+  result = null,
+  resultFooter = null,
+}) {
   const formatRoleLabel = (role) => role.replace(/_/g, " ");
   const datasetContextEntries = Object.entries(result?.datasetContext || {}).filter(([, value]) => Boolean(value));
   const explanation = result?.explanation || null;
@@ -95,6 +104,7 @@ export default function ModelCard({ model, checked, onToggle, disabled = false, 
                     ))}
                   </div>
                 ) : null}
+                {resultFooter}
               </div>
             )}
           </div>
