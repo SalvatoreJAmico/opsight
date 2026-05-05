@@ -57,6 +57,45 @@ def _clean_records_for_ml(records: list) -> list:
     return valid_values if valid_values else records
 
 
+def _extract_key_feature_values(features: dict) -> dict:
+    """Extract report-friendly key feature values from a record's feature map."""
+    feature_lookup = {str(k).lower(): v for k, v in (features or {}).items()}
+    return {
+        "Sales": feature_lookup.get("sales"),
+        "Profit": feature_lookup.get("profit"),
+        "Discount": feature_lookup.get("discount"),
+    }
+
+
+def _build_isolation_forest_anomaly_sample(records: list, predictions: list, limit: int = 10) -> list:
+    """Return a top-N sample of anomalous rows sorted by most anomalous score."""
+    sample = []
+
+    for record, prediction in zip(records, predictions):
+        if not prediction.is_anomaly:
+            continue
+
+        key_values = _extract_key_feature_values(record.get("features", {}))
+        sample.append(
+            {
+                "row_id": record.get("row_id", prediction.entity_id),
+                "Sales": key_values.get("Sales"),
+                "Profit": key_values.get("Profit"),
+                "Discount": key_values.get("Discount"),
+                "anomaly_score": prediction.anomaly_score,
+            }
+        )
+
+    # Lower decision_function scores indicate stronger anomalies.
+    sample.sort(
+        key=lambda row: (
+            row["anomaly_score"] is None,
+            row["anomaly_score"] if row["anomaly_score"] is not None else float("inf"),
+        )
+    )
+    return sample[:limit]
+
+
 def _load_ml_records() -> list:
     """Load persisted canonical records and flatten them for model consumption."""
     config = StorageConfig()
@@ -79,9 +118,11 @@ def _load_ml_records() -> list:
                 value = float(v)
                 break
         flat.append({
+            "row_id": i,
             "entity_id": str(r.get("entity_id", i)),
             "timestamp": str(r.get("timestamp", i)),
             "value": value,
+            "features": features,
         })
 
     # Clean records to remove NaN values before model processing
@@ -133,11 +174,13 @@ def run_isolation_forest():
         model = IsolationForestModel(contamination=0.1)
         predictions = model.predict(dataset.records)
         summary = model.evaluate(dataset.records)
+        anomaly_sample_top10 = _build_isolation_forest_anomaly_sample(records, predictions, limit=10)
         set_anomaly_status("completed")
 
         response = {
             "result": [p.model_dump() for p in predictions],
             "summary": summary.model_dump(),
+            "anomaly_sample_top10": anomaly_sample_top10,
             "dataset_context": dataset_context,
         }
         return _sanitize_for_json(response)

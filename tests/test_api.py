@@ -825,6 +825,50 @@ class TestApiLayer(unittest.TestCase):
                         score = result["anomaly_score"]
                         self.assertFalse(isinstance(score, float) and math.isnan(score))
 
+    def test_isolation_forest_endpoint_returns_top10_anomaly_sample(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage_path = Path(tmp_dir) / "records.json"
+            local_storage = LocalStorage(storage_path=str(storage_path))
+
+            records = []
+            for idx in range(150):
+                sales = 100.0 + (idx % 7)
+                if idx % 15 == 0:
+                    sales += 400.0
+
+                records.append(
+                    {
+                        "entity_id": str(idx),
+                        "timestamp": f"2026-02-{(idx % 28) + 1:02d}",
+                        "features": {
+                            "Sales": sales,
+                            "Profit": float(-50 + (idx % 20)),
+                            "Discount": round((idx % 10) / 10.0, 2),
+                        },
+                        "metadata": {},
+                    }
+                )
+
+            local_storage.save_records(records)
+
+            with patch("modules.api.routes.ml.StorageConfig") as mocked_config:
+                mocked_config.return_value.storage_path = str(storage_path)
+
+                response = self.client.get("/ml/anomaly/isolation-forest")
+
+            self.assertEqual(response.status_code, 200)
+            body = response.json()
+            self.assertIn("anomaly_sample_top10", body)
+            self.assertIsInstance(body["anomaly_sample_top10"], list)
+            self.assertLessEqual(len(body["anomaly_sample_top10"]), 10)
+
+            for row in body["anomaly_sample_top10"]:
+                self.assertIn("row_id", row)
+                self.assertIn("Sales", row)
+                self.assertIn("Profit", row)
+                self.assertIn("Discount", row)
+                self.assertIn("anomaly_score", row)
+
     def test_regression_endpoint_handles_nan_values(self):
         """Test that Linear Regression endpoint handles NaN values and produces valid JSON."""
         with tempfile.TemporaryDirectory() as tmp_dir:
