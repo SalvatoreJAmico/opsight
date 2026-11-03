@@ -184,7 +184,11 @@ export default function App() {
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "2rem" }}>
       <header style={{ marginBottom: "1.5rem" }}>
         <h1>Opsight</h1>
-        <p>Operational analytics, visualization, and anomaly detection.</p>
+        <p>A working demo for operational analytics, visualization, and anomaly detection.</p>
+        <p>
+          Tested with selected CSV, SQL, JSON, Parquet, and XLSX datasets.
+          {" "}Long-term goal: support every dataset.
+        </p>
 
         {isDev ? (
           <>

@@ -85,6 +85,14 @@ describe("App dataset switching", () => {
     });
   });
 
+  it("distinguishes the working demo from its long-term dataset goal", async () => {
+    clientMocks.getSessionState.mockResolvedValue({ ok: true, data: {} });
+    render(<App />);
+    expect(screen.getByText("A working demo for operational analytics, visualization, and anomaly detection.")).toBeInTheDocument();
+    expect(screen.getByText("Tested with selected CSV, SQL, JSON, Parquet, and XLSX datasets. Long-term goal: support every dataset.")).toBeInTheDocument();
+    await screen.findByText("API connected");
+  });
+
   it("clears stale metrics and only shows new dataset results after a switch", async () => {
     let sessionResponse = {
       active_dataset: "sales_csv",

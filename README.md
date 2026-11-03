@@ -18,7 +18,7 @@ https://opsight-api.calmstone-581ea79a.eastus.azurecontainerapps.io/health
 
 ## What Is Opsight?
 
-Opsight is an end-to-end operational analytics project that takes raw business-style datasets and turns them into usable analysis outputs.
+Opsight is a working portfolio demo for operational analytics, visualization, and anomaly detection. It takes raw business-style datasets and turns them into usable analysis outputs.
 
 It combines:
 
@@ -28,6 +28,12 @@ It combines:
 - analytics, anomaly detection, and chart visualization
 
 In one flow, a user can load a dataset, run processing, review quality metrics, inspect charts, and run anomaly or prediction models.
+
+### Current Scope and Long-Term Goal
+
+The current demo has been tested with selected CSV, SQL, JSON, Parquet, and XLSX datasets. Available analyses depend on the dataset structure, available fields, and model requirements.
+
+The long-term goal is to handle every dataset. Support for arbitrary dataset structures is still being developed and validated.
 
 ## Problem It Solves
 
@@ -72,7 +78,7 @@ Ingestion -> Adapter -> Canonical Records -> Validation -> Persistence
 
 ### Canonical Record Contract
 
-All datasets are normalized to the same record shape:
+Supported input records are normalized to this canonical record shape:
 
 ```json
 {
