@@ -1,7 +1,8 @@
 import React from "react";
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import GlobalStatusBar, { resolveStatusMessage } from "./GlobalStatusBar";
+import GlobalStatusBar from "./GlobalStatusBar";
+import { resolveStatusMessage } from "./statusMessage";
 
 describe("resolveStatusMessage", () => {
   it("returns no-dataset message when sessionState is null", () => {

@@ -2,11 +2,14 @@ from typing import List
 import math
 
 from modules.ml.base import BaseModel
+from modules.ml.time_series import prepare_time_series, validate_horizon
 from modules.ml.schemas import FeatureRecord, PredictionRecord, PredictionResult
 
 
 class MovingAverageModel(BaseModel):
     def __init__(self, window_size: int = 2):
+        if isinstance(window_size, bool) or not isinstance(window_size, int) or window_size < 1:
+            raise ValueError("window_size must be a positive integer.")
         self.window_size = window_size
 
     def fit(self, records: List[FeatureRecord]) -> None:
@@ -14,10 +17,9 @@ class MovingAverageModel(BaseModel):
         return None
 
     def predict(self, records: List[FeatureRecord], steps_ahead: int = 0) -> List[PredictionRecord]:
-        values = [r.value for r in records if r.value is not None]
-
-        if not values:
-            return []
+        validate_horizon(steps_ahead)
+        records = prepare_time_series(records)
+        values = [r.value for r in records]
 
         results: List[PredictionRecord] = []
 
@@ -38,11 +40,11 @@ class MovingAverageModel(BaseModel):
 
         for i in range(steps_ahead):
             window = history[-self.window_size:]
-            avg = sum(window) / len(window)
+            avg = sum(value / len(window) for value in window)
 
             # Ensure average is not NaN or Inf
             if math.isnan(avg) or math.isinf(avg):
-                avg = 0.0
+                raise ValueError("Forecast could not be computed from these values.")
             else:
                 avg = round(avg, 4)
 

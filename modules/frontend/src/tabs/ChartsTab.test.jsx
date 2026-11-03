@@ -148,7 +148,8 @@ describe("ChartsTab", () => {
   });
 
   it("allows only one chart selection and shows only the active chart", async () => {
-    render(<ChartsTab />);
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+    await screen.findByLabelText("Target Variable");
 
     fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
 
@@ -174,7 +175,8 @@ describe("ChartsTab", () => {
       }),
     );
 
-    render(<ChartsTab />);
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+    await screen.findByLabelText("Target Variable");
 
     fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
 
@@ -195,7 +197,8 @@ describe("ChartsTab", () => {
       data: null,
     });
 
-    render(<ChartsTab />);
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+    await screen.findByLabelText("Target Variable");
 
     fireEvent.click(screen.getByRole("radio", { name: "Scatter Plot" }));
 
@@ -205,7 +208,8 @@ describe("ChartsTab", () => {
   });
 
   it("renders explainability text for each supported chart", async () => {
-    render(<ChartsTab />);
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+    await screen.findByLabelText("Target Variable");
 
     const scenarios = [
       {
@@ -242,7 +246,8 @@ describe("ChartsTab", () => {
   });
 
   it("uses resolver with the local proxy base when rendering chart images", async () => {
-    render(<ChartsTab />);
+    render(<ChartsTab activeDatasetId="sales_csv" />);
+    await screen.findByLabelText("Target Variable");
 
     fireEvent.click(screen.getByRole("radio", { name: "Grouped Comparison" }));
 
@@ -600,7 +605,7 @@ describe("ChartsTab", () => {
       expect(screen.getByText(/Relationship charts generated:/)).toBeInTheDocument();
     });
 
-    expect(getScatter).toHaveBeenCalled();
+    expect(getScatter).not.toHaveBeenCalled();
     expect(getGroupedBoxplot).toHaveBeenCalled();
     expect(getTimeLine).toHaveBeenCalledWith(
       expect.objectContaining({ compareVariable: "Order Date" }),
@@ -667,5 +672,192 @@ describe("ChartsTab", () => {
     });
 
     expect(await screen.findByText(/Enhancements Applied:/)).toBeInTheDocument();
+  });
+});
+
+const freightOverview = (datasetId = "sales_sql") => ({
+  ok: true,
+  data: {
+    source: "Northwind Orders",
+    source_metadata: { dataset_id: datasetId },
+    rows: 3,
+    fields: ["Freight", "ShipCountry", "OrderDate"],
+    assignment_analysis: {
+      target_variable: "Freight",
+      target_options: ["Freight"],
+      compare_options: ["Freight", "ShipCountry", "OrderDate"],
+      field_types: { Freight: "numeric", ShipCountry: "categorical", OrderDate: "date" },
+    },
+    numeric_summary: [{ field: "Freight", count: 3 }],
+    categorical_summary: [{ field: "ShipCountry", unique: 2 }],
+    date_summary: [{ field: "OrderDate", count: 3 }],
+  },
+});
+
+describe("dataset-aware chart selection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getChartOverview.mockResolvedValue(freightOverview());
+    getVariableSelection.mockResolvedValue({ ok: true, data: { target: "Sales", compare: ["Profit"] } });
+    getHistogram.mockResolvedValue(SUCCESS_RESPONSE("/freight.png"));
+    getBarCategory.mockResolvedValue(SUCCESS_RESPONSE("/countries.png"));
+    getScatter.mockResolvedValue(SUCCESS_RESPONSE("/scatter.png"));
+    getGroupedBoxplot.mockResolvedValue(SUCCESS_RESPONSE("/groups.png"));
+    getTimeLine.mockResolvedValue(SUCCESS_RESPONSE("/timeline.png"));
+  });
+
+  it("uses actual SQL fields and rejects stale Sales choices without a false source warning", async () => {
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    expect(await screen.findByLabelText("Target Variable")).toHaveValue("Freight");
+    expect(screen.getByLabelText("Compare Variable")).toHaveValue(["ShipCountry"]);
+    expect(screen.queryByRole("option", { name: "Sales" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Note: charts show data/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+    expect(await screen.findByAltText("Histogram visualization")).toBeInTheDocument();
+    expect(getHistogram).toHaveBeenCalledWith(expect.objectContaining({ targetVariable: "Freight" }));
+  });
+
+  it("clears charts and validates saved selection when switching datasets", async () => {
+    const { rerender } = render(<ChartsTab activeDatasetId="sales_sql" />);
+    await screen.findByLabelText("Target Variable");
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+    await screen.findByAltText("Histogram visualization");
+    const inventory = freightOverview("inventory");
+    inventory.data.assignment_analysis = {
+      target_variable: "Stock", target_options: ["Stock"], compare_options: ["Warehouse"],
+      field_types: { Stock: "numeric", Warehouse: "categorical" },
+    };
+    getChartOverview.mockResolvedValue(inventory);
+    getVariableSelection.mockResolvedValue({ ok: true, data: { target: "Freight", compare: ["ShipCountry"] } });
+    rerender(<ChartsTab activeDatasetId="inventory" />);
+    expect(screen.queryByAltText("Histogram visualization")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Target Variable")).toHaveValue("Stock");
+    expect(screen.getByLabelText("Compare Variable")).toHaveValue(["Warehouse"]);
+  });
+
+  it("does not render an in-flight image after variables change", async () => {
+    let finish;
+    getHistogram.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    await screen.findByLabelText("Target Variable");
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+    fireEvent.change(screen.getByLabelText("Compare Variable"), { target: { value: "OrderDate" } });
+    finish(SUCCESS_RESPONSE("/stale.png"));
+    await waitFor(() => expect(screen.queryByText("Loading chart...")).not.toBeInTheDocument());
+    expect(screen.queryByAltText("Histogram visualization")).not.toBeInTheDocument();
+  });
+
+  it("allows category counts without fabricating a numeric target", async () => {
+    const categories = freightOverview();
+    categories.data.assignment_analysis = {
+      target_variable: null, target_options: [], compare_options: ["ShipCountry"],
+      field_types: { ShipCountry: "categorical" },
+    };
+    categories.data.numeric_summary = [];
+    getChartOverview.mockResolvedValue(categories);
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    expect(await screen.findByLabelText("Target Variable")).toBeDisabled();
+    expect(screen.getByLabelText("Target Variable")).toHaveValue("");
+    expect(screen.getByRole("radio", { name: "Histogram" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Category Bar Chart" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Run Guided Relationship Analysis" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: "Category Bar Chart" }));
+    await screen.findByAltText("Category Bar Chart visualization");
+    expect(getBarCategory).toHaveBeenCalledWith(expect.objectContaining({ targetVariable: "", compareVariable: "ShipCountry" }));
+  });
+
+  it("enables time charts by date type, not an Order Date spelling", async () => {
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    await screen.findByLabelText("Target Variable");
+    expect(screen.getByRole("radio", { name: "Time-based Line Chart" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Compare Variable"), { target: { value: "OrderDate" } });
+    expect(screen.getByRole("radio", { name: "Time-based Line Chart" })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: "Scatter Plot" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Run Guided Relationship Analysis" }));
+    await screen.findByText(/Relationship charts generated:/);
+    expect(getScatter).not.toHaveBeenCalled();
+    expect(getTimeLine).toHaveBeenCalledWith(expect.objectContaining({ targetVariable: "Freight", compareVariable: "OrderDate" }));
+  });
+
+  it("retains usable guided results when another combination fails", async () => {
+    getScatter.mockResolvedValue({ ok: false, error: "No usable pairs" });
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    await screen.findByLabelText("Target Variable");
+    fireEvent.click(screen.getByRole("button", { name: "Run Guided Relationship Analysis" }));
+    expect(await screen.findByText("Relationship charts generated: 1")).toBeInTheDocument();
+    expect(screen.getByText(/Some charts could not be generated:/)).toBeInTheDocument();
+    expect(getGroupedBoxplot).toHaveBeenCalled();
+  });
+
+  it("blocks charts for an actual dataset identity mismatch", async () => {
+    getChartOverview.mockResolvedValue(freightOverview("other_dataset"));
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    await screen.findByLabelText("Target Variable");
+    expect(screen.getByText(/Note: charts show data/)).toBeInTheDocument();
+    for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
+  });
+
+  it("clears an old image when changing the numeric target", async () => {
+    const overview = freightOverview();
+    overview.data.assignment_analysis.target_options.push("Tax");
+    overview.data.assignment_analysis.compare_options.push("Tax");
+    overview.data.assignment_analysis.field_types.Tax = "numeric";
+    getChartOverview.mockResolvedValue(overview);
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    await screen.findByLabelText("Target Variable");
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+    await screen.findByAltText("Histogram visualization");
+    fireEvent.change(screen.getByLabelText("Target Variable"), { target: { value: "Tax" } });
+    expect(screen.queryByAltText("Histogram visualization")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Target Variable")).toHaveValue("Tax");
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+    await waitFor(() => expect(getHistogram).toHaveBeenLastCalledWith(expect.objectContaining({ targetVariable: "Tax" })));
+  });
+
+  it("enables Apply Changes for text and checkbox edits after rendering", async () => {
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    await screen.findByLabelText("Target Variable");
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+    await screen.findByAltText("Histogram visualization");
+    const apply = screen.getByRole("button", { name: "Apply Changes" });
+    expect(apply).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Chart Title"), { target: { value: "Freight analysis" } });
+    expect(apply).toBeEnabled();
+    fireEvent.click(apply);
+    await waitFor(() => expect(apply).toBeDisabled());
+    expect(getHistogram).toHaveBeenLastCalledWith(expect.objectContaining({
+      enhancements: expect.objectContaining({ title: "Freight analysis" }),
+    }));
+    fireEvent.click(screen.getByLabelText("Show Gridlines"));
+    expect(apply).toBeEnabled();
+  });
+
+  it("preserves main's axis controls and resets their range with Reset Zoom", async () => {
+    const overview = freightOverview();
+    overview.data.numeric_summary[0] = { field: "Freight", count: 3, min: 1, max: 20 };
+    getChartOverview.mockResolvedValue(overview);
+    render(<ChartsTab activeDatasetId="sales_sql" />);
+    await screen.findByLabelText("Target Variable");
+    fireEvent.click(screen.getByRole("radio", { name: "Histogram" }));
+    await screen.findByAltText("Histogram visualization");
+    const slider = screen.getByLabelText("X-axis Min Slider");
+    expect(slider).toHaveValue("1");
+    fireEvent.change(slider, { target: { value: "5" } });
+    expect(slider).toHaveValue("5");
+    fireEvent.click(screen.getByRole("button", { name: "Apply Changes" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Apply Changes" })).toBeDisabled());
+    expect(getHistogram).toHaveBeenLastCalledWith(expect.objectContaining({
+      enhancements: expect.objectContaining({ xMin: "5" }),
+    }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset Zoom" }));
+    await waitFor(() => expect(slider).toHaveValue("1"));
+    expect(getHistogram).toHaveBeenLastCalledWith(expect.objectContaining({
+      enhancements: expect.objectContaining({ xMin: "", xMax: "", zoomPreset: "full_range" }),
+    }));
+  });
+
+  it("disables charts until a dataset is loaded", () => {
+    render(<ChartsTab />);
+    for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
   });
 });

@@ -9,12 +9,6 @@ import {
 
 const anomalyModels = [
   {
-    key: "threshold",
-    name: "Threshold",
-    education: "Marks records as unusual when values are far from the normal range.",
-    recommendation: "Use when you want a simple first-pass anomaly check.",
-  },
-  {
     key: "zscore",
     name: "Z-Score",
     education: "Finds records with values far from the dataset average.",
@@ -35,12 +29,6 @@ const anomalyModels = [
 ];
 
 const ANOMALY_EXPLANATIONS = {
-  threshold: {
-    what: "Shows how many records were marked unusual by a threshold rule.",
-    time: "Time is not used. Records are compared across the dataset.",
-    comparison: "Each value is compared to a baseline range from dataset values.",
-    where: "The anomaly count and model summary are shown in this card.",
-  },
   zscore: {
     what: "Shows records with values far from the average value.",
     time: "Time is not used. Records are compared across the dataset.",
@@ -65,7 +53,6 @@ const MODEL_RUNNERS = {
   zscore: () => runZscoreAnomaly(),
   isolation_forest: () => runIsolationForestAnomaly(),
   kmeans: () => runKmeansAnomaly(),
-  threshold: () => runZscoreAnomaly(),
 };
 
 function formatAnomalyScore(value) {
@@ -75,10 +62,10 @@ function formatAnomalyScore(value) {
   return value.toFixed(4);
 }
 
-export default function AnomalyDetectionTab({ onAction, hasDataset }) {
+export default function AnomalyDetectionTab({ onAction, pipelineCompleted }) {
   const [selectedModels, setSelectedModels] = useState({});
   const [resultsByModel, setResultsByModel] = useState({});
-  const isBlocked = !hasDataset;
+  const isBlocked = !pipelineCompleted;
 
   const loadModelResults = async (modelKey) => {
     setResultsByModel((prev) => ({
@@ -139,7 +126,7 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
       [key]: shouldSelect,
     }));
 
-    if (shouldSelect && !resultsByModel[key]?.data) {
+    if (shouldSelect && !resultsByModel[key]?.data && !resultsByModel[key]?.loading) {
       loadModelResults(key);
     }
   };
@@ -147,6 +134,7 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
   return (
     <div>
       <h2>Anomaly Detection</h2>
+      <p>Models use the numeric target selected in Charts. Select a target there if your dataset has multiple numeric fields.</p>
 
       {isBlocked ? (
         <div
@@ -177,6 +165,7 @@ export default function AnomalyDetectionTab({ onAction, hasDataset }) {
               summary: `${summary.anomaly_count} records were flagged as unusual out of ${summary.total_records}.`,
               notes: state.data?.notes || "This result highlights records that differ from typical values.",
               datasetContext: state.data?.dataset_context || null,
+              dataQuality: state.data?.data_quality || null,
               explanation: ANOMALY_EXPLANATIONS[model.key] || ANOMALY_EXPLANATIONS.zscore,
             }
           : null;

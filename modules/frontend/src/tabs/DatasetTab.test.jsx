@@ -81,7 +81,7 @@ describe("DatasetTab", () => {
     expect(screen.getAllByText(/Source Name:/)).toHaveLength(2);
     expect(screen.getAllByText(/Source Location:/)).toHaveLength(2);
     expect(
-      screen.getAllByRole("link", { name: "https://www.kaggle.com/datasets/vivek468/superstore-dataset-final" }),
+      screen.getAllByText("https://www.kaggle.com/datasets/vivek468/superstore-dataset-final"),
     ).toHaveLength(2);
     expect(screen.getByText(/File:/)).toBeInTheDocument();
     expect(screen.getByText(/records_ingested/)).toBeInTheDocument();
@@ -307,4 +307,22 @@ describe("DatasetTab", () => {
     expect(screen.getByText("SQL Server is ready")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
   });
+});
+
+
+it("invalidates analysis at run start and tags completion with the same run version", async () => {
+  let finish;
+  triggerPipeline.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const onPipelineStart = vi.fn(() => 42);
+  const onPipelineComplete = vi.fn();
+  const onAction = vi.fn();
+  render(<DatasetTab onPipelineStart={onPipelineStart} onPipelineComplete={onPipelineComplete} onAction={onAction} />);
+  fireEvent.change(screen.getByLabelText("Dataset"), { target: { value: "sales_csv" } });
+  fireEvent.click(screen.getByRole("button", { name: "Run" }));
+  expect(onPipelineStart).toHaveBeenCalledWith("sales_csv");
+  expect(screen.getByLabelText("Dataset")).toBeDisabled();
+  finish({ ok: true, data: { records_ingested: 3 } });
+  await screen.findByText(/Dataset run triggered successfully/);
+  expect(onPipelineComplete).toHaveBeenCalledWith({ records_ingested: 3 }, 42);
+  expect(onAction).toHaveBeenCalledWith(42);
 });

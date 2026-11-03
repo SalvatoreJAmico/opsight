@@ -61,6 +61,12 @@ export default function ModelCard({
                 <p style={{ margin: 0 }}>
                   <strong>What it means:</strong> {result.notes}
                 </p>
+                {result.dataQuality ? (
+                  <p style={{ margin: "0.35rem 0" }}>
+                    <strong>Rows used:</strong> {result.dataQuality.usable_records} of {result.dataQuality.input_records}.
+                    {" "}{result.dataQuality.excluded_records} rows excluded because the selected value was missing or non-finite.
+                  </p>
+                ) : null}
                 {explanation ? (
                   <div
                     style={{

@@ -20,13 +20,13 @@ const predictionModels = [
 const PREDICTION_EXPLANATIONS = {
   linear_regression: {
     what: "Shows estimated future values based on the trend in earlier values.",
-    time: "Time is used. Values are ordered by timestamp before projecting forward.",
+    time: "Values are ordered by timestamp. Forecast steps represent successive records, not fixed calendar intervals.",
     comparison: "Compares how value changes over time, then extends that trend.",
     where: "This card summarizes returned predictions; predicted rows appear in the model output payload.",
   },
   moving_average: {
     what: "Shows estimated future values based on recent value history.",
-    time: "Time is used. Values are ordered by timestamp before averaging recent points.",
+    time: "Values are ordered by timestamp before averaging recent records. Forecast steps are not fixed calendar intervals.",
     comparison: "Compares each new step to prior recent values over time.",
     where: "This card summarizes returned predictions; predicted rows appear in the model output payload.",
   },
@@ -83,7 +83,7 @@ export default function PredictionTab({ onAction, pipelineCompleted }) {
       [key]: shouldSelect,
     }));
 
-    if (shouldSelect && !resultsByModel[key]?.data) {
+    if (shouldSelect && !resultsByModel[key]?.data && !resultsByModel[key]?.loading) {
       loadModelResults(key);
     }
   };
@@ -91,6 +91,7 @@ export default function PredictionTab({ onAction, pipelineCompleted }) {
   return (
     <div>
       <h2>Prediction</h2>
+      <p>Models use the numeric target selected in Charts. Select a target there if your dataset has multiple numeric fields.</p>
 
       {isBlocked ? (
         <div
@@ -116,6 +117,7 @@ export default function PredictionTab({ onAction, pipelineCompleted }) {
           summary: `Returned ${predictionRows.length} rows, including ${futureRows.length} future estimates.`,
           notes: "Future estimates are labeled with timestamps like t+1, t+2, and so on.",
           datasetContext: state.data?.dataset_context || null,
+              dataQuality: state.data?.data_quality || null,
           explanation: PREDICTION_EXPLANATIONS[model.key],
         } : null;
 

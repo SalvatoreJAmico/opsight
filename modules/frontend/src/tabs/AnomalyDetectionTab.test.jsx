@@ -19,7 +19,7 @@ describe("AnomalyDetectionTab", () => {
   });
 
   it("shows a blocked message and disables model actions when no dataset is loaded", () => {
-    render(<AnomalyDetectionTab hasDataset={false} />);
+    render(<AnomalyDetectionTab pipelineCompleted={false} />);
 
     expect(screen.getByText("You must run a dataset first")).toBeInTheDocument();
 
@@ -32,7 +32,7 @@ describe("AnomalyDetectionTab", () => {
     expect(runZscoreAnomaly).not.toHaveBeenCalled();
   });
 
-  it("enables anomaly execution when a dataset is loaded", async () => {
+  it("enables anomaly execution after the pipeline completes", async () => {
     runZscoreAnomaly.mockResolvedValue({
       ok: true,
       data: {
@@ -40,7 +40,7 @@ describe("AnomalyDetectionTab", () => {
       },
     });
 
-    render(<AnomalyDetectionTab hasDataset />);
+    render(<AnomalyDetectionTab pipelineCompleted />);
 
     fireEvent.click(screen.getByLabelText("Z-Score"));
 
@@ -61,7 +61,7 @@ describe("AnomalyDetectionTab", () => {
       },
     });
 
-    render(<AnomalyDetectionTab hasDataset />);
+    render(<AnomalyDetectionTab pipelineCompleted />);
 
     fireEvent.click(screen.getByLabelText("K-Means"));
 
@@ -90,7 +90,7 @@ describe("AnomalyDetectionTab", () => {
       },
     });
 
-    render(<AnomalyDetectionTab hasDataset />);
+    render(<AnomalyDetectionTab pipelineCompleted />);
 
     fireEvent.click(screen.getByLabelText("Isolation Forest"));
 
@@ -107,4 +107,23 @@ describe("AnomalyDetectionTab", () => {
     expect(screen.getByText("1023")).toBeInTheDocument();
     expect(screen.getByText("-0.7235")).toBeInTheDocument();
   });
+});
+
+
+it("does not advertise a duplicate Threshold algorithm", () => {
+  render(<AnomalyDetectionTab pipelineCompleted />);
+  expect(screen.queryByLabelText("Threshold")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+});
+
+it("shows the actual target field and actionable API selection errors", async () => {
+  runZscoreAnomaly.mockResolvedValueOnce({ ok: false, error: "Choose a numeric target in Charts before running ML." });
+  render(<AnomalyDetectionTab pipelineCompleted />);
+  fireEvent.click(screen.getByLabelText("Z-Score"));
+  expect(await screen.findByText("Choose a numeric target in Charts before running ML.")).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText("Z-Score"));
+  runZscoreAnomaly.mockResolvedValueOnce({ ok: true, data: { summary: { total_records: 5, anomaly_count: 1 }, dataset_context: { value: "Freight" }, data_quality: { input_records: 7, usable_records: 5, excluded_records: 2 } } });
+  fireEvent.click(screen.getByLabelText("Z-Score"));
+  expect(await screen.findByText("Freight")).toBeInTheDocument();
+  expect(screen.getByText(/2 rows excluded because/)).toBeInTheDocument();
 });

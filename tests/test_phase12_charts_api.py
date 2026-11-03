@@ -147,8 +147,8 @@ def test_chart_endpoints_return_500_with_error_detail_on_plotting_failure(monkey
 
 def test_chart_endpoints_return_422_for_malformed_data(monkeypatch):
     malformed_df = pd.DataFrame([
-        {"entity_id": "A", "unexpected": 1},
-        {"entity_id": "B", "unexpected": 2},
+        {"entity_id": "A", "unexpected": "one"},
+        {"entity_id": "B", "unexpected": "two"},
     ])
 
     monkeypatch.setattr(api_app_module, "get_chart_dataframe", lambda: malformed_df)

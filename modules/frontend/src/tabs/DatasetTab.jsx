@@ -60,7 +60,7 @@ function formatSqlUserMessage(message, isCloudTarget) {
   return message || "Database connection failed. Please try again.";
 }
 
-export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChange }) {
+export default function DatasetTab({ onPipelineComplete, onPipelineStart, onAction, onDatasetChange }) {
   const [targetEnvironment, setTargetEnvironment] = useState(isDev ? "local" : "cloud");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -163,6 +163,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
       return;
     }
 
+    const runVersion = onPipelineStart?.(activeDataset);
     setLoading(true);
     setError("");
     setSuccessMessage("");
@@ -192,7 +193,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
       } else {
         setError(response.error || "Pipeline trigger failed.");
       }
-      onAction?.();
+      onAction?.(runVersion);
       return;
     }
 
@@ -201,9 +202,9 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
     setSuccessMessage(`Dataset run triggered successfully on ${destinationLabel}${datasetLabelSuffix}.`);
     setResult(response.data);
     if (onPipelineComplete) {
-      onPipelineComplete(response.data);
+      onPipelineComplete(response.data, runVersion);
     }
-    onAction?.();
+    onAction?.(runVersion);
   }
 
   return (
@@ -278,7 +279,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
             color: "#f9fafb",
           }}
           value={activeDataset || ""}
-          disabled={isSqlStartInFlight}
+          disabled={loading || isSqlStartInFlight}
           onChange={(e) => {
             const nextDataset = e.target.value || null;
             const hasChanged = nextDataset !== activeDataset;
@@ -343,7 +344,7 @@ export default function DatasetTab({ onPipelineComplete, onAction, onDatasetChan
             <button
               type="button"
               onClick={handleStartSqlServer}
-              disabled={isSqlStartInFlight}
+              disabled={loading || isSqlStartInFlight}
               style={{
                 display: "block",
                 margin: "0 auto",

@@ -1,13 +1,14 @@
 import pandas as pd
+from pandas.api.types import is_scalar
 
 
-def _is_missing(value) -> bool:
-    if value is None:
-        return True
-    try:
-        return bool(pd.isna(value))
-    except Exception:
-        return False
+def _is_missing_scalar(value):
+    """Recognize scalar nulls without testing containers for truthiness.
+
+    pandas string/datetime columns may expose NaN, NA, or NaT rather
+    than None. Container validation remains the caller's responsibility.
+    """
+    return is_scalar(value) and bool(pd.isna(value))
 
 
 def validate_canonical_record(record):
@@ -22,22 +23,22 @@ def validate_canonical_record(record):
         "errors": [],
     }
 
-    if _is_missing(record.get("entity_id")):
+    if _is_missing_scalar(record.get("entity_id")):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Missing entity_id")
 
-    if _is_missing(record.get("timestamp")):
+    if _is_missing_scalar(record.get("timestamp")):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Missing timestamp")
 
-    if _is_missing(record.get("features")):
+    if _is_missing_scalar(record.get("features")):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Missing features")
     elif not isinstance(record.get("features"), dict):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Features must be a dictionary")
 
-    if _is_missing(record.get("metadata")):
+    if _is_missing_scalar(record.get("metadata")):
         validation_report["status"] = "invalid"
         validation_report["errors"].append("Missing metadata")
 

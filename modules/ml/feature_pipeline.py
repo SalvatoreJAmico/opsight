@@ -1,4 +1,5 @@
-from typing import Any, Dict, List
+import math
+from typing import Any
 from modules.ml.schemas import FeatureRecord, DatasetBuildResult
 
 def build_feature_dataset(records):
@@ -34,8 +35,9 @@ def _coerce_float(value: Any) -> float | None:
     if value is None or value == "":
         return None
     try:
-        return float(value)
-    except (TypeError, ValueError):
+        number = float(value)
+        return number if math.isfinite(number) else None
+    except (TypeError, ValueError, OverflowError):
         return None
 
 
@@ -44,5 +46,5 @@ def _coerce_int(value: Any) -> int | None:
         return None
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None

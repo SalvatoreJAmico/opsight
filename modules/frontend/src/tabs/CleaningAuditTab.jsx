@@ -26,37 +26,31 @@ function toRows(beforeValues = {}, afterValues = {}) {
 export default function CleaningAuditTab({ activeDatasetId = null }) {
   const isDev = import.meta.env.DEV;
   const [target, setTarget] = useState(isDev ? "local" : "cloud");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [audit, setAudit] = useState(null);
+  const [response, setResponse] = useState(null);
+  const requestKey = `${activeDatasetId}:${target}`;
+  const current = response?.key === requestKey ? response : null;
+  const loading = Boolean(activeDatasetId) && !current;
+  const error = current?.error || "";
+  const audit = current?.audit || null;
 
   useEffect(() => {
     if (!activeDatasetId) {
-      setAudit(null);
-      setError("");
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
-    setError("");
 
     const baseUrl = resolveBaseUrl(target);
     getCleaningAudit({ baseUrl }).then((result) => {
       if (cancelled) return;
-      setLoading(false);
-      if (result.ok) {
-        setAudit(result.data);
-      } else {
-        setError(result.error || "Failed to load cleaning audit.");
-        setAudit(null);
-      }
+      setResponse({ key: requestKey, audit: result.ok ? result.data : null,
+        error: result.ok ? "" : result.error || "Failed to load cleaning audit." });
     });
 
     return () => {
       cancelled = true;
     };
-  }, [activeDatasetId, target]);
+  }, [activeDatasetId, target, requestKey]);
 
   const missingRows = useMemo(() => {
     return toRows(audit?.missing_by_column?.before || {}, audit?.missing_by_column?.after || {});

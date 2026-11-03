@@ -1,0 +1,13 @@
+test_does_not_overwrite_existing_output (tests.test_portfolio_example.TestPortfolioExample.test_does_not_overwrite_existing_output) ... ok
+test_repeated_runs_have_same_functional_results (tests.test_portfolio_example.TestPortfolioExample.test_repeated_runs_have_same_functional_results) ... ok
+test_validation_persistence_and_anomaly_output (tests.test_portfolio_example.TestPortfolioExample.test_validation_persistence_and_anomaly_output) ... ok
+test_duplicate_record_detection_works (tests.test_validation.TestValidationLayer.test_duplicate_record_detection_works) ... ok
+test_features_not_dict_fails (tests.test_validation.TestValidationLayer.test_features_not_dict_fails) ... ok
+test_missing_entity_id_fails (tests.test_validation.TestValidationLayer.test_missing_entity_id_fails) ... ok
+test_missing_timestamp_fails (tests.test_validation.TestValidationLayer.test_missing_timestamp_fails) ... ok
+test_valid_record_passes (tests.test_validation.TestValidationLayer.test_valid_record_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.004s
+
+OK

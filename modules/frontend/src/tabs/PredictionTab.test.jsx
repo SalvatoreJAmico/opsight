@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import PredictionTab from "./PredictionTab";
-import { runMovingAveragePrediction, runRegressionPrediction } from "../api/client";
+import { runRegressionPrediction } from "../api/client";
 
 vi.mock("../api/client", () => ({
   runRegressionPrediction: vi.fn(),

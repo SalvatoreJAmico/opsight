@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import App from "./App";
 
 const clientMocks = vi.hoisted(() => ({
@@ -15,10 +15,11 @@ vi.mock("./api/client", () => ({
 }));
 
 vi.mock("./tabs/DatasetTab", () => ({
-  default: function MockDatasetTab({ onPipelineComplete, onAction, onDatasetChange }) {
+  default: function MockDatasetTab({ onPipelineComplete, onPipelineStart, onAction, onDatasetChange }) {
     return (
       <div>
         <h2>Dataset</h2>
+        <button onClick={() => onPipelineStart?.("sales_csv")}>Start Sales Run</button>
         <button type="button" onClick={() => onPipelineComplete({ records_ingested: 11, records_valid: 10, records_invalid: 1, records_persisted: 10 })}>
           Seed Sales Metrics
         </button>
@@ -49,8 +50,11 @@ vi.mock("./tabs/CleaningAuditTab", () => ({
 }));
 
 vi.mock("./tabs/AnomalyDetectionTab", () => ({
-  default: function MockAnomalyDetectionTab() {
-    return <div>Anomaly Detection</div>;
+  default: function MockAnomalyDetectionTab({ pipelineCompleted, onAction }) {
+    const [result, setResult] = React.useState(false);
+    return <div><button disabled={!pipelineCompleted} onClick={() => setResult(true)}>Run anomaly</button>
+      <button onClick={onAction}>Refresh analysis state</button>
+      {result && <p>Old anomaly result</p>}</div>;
   },
 }));
 
@@ -215,5 +219,69 @@ describe("App dataset switching", () => {
     fireEvent.click(screen.getByRole("button", { name: "Metrics" }));
     expect(screen.getByText("No data yet. Run the pipeline from the Dataset tab.")).toBeInTheDocument();
     expect(screen.queryByText("11")).not.toBeInTheDocument();
+  });
+});
+
+describe("App analysis safety", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clientMocks.getHealth.mockResolvedValue({ ok: true, data: {} });
+  });
+
+  it("restores completed run metrics from the session after reload", async () => {
+    clientMocks.getSessionState.mockResolvedValue({ ok: true, data: {
+      active_dataset: "sales_csv", pipeline_status: "completed", pipeline_run_id: "run-1",
+      pipeline_summary: { records_ingested: 17, records_valid: 16, records_invalid: 1, records_persisted: 16 },
+    } });
+    render(<App />);
+    await screen.findByText("Pipeline completed successfully");
+    fireEvent.click(screen.getByRole("button", { name: "Metrics" }));
+    expect(screen.getByText("17")).toBeInTheDocument();
+  });
+
+  it.each(["not_run", "running", "failed"])("blocks anomaly for a selected dataset with %s status", async (status) => {
+    clientMocks.getSessionState.mockResolvedValue({ ok: true, data: { active_dataset: "sales_csv", pipeline_status: status } });
+    render(<App />);
+    await waitFor(() => expect(clientMocks.getSessionState).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "Anomaly Detection" }));
+    expect(screen.getByRole("button", { name: "Run anomaly" })).toBeDisabled();
+  });
+
+  it("blocks anomaly immediately when rerunning the same dataset", async () => {
+    clientMocks.getSessionState.mockResolvedValue({ ok: true, data: { active_dataset: "sales_csv", pipeline_status: "completed" } });
+    render(<App />);
+    await screen.findByText("Pipeline completed successfully");
+    fireEvent.click(screen.getByRole("button", { name: "Start Sales Run" }));
+    fireEvent.click(screen.getByRole("button", { name: "Anomaly Detection" }));
+    expect(screen.getByRole("button", { name: "Run anomaly" })).toBeDisabled();
+  });
+
+  it.each([
+    { pipeline_run_id: "run-2" },
+    { selected_variables: { target: "Profit" } },
+    { active_dataset: "customers_json" },
+    { pipeline_status: "failed" },
+  ])("clears model results after session identity changes: %j", async (change) => {
+    let session = { active_dataset: "sales_csv", pipeline_status: "completed", pipeline_run_id: "run-1", selected_variables: { target: "Sales" } };
+    clientMocks.getSessionState.mockImplementation(async () => ({ ok: true, data: session }));
+    render(<App />);
+    await screen.findByText("Pipeline completed successfully");
+    fireEvent.click(screen.getByRole("button", { name: "Anomaly Detection" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run anomaly" }));
+    expect(screen.getByText("Old anomaly result")).toBeInTheDocument();
+    session = { ...session, ...change };
+    fireEvent.click(screen.getByRole("button", { name: "Refresh analysis state" }));
+    await waitFor(() => expect(screen.queryByText("Old anomaly result")).not.toBeInTheDocument());
+  });
+
+  it("ignores a stale initial session response after a dataset selection", async () => {
+    let resolveSession;
+    clientMocks.getSessionState.mockImplementation(() => new Promise(resolve => { resolveSession = resolve; }));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Switch To Customers" }));
+    await act(async () => resolveSession({ ok: true, data: { active_dataset: "sales_csv", pipeline_status: "completed" } }));
+    expect(screen.getByText("Dataset loaded: customers_json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Anomaly Detection" }));
+    expect(screen.getByRole("button", { name: "Run anomaly" })).toBeDisabled();
   });
 });

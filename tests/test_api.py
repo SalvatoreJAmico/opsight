@@ -410,6 +410,8 @@ class TestApiLayer(unittest.TestCase):
                 "active_dataset": "transactions_json",
                 "dataset_source_metadata": None,
                 "pipeline_status": "running",
+                "pipeline_run_id": session_state.get_session_state()["pipeline_run_id"],
+                "pipeline_summary": None,
                 "anomaly_status": "completed",
                 "prediction_status": "running",
                 "selected_variables": {"target": None, "compare": []},
@@ -513,6 +515,8 @@ class TestApiLayer(unittest.TestCase):
                 "active_dataset": None,
                 "dataset_source_metadata": None,
                 "pipeline_status": "not_run",
+                "pipeline_run_id": None,
+                "pipeline_summary": None,
                 "anomaly_status": "idle",
                 "prediction_status": "idle",
                 "selected_variables": {"target": None, "compare": []},
@@ -635,6 +639,7 @@ class TestApiLayer(unittest.TestCase):
             )
 
             session_state.set_active_dataset("sales_csv")
+            session_state.set_pipeline_status("completed")
             session_state.set_dataset_source_metadata(
                 {
                     "dataset_id": "sales_csv",
@@ -659,7 +664,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(body["assignment_analysis"]["target_variable"], "Sales")
         self.assertEqual(
             body["assignment_analysis"]["compare_options"],
-            ["Profit", "Category", "Order Date"],
+            ["Sales", "Profit", "Category", "Order Date"],
         )
 
         numeric_fields = {item["field"] for item in body["numeric_summary"]}

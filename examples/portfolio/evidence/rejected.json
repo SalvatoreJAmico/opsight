@@ -1,0 +1,42 @@
+[
+  {
+    "record_index": 11,
+    "record": {
+      "timestamp": "2026-01-01T01:00:00Z",
+      "features": {
+        "amount": 10
+      },
+      "metadata": {}
+    },
+    "errors": [
+      "Missing entity_id"
+    ]
+  },
+  {
+    "record_index": 12,
+    "record": {
+      "entity_id": "invalid-timestamp",
+      "features": {
+        "amount": 10
+      },
+      "metadata": {}
+    },
+    "errors": [
+      "Missing timestamp"
+    ]
+  },
+  {
+    "record_index": 13,
+    "record": {
+      "entity_id": "invalid-features",
+      "timestamp": "2026-01-01T01:02:00Z",
+      "features": [
+        "not a mapping"
+      ],
+      "metadata": {}
+    },
+    "errors": [
+      "Features must be a dictionary"
+    ]
+  }
+]

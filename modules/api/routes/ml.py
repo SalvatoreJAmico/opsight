@@ -1,12 +1,14 @@
 import math
-from fastapi import APIRouter, HTTPException
+import pandas as pd
+from fastapi import APIRouter, HTTPException, Query
+from modules.api.chart_schema import schema_for
 from modules.ml.anomaly_kmeans import KMeansAnomalyModel
 from modules.ml.anomaly_isolation import IsolationForestModel
 from modules.ml.anomaly_zscore import ZScoreAnomalyModel
 from modules.ml.feature_pipeline import build_feature_dataset
 from modules.ml.prediction_moving_average import MovingAverageModel
 from modules.ml.prediction_regression import LinearRegressionModel
-from modules.api.session_state import set_anomaly_status, set_prediction_status
+from modules.api.session_state import get_session_state, set_anomaly_status, set_prediction_status
 from modules.config.storage_config import StorageConfig
 from modules.persistence.local_storage import LocalStorage
 
@@ -14,13 +16,13 @@ router = APIRouter(prefix="/ml", tags=["ml"])
 
 
 def _is_valid_number(value) -> bool:
-    """Check if value is a valid number (not None and not NaN)."""
-    if value is None:
+    """Only finite measurements are usable; booleans are not measurements."""
+    if value is None or isinstance(value, bool):
         return False
     try:
         float_val = float(value)
-        return not math.isnan(float_val)
-    except (TypeError, ValueError):
+        return math.isfinite(float_val)
+    except (TypeError, ValueError, OverflowError):
         return False
 
 
@@ -39,22 +41,8 @@ def _sanitize_for_json(obj):
 
 
 def _clean_records_for_ml(records: list) -> list:
-    """Clean records by removing rows with NaN values."""
-    cleaned = []
-    valid_values = []
-    
-    # First pass: collect all valid numeric values
-    for record in records:
-        value = record.get("value")
-        if value is not None:
-            try:
-                float_val = float(value)
-                if not math.isnan(float_val):
-                    valid_values.append(record)
-            except (TypeError, ValueError):
-                pass
-    
-    return valid_values if valid_values else records
+    """Drop missing/nonfinite measurements without substituting another field."""
+    return [record for record in records if _is_valid_number(record.get("value"))]
 
 
 def _extract_key_feature_values(features: dict) -> dict:
@@ -97,46 +85,74 @@ def _build_isolation_forest_anomaly_sample(records: list, predictions: list, lim
 
 
 def _load_ml_records() -> list:
-    """Load persisted canonical records and flatten them for model consumption."""
+    """Load one selected numeric field consistently across all persisted rows."""
+    state = get_session_state()
+    status = state.get("pipeline_status")
+    if status in {"running", "failed"} or (state.get("active_dataset") and status != "completed"):
+        raise HTTPException(
+            status_code=422,
+            detail="The selected dataset has not completed processing. Run it successfully before running models.",
+        )
+
     config = StorageConfig()
     storage = LocalStorage(storage_path=config.storage_path)
     records = storage.load_records()
-
     if not records:
-        raise HTTPException(
-            status_code=422,
-            detail="No dataset loaded. Select and run a dataset first.",
-        )
+        raise HTTPException(status_code=422, detail="No dataset loaded. Select and run a dataset first.")
 
+    features_df = pd.DataFrame([record.get("features") or {} for record in records])
+    fields, types = schema_for(features_df)
+    choices = [label for label, column in fields.items()
+               if types[label] == "numeric" and any(_is_valid_number(value) for value in features_df[column])]
+    target = (state.get("selected_variables") or {}).get("target")
+    if target:
+        if target not in fields:
+            raise HTTPException(status_code=422, detail=f"Target variable '{target}' is not available. Choose a numeric target in Charts.")
+        if target not in choices:
+            raise HTTPException(status_code=422, detail=f"Target variable '{target}' has no usable finite numeric values. Choose a numeric target in Charts.")
+    elif "Sales" in choices:
+        # Match the established sales-dashboard default, and report the real field.
+        target = "Sales"
+    elif len(choices) == 1:
+        target = choices[0]
+    elif not choices:
+        raise HTTPException(status_code=422, detail="No usable finite numeric values are available for analysis.")
+    else:
+        raise HTTPException(status_code=422, detail="Choose a numeric target in Charts before running a model. Available fields: " + ", ".join(choices))
+
+    column = fields[target]
     flat = []
-    for i, r in enumerate(records):
-        features = r.get("features", {})
-        # Map the first numeric feature to ``value``
-        value = None
-        for v in features.values():
-            if _is_valid_number(v):
-                value = float(v)
-                break
+    for i, record in enumerate(records):
+        features = record.get("features") or {}
+        value = features.get(column)
+        if not _is_valid_number(value):
+            continue
         flat.append({
             "row_id": i,
-            "entity_id": str(r.get("entity_id", i)),
-            "timestamp": str(r.get("timestamp", i)),
-            "value": value,
+            "entity_id": str(record.get("entity_id", i)),
+            "timestamp": str(record.get("timestamp", "")),
+            "value": float(value),
             "features": features,
+            "value_field": target,
+            "input_records": len(records),
         })
-
-    # Clean records to remove NaN values before model processing
-    return _clean_records_for_ml(flat)
+    if not flat:
+        raise HTTPException(status_code=422, detail="No usable finite numeric values are available for analysis.")
+    return flat
 
 
 def _get_ml_dataset_context(records: list) -> dict:
-    """Return role-based field context for ML endpoints."""
-    value_field = "value" if records else None
+    """Return the actual selected field rather than a misleading generic value."""
     return {
         "identifier": "entity_id",
         "time": "timestamp",
-        "value": value_field,
+        "value": records[0].get("value_field", "value") if records else None,
     }
+
+
+def _get_data_quality(records: list) -> dict:
+    total = records[0].get("input_records", len(records)) if records else 0
+    return {"input_records": total, "usable_records": len(records), "excluded_records": total - len(records)}
 
 
 @router.get("/anomaly/zscore")
@@ -156,6 +172,7 @@ def run_zscore_anomaly():
             "result": [p.model_dump() for p in predictions],
             "summary": summary.model_dump(),
             "dataset_context": dataset_context,
+            "data_quality": _get_data_quality(records),
         }
         return _sanitize_for_json(response)
     except Exception:
@@ -182,6 +199,7 @@ def run_isolation_forest():
             "summary": summary.model_dump(),
             "anomaly_sample_top10": anomaly_sample_top10,
             "dataset_context": dataset_context,
+            "data_quality": _get_data_quality(records),
         }
         return _sanitize_for_json(response)
     except Exception:
@@ -209,6 +227,7 @@ def run_kmeans_anomaly():
             "notes": "K-Means clustering using distance from centroid.",
             "result": [p.model_dump() for p in summary.records],
             "dataset_context": dataset_context,
+            "data_quality": _get_data_quality(records),
         }
         return _sanitize_for_json(response)
     except Exception:
@@ -217,7 +236,7 @@ def run_kmeans_anomaly():
 
 
 @router.get("/prediction/regression")
-def run_linear_regression(steps_ahead: int = 5):
+def run_linear_regression(steps_ahead: int = Query(default=5, ge=1, le=365)):
     set_prediction_status("running")
     try:
         records = _load_ml_records()
@@ -231,15 +250,19 @@ def run_linear_regression(steps_ahead: int = 5):
         response = {
             "result": [p.model_dump() for p in predictions],
             "dataset_context": dataset_context,
+            "data_quality": _get_data_quality(records),
         }
         return _sanitize_for_json(response)
+    except ValueError as exc:
+        set_prediction_status("idle")
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception:
         set_prediction_status("idle")
         raise
 
 
 @router.get("/prediction/moving-average")
-def run_moving_average(steps_ahead: int = 5):
+def run_moving_average(steps_ahead: int = Query(default=5, ge=1, le=365)):
     set_prediction_status("running")
     try:
         records = _load_ml_records()
@@ -253,8 +276,12 @@ def run_moving_average(steps_ahead: int = 5):
         response = {
             "result": [p.model_dump() for p in predictions],
             "dataset_context": dataset_context,
+            "data_quality": _get_data_quality(records),
         }
         return _sanitize_for_json(response)
+    except ValueError as exc:
+        set_prediction_status("idle")
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception:
         set_prediction_status("idle")
         raise

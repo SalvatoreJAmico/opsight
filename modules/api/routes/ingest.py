@@ -10,6 +10,7 @@ from modules.api.session_state import (
     set_dataset_source_metadata,
     set_active_dataset,
     set_pipeline_status,
+    set_pipeline_summary,
 )
 
 router = APIRouter()
@@ -92,10 +93,13 @@ def _build_dataset_source_metadata(dataset_id: str, dataset: dict) -> dict:
 @router.post("/data")
 async def ingest_data_endpoint(payload: dict, request: Request):
     await require_upload_access_code(request=request, payload=payload)
+    set_active_dataset(None)
+    set_dataset_source_metadata(None)
     set_pipeline_status("running")
     try:
         response = _run_pipeline_for_payload(payload)
         set_pipeline_status("completed")
+        set_pipeline_summary(response)
         return response
     except Exception:
         set_pipeline_status("failed")
@@ -150,6 +154,7 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
         response["dataset_source_name"] = source_metadata["source_name"]
         response["dataset_source_url"] = source_metadata["source_url"]
         response["dataset_source_location"] = source_metadata["source_location"]
+        set_pipeline_summary(response)
         return response
 
     if source_type == "sql":
@@ -190,6 +195,7 @@ async def trigger_pipeline_endpoint(payload: PipelineTriggerRequest, request: Re
         response["dataset_source_name"] = source_metadata["source_name"]
         response["dataset_source_url"] = source_metadata["source_url"]
         response["dataset_source_location"] = source_metadata["source_location"]
+        set_pipeline_summary(response)
         return response
 
     raise HTTPException(status_code=400, detail="Unsupported dataset source_type")

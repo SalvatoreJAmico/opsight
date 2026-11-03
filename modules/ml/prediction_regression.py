@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 
 from modules.ml.base import BaseModel
+from modules.ml.time_series import prepare_time_series, validate_horizon
 from modules.ml.schemas import FeatureRecord, PredictionRecord, PredictionResult
 
 
@@ -14,10 +15,8 @@ class LinearRegressionModel(BaseModel):
         self.is_fitted = False
 
     def fit(self, records: List[FeatureRecord]) -> None:
-        values = [r.value for r in records if r.value is not None]
-
-        if len(values) < 2:
-            return
+        records = prepare_time_series(records, minimum=2)
+        values = [r.value for r in records]
 
         X = np.arange(len(values)).reshape(-1, 1)  # simple time index
         y = np.array(values)
@@ -26,10 +25,12 @@ class LinearRegressionModel(BaseModel):
         self.is_fitted = True
 
     def predict(self, records: List[FeatureRecord], steps_ahead: int = 0) -> List[PredictionRecord]:
-        if not self.is_fitted:
-            self.fit(records)
+        validate_horizon(steps_ahead)
+        records = prepare_time_series(records, minimum=2)
+        # Fit the supplied series every time; never reuse a different dataset.
+        self.fit(records)
 
-        values = [r.value for r in records if r.value is not None]
+        values = [r.value for r in records]
         n = len(values)
 
         if n == 0:
@@ -55,7 +56,7 @@ class LinearRegressionModel(BaseModel):
             # Ensure prediction value is not NaN or Inf
             pred_value = predictions[i]
             if math.isnan(pred_value) or math.isinf(pred_value):
-                pred_value = 0.0
+                raise ValueError("Forecast could not be computed from these values.")
             else:
                 pred_value = round(float(pred_value), 4)
 

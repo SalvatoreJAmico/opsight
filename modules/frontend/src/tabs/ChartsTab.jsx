@@ -15,9 +15,6 @@ import {
 import { chartCatalog } from "../catalog/chartCatalog";
 import { resolveBaseUrl } from "../config/env";
 
-const DEFAULT_TARGET_VARIABLE = "Sales";
-const FALLBACK_TARGET_OPTIONS = [DEFAULT_TARGET_VARIABLE];
-const FALLBACK_COMPARE_OPTIONS = ["Profit", "Quantity", "Discount", "Category", "Order Date"];
 const CHART_COLOR_OPTIONS = [
   { label: "Blue", value: "#2563eb" },
   { label: "Green", value: "#16a34a" },
@@ -85,6 +82,10 @@ function normalizeFieldName(fieldName) {
     .replace(/\s+/g, " ");
 }
 
+function cacheBustImage(url) {
+  return `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
+}
+
 function downloadJson(filename, payload) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const objectUrl = URL.createObjectURL(blob);
@@ -107,125 +108,118 @@ export default function ChartsTab({ activeDatasetId = null }) {
   const [overview, setOverview] = useState(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState("");
-  const [targetVariable, setTargetVariable] = useState(DEFAULT_TARGET_VARIABLE);
-  const [compareVariables, setCompareVariables] = useState([FALLBACK_COMPARE_OPTIONS[0]]);
+  const [targetVariable, setTargetVariable] = useState("");
+  const [compareVariables, setCompareVariables] = useState([]);
   const [chartEnhancements, setChartEnhancements] = useState(DEFAULT_CHART_ENHANCEMENTS);
   const [chartMetadata, setChartMetadata] = useState({});
   const [relationshipRuns, setRelationshipRuns] = useState([]);
   const [relationshipLoading, setRelationshipLoading] = useState(false);
   const [relationshipError, setRelationshipError] = useState("");
-  const [defaultSettings, setDefaultSettings] = useState({
-    xMin: "",
-    xMax: "",
-    yMin: "",
-    yMax: "",
-    logScaleX: DEFAULT_CHART_ENHANCEMENTS.logScaleX,
-    logScaleY: DEFAULT_CHART_ENHANCEMENTS.logScaleY,
-    color: DEFAULT_CHART_ENHANCEMENTS.color,
-    clipMode: DEFAULT_CHART_ENHANCEMENTS.clipMode,
-    clipPercentile: DEFAULT_CHART_ENHANCEMENTS.clipPercentile,
-    clipMax: DEFAULT_CHART_ENHANCEMENTS.clipMax,
-    zoomPreset: DEFAULT_CHART_ENHANCEMENTS.zoomPreset,
-  });
-  const [axisSlider, setAxisSlider] = useState({
-    xMin: 0,
-    xMax: 0,
-    yMin: 0,
-    yMax: 0,
-  });
-  const selectionLoadedRef = useRef(false);
+  const [defaultSettings, setDefaultSettings] = useState(DEFAULT_CHART_ENHANCEMENTS);
+  const requestVersion = useRef(0);
+
+  // A chart belongs to a dataset AND a variable selection. Invalidate pending
+  // responses as well as rendered images whenever that context changes.
+  const clearCharts = () => {
+    requestVersion.current += 1;
+    setActiveChart("");
+    setChartEnhancements((prev) => ({ ...prev, xMin: "", xMax: "", yMin: "", yMax: "" }));
+    setDefaultSettings((prev) => ({ ...prev, xMin: "", xMax: "", yMin: "", yMax: "" }));
+    setChartImages({});
+    setChartMetadata({});
+    setRelationshipRuns([]);
+    setLoading(false);
+    setRelationshipLoading(false);
+    setError("");
+    setRelationshipError("");
+  };
 
   useEffect(() => {
-    if (!activeDatasetId) {
-      setOverview(null);
-      setOverviewError("");
-      selectionLoadedRef.current = false;
-      return;
-    }
-
     let cancelled = false;
-    setOverviewLoading(true);
+    // Reset the external dataset request context before starting its replacement.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    clearCharts();
+    setOverview(null);
+    setTargetVariable("");
+    setCompareVariables([]);
     setOverviewError("");
-
-    const baseUrl = resolveBaseUrl(target);
-    getChartOverview({ baseUrl }).then((result) => {
-      if (cancelled) return;
-      setOverviewLoading(false);
-      if (result.ok) {
-        setOverview(result.data);
-      } else {
-        setOverviewError(result.error || "Failed to load dataset overview.");
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeDatasetId, target]);
-
-  useEffect(() => {
+    setOverviewLoading(Boolean(activeDatasetId));
     if (!activeDatasetId) return;
 
-    let cancelled = false;
     const baseUrl = resolveBaseUrl(target);
-
-    getVariableSelection({ baseUrl }).then((result) => {
+    Promise.all([
+      getChartOverview({ baseUrl }),
+      getVariableSelection({ baseUrl }).catch(() => ({ ok: false })),
+    ]).then(([result, saved]) => {
       if (cancelled) return;
-      if (result.ok && result.data?.target) {
-        setTargetVariable(result.data.target);
-        setCompareVariables(
-          Array.isArray(result.data.compare) && result.data.compare.length > 0
-            ? result.data.compare
-            : [FALLBACK_COMPARE_OPTIONS[0]],
-        );
-        selectionLoadedRef.current = true;
+      setOverviewLoading(false);
+      if (!result.ok) {
+        setOverviewError(result.error || "Failed to load dataset overview.");
+        return;
       }
+      const data = result.data;
+      const analysis = data?.assignment_analysis || {};
+      const targets = analysis.target_options || (data?.numeric_summary || []).map((item) => item.field);
+      const comparisons = analysis.compare_options || data?.fields || [];
+      const savedSelection = saved.ok ? saved.data : null;
+      const nextTarget = targets.includes(savedSelection?.target)
+        ? savedSelection.target
+        : targets.includes(analysis.target_variable) ? analysis.target_variable : targets[0] || "";
+      const validComparisons = comparisons.filter((field) => field !== nextTarget);
+      const savedComparisons = Array.isArray(savedSelection?.compare)
+        ? savedSelection.compare.filter((field) => validComparisons.includes(field)) : [];
+      setOverview(data);
+      setTargetVariable(nextTarget);
+      setCompareVariables(savedComparisons.length ? [...new Set(savedComparisons)] : validComparisons.slice(0, 1));
+    }).catch((err) => {
+      if (cancelled) return;
+      setOverviewLoading(false);
+      setOverviewError(err.message || "Failed to load dataset overview.");
     });
-
     return () => {
       cancelled = true;
+      requestVersion.current += 1;
     };
   }, [activeDatasetId, target]);
 
-  useEffect(() => {
-    if (selectionLoadedRef.current) return;
-    const nextTarget = overview?.assignment_analysis?.target_variable || DEFAULT_TARGET_VARIABLE;
-    const nextCompareOptions = overview?.assignment_analysis?.compare_options || FALLBACK_COMPARE_OPTIONS;
+  const targetOptions = overview?.assignment_analysis?.target_options ||
+    (overview?.numeric_summary || []).map((item) => item.field);
+  const compareOptions = (overview?.assignment_analysis?.compare_options || overview?.fields || [])
+    .filter((field) => field !== targetVariable);
+  const compareVariable = compareVariables[0] || "";
+  const fieldTypes = {
+    ...Object.fromEntries((overview?.categorical_summary || []).map((item) => [normalizeFieldName(item.field), "categorical"])),
+    ...Object.fromEntries((overview?.numeric_summary || []).map((item) => [normalizeFieldName(item.field), "numeric"])),
+    ...Object.fromEntries((overview?.date_summary || []).map((item) => [normalizeFieldName(item.field), "date"])),
+    ...Object.fromEntries(Object.entries(overview?.field_types || overview?.assignment_analysis?.field_types || {})
+      .map(([field, type]) => [normalizeFieldName(field), type])),
+  };
+  const sourceMismatch = Boolean(overview?.source_metadata?.dataset_id && overview.source_metadata.dataset_id !== activeDatasetId);
+  const chartAvailability = (chartId, comparison = compareVariable) => {
+    if (!activeDatasetId || !overview || overviewLoading) return "Load a dataset to choose a chart.";
+    if (sourceMismatch) return "Run the selected dataset before generating charts.";
+    if (chartId !== "bar-category" && !targetOptions.includes(targetVariable)) return "Select a numeric target variable.";
+    if (["histogram", "boxplot"].includes(chartId)) return "";
+    if (!compareOptions.includes(comparison)) return "Select a compare variable.";
+    const type = fieldTypes[normalizeFieldName(comparison)];
+    if (chartId === "time-line" && type !== "date") return "Select a date compare variable for a time-based chart.";
+    if (chartId === "scatter" && type === "date") return "Use a time-based line chart for a date comparison.";
+    return "";
+  };
 
-    if (targetVariable !== nextTarget) {
-      setTargetVariable(nextTarget);
-    }
-
-    if (!nextCompareOptions.includes(compareVariables[0])) {
-      setCompareVariables([nextCompareOptions[0] || FALLBACK_COMPARE_OPTIONS[0]]);
-    }
-  }, [overview, targetVariable, compareVariables]);
-
-  const targetOptions = overview?.assignment_analysis?.target_options || FALLBACK_TARGET_OPTIONS;
-  const compareOptions = overview?.assignment_analysis?.compare_options || FALLBACK_COMPARE_OPTIONS;
-  const compareVariable = compareVariables[0] ?? FALLBACK_COMPARE_OPTIONS[0];
   const axisContext = useMemo(
     () => getAxisContext(activeChart, overview, targetVariable, compareVariable),
     [activeChart, overview, targetVariable, compareVariable],
   );
 
-  const currentSettings = useMemo(
-    () => ({
-      xMin: chartEnhancements.xMin || "",
-      xMax: chartEnhancements.xMax || "",
-      yMin: chartEnhancements.yMin || "",
-      yMax: chartEnhancements.yMax || "",
-      logScaleX: chartEnhancements.logScaleX,
-      logScaleY: chartEnhancements.logScaleY,
-      color: chartEnhancements.color,
-      clipMode: chartEnhancements.clipMode,
-      clipPercentile: chartEnhancements.clipPercentile,
-      clipMax: chartEnhancements.clipMax || "",
-      zoomPreset: chartEnhancements.zoomPreset,
-    }),
-    [chartEnhancements],
+  const hasPendingChanges = JSON.stringify(chartEnhancements) !== JSON.stringify(defaultSettings);
+  const axisSlider = Object.fromEntries(
+    ["xMin", "xMax", "yMin", "yMax"].map((key) => [
+      key, chartEnhancements[key] === ""
+        ? (axisContext[key[0]]?.[key.slice(1).toLowerCase()] ?? 0)
+        : Number(chartEnhancements[key]),
+    ]),
   );
-  const hasPendingChanges = JSON.stringify(currentSettings) !== JSON.stringify(defaultSettings);
 
   const buildEnhancementPayload = () => ({
     title: chartEnhancements.title,
@@ -248,49 +242,24 @@ export default function ChartsTab({ activeDatasetId = null }) {
     zoomPreset: chartEnhancements.zoomPreset,
   });
 
-  useEffect(() => {
-    const hasX = axisContext.x && Number.isFinite(axisContext.x.min) && Number.isFinite(axisContext.x.max);
-    const hasY = axisContext.y && Number.isFinite(axisContext.y.min) && Number.isFinite(axisContext.y.max);
-
-    setAxisSlider((prev) => ({
-      xMin: hasX ? axisContext.x.min : 0,
-      xMax: hasX ? axisContext.x.max : 0,
-      yMin: hasY ? axisContext.y.min : 0,
-      yMax: hasY ? axisContext.y.max : 0,
-    }));
-
-    setChartEnhancements((prev) => ({
-      ...prev,
-      xMin: "",
-      xMax: "",
-      yMin: "",
-      yMax: "",
-    }));
-
-    setDefaultSettings((prev) => ({
-      ...prev,
-      xMin: "",
-      xMax: "",
-      yMin: "",
-      yMax: "",
-    }));
-  }, [axisContext.x?.min, axisContext.x?.max, axisContext.y?.min, axisContext.y?.max]);
-
   const applyAxisChanges = async () => {
     if (!activeChart || !hasPendingChanges) {
       return;
     }
     await handleChartSelect(activeChart, chartEnhancements);
-    setDefaultSettings(currentSettings);
   };
 
   const handleTargetChange = (newTarget) => {
+    clearCharts();
     setTargetVariable(newTarget);
+    const nextCompare = compareVariables.filter((field) => field !== newTarget);
+    setCompareVariables(nextCompare);
     const baseUrl = resolveBaseUrl(target);
-    saveVariableSelection({ baseUrl, target: newTarget, compare: compareVariables });
+    saveVariableSelection({ baseUrl, target: newTarget, compare: nextCompare });
   };
 
   const handleCompareChange = (newCompareArr) => {
+    clearCharts();
     setCompareVariables(newCompareArr);
     const baseUrl = resolveBaseUrl(target);
     saveVariableSelection({ baseUrl, target: targetVariable, compare: newCompareArr });
@@ -450,13 +419,27 @@ export default function ChartsTab({ activeDatasetId = null }) {
   };
 
   const handleChartSelect = async (chartId, enhancementOverride = null) => {
+    if (chartAvailability(chartId)) return;
+    const version = ++requestVersion.current;
+    const applied = enhancementOverride || {
+      ...buildEnhancementPayload(),
+      ...(chartId !== activeChart ? { xMin: "", xMax: "", yMin: "", yMax: "" } : {}),
+    };
+    if (chartId !== activeChart) setChartEnhancements(applied);
     setError("");
+    setChartImages((prev) => ({ ...prev, [chartId]: null }));
     setActiveChart(chartId);
     setLoading(true);
     setChartImages({});
     setChartMetadata({});
 
-    const response = await loadChartById(chartId, enhancementOverride);
+    let response;
+    try {
+      response = await loadChartById(chartId, applied);
+    } catch (err) {
+      response = { ok: false, error: err.message };
+    }
+    if (version !== requestVersion.current) return;
 
     setLoading(false);
 
@@ -477,7 +460,7 @@ export default function ChartsTab({ activeDatasetId = null }) {
       return;
     }
 
-    const cacheBustedImageUrl = `${resolvedImageUrl}${resolvedImageUrl.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    const cacheBustedImageUrl = cacheBustImage(resolvedImageUrl);
 
     setChartImages((prev) => ({
       ...prev,
@@ -486,23 +469,10 @@ export default function ChartsTab({ activeDatasetId = null }) {
 
     setChartMetadata((prev) => ({
       ...prev,
-      [chartId]: response.data?.chart_metadata || { enhancements: enhancementOverride || buildEnhancementPayload() },
+      [chartId]: response.data?.chart_metadata || { enhancements: applied },
     }));
 
-    const applied = enhancementOverride || buildEnhancementPayload();
-    setDefaultSettings({
-      xMin: applied.xMin || "",
-      xMax: applied.xMax || "",
-      yMin: applied.yMin || "",
-      yMax: applied.yMax || "",
-      logScaleX: applied.logScaleX,
-      logScaleY: applied.logScaleY,
-      color: applied.color,
-      clipMode: applied.clipMode,
-      clipPercentile: applied.clipPercentile,
-      clipMax: applied.clipMax || "",
-      zoomPreset: applied.zoomPreset,
-    });
+    setDefaultSettings(applied);
   };
 
   const handleResetZoom = async () => {
@@ -536,59 +506,61 @@ export default function ChartsTab({ activeDatasetId = null }) {
   };
 
   const handleRunRelationshipAnalysis = async () => {
+    const version = requestVersion.current;
+    setRelationshipRuns([]);
     setRelationshipError("");
     setRelationshipLoading(true);
+    const failures = [];
 
     const relationshipChartIds = ["scatter", "grouped-boxplot"];
     const runEntries = [];
 
     for (const compareVariableCandidate of compareVariables) {
       const chartIdsForVariable = [...relationshipChartIds];
-      if (normalizeFieldName(compareVariableCandidate) === "order date") {
+      if (fieldTypes[normalizeFieldName(compareVariableCandidate)] === "date") {
         chartIdsForVariable.push("time-line");
       }
 
       for (const chartId of chartIdsForVariable) {
+        if (chartAvailability(chartId, compareVariableCandidate)) continue;
         const baseUrl = resolveBaseUrl(target);
         let response;
-        if (chartId === "scatter") {
-          response = await getScatter({
-            baseUrl,
-            targetVariable,
-            compareVariable: compareVariableCandidate,
-            enhancements: buildEnhancementPayload(),
-          });
-        } else if (chartId === "grouped-boxplot") {
-          response = await getGroupedBoxplot({
-            baseUrl,
-            targetVariable,
-            compareVariable: compareVariableCandidate,
-            enhancements: buildEnhancementPayload(),
-          });
-        } else {
-          response = await getTimeLine({
-            baseUrl,
-            targetVariable,
-            compareVariable: compareVariableCandidate,
-            enhancements: buildEnhancementPayload(),
-          });
-        }
+        try {
+          if (chartId === "scatter") {
+            response = await getScatter({
+              baseUrl,
+              targetVariable,
+              compareVariable: compareVariableCandidate,
+              enhancements: buildEnhancementPayload(),
+            });
+          } else if (chartId === "grouped-boxplot") {
+            response = await getGroupedBoxplot({
+              baseUrl,
+              targetVariable,
+              compareVariable: compareVariableCandidate,
+              enhancements: buildEnhancementPayload(),
+            });
+          } else {
+            response = await getTimeLine({
+              baseUrl,
+              targetVariable,
+              compareVariable: compareVariableCandidate,
+              enhancements: buildEnhancementPayload(),
+            });
+          }
 
+        } catch (err) {
+          response = { ok: false, error: err.message };
+        }
+        if (version !== requestVersion.current) return;
         if (!response.ok) {
-          setRelationshipLoading(false);
-          setRelationshipError(response.error || "Relationship analysis request failed.");
-          return;
+          failures.push(`${chartId} (${compareVariableCandidate}): ${response.error || "Chart request failed."}`);
+          continue;
         }
-
-        const resolvedImageUrl = resolveApiAssetUrl(
-          response.data?.image,
-          baseUrl,
-        );
-
+        const resolvedImageUrl = resolveApiAssetUrl(response.data?.image, baseUrl);
         if (!resolvedImageUrl) {
-          setRelationshipLoading(false);
-          setRelationshipError("Relationship analysis response did not include an image path.");
-          return;
+          failures.push(`${chartId} (${compareVariableCandidate}): No image returned.`);
+          continue;
         }
 
         const chartMeta = chartCatalog.find((chart) => chart.id === chartId);
@@ -598,12 +570,15 @@ export default function ChartsTab({ activeDatasetId = null }) {
           targetVariable,
           compareVariable: compareVariableCandidate,
           enhancementMetadata: response.data?.chart_metadata?.enhancements || buildEnhancementPayload(),
-          image: `${resolvedImageUrl}${resolvedImageUrl.includes("?") ? "&" : "?"}t=${Date.now()}`,
+          image: cacheBustImage(resolvedImageUrl),
           generatedAt: new Date().toISOString(),
         });
       }
     }
 
+    if (version !== requestVersion.current) return;
+    setRelationshipError(failures.length ? `Some charts could not be generated: ${failures.join(" ")}` :
+      runEntries.length ? "" : "No supported relationship charts for the selected variables.");
     setRelationshipRuns(runEntries);
     setRelationshipLoading(false);
   };
@@ -717,7 +692,7 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
         <p style={{ color: "#c00" }}>{overviewError}</p>
       ) : overview ? (
         <>
-          {activeDatasetId && overview.source && overview.source !== activeDatasetId && (
+          {sourceMismatch && (
             <p style={{ color: "#b8860b", fontWeight: 600, marginBottom: "0.5rem" }}>
               Note: charts show data from &ldquo;{overview.source}&rdquo;. Run the selected dataset to update.
             </p>
@@ -797,9 +772,10 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
                 <select
                   value={targetVariable}
                   onChange={(event) => handleTargetChange(event.target.value)}
-                  disabled={!activeDatasetId || overviewLoading}
+                  disabled={!activeDatasetId || overviewLoading || targetOptions.length === 0}
                   style={{ minWidth: "12rem", padding: "0.45rem" }}
                 >
+                  {targetOptions.length === 0 && <option value="">No numeric target available</option>}
                   {targetOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
@@ -961,10 +937,6 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
               onChange={(event) => {
                 const value = Number(event.target.value);
                 const nextXMin = Math.min(value, axisSlider.xMax - 0.0001);
-                setAxisSlider((prev) => ({
-                  ...prev,
-                  xMin: nextXMin,
-                }));
                 setChartEnhancements((prev) => ({ ...prev, xMin: String(nextXMin) }));
               }}
               style={{ width: "100%" }}
@@ -979,10 +951,6 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
               onChange={(event) => {
                 const value = Number(event.target.value);
                 const nextXMax = Math.max(value, axisSlider.xMin + 0.0001);
-                setAxisSlider((prev) => ({
-                  ...prev,
-                  xMax: nextXMax,
-                }));
                 setChartEnhancements((prev) => ({ ...prev, xMax: String(nextXMax) }));
               }}
               style={{ width: "100%" }}
@@ -1004,10 +972,6 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
               onChange={(event) => {
                 const value = Number(event.target.value);
                 const nextYMin = Math.min(value, axisSlider.yMax - 0.0001);
-                setAxisSlider((prev) => ({
-                  ...prev,
-                  yMin: nextYMin,
-                }));
                 setChartEnhancements((prev) => ({ ...prev, yMin: String(nextYMin) }));
               }}
               style={{ width: "100%" }}
@@ -1022,10 +986,6 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
               onChange={(event) => {
                 const value = Number(event.target.value);
                 const nextYMax = Math.max(value, axisSlider.yMin + 0.0001);
-                setAxisSlider((prev) => ({
-                  ...prev,
-                  yMax: nextYMax,
-                }));
                 setChartEnhancements((prev) => ({ ...prev, yMax: String(nextYMax) }));
               }}
               style={{ width: "100%" }}
@@ -1136,12 +1096,12 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
 
       <h3>Relationship Analysis Mode</h3>
       <p style={{ marginBottom: "0.5rem", opacity: 0.85 }}>
-        Run scatter, grouped box plot, and time-based line charts in sequence for each selected compare variable.
+        Run suitable scatter, grouped box plot, and time-based line charts for each selected compare variable. Unsupported combinations are skipped.
       </p>
       <button
         type="button"
         onClick={handleRunRelationshipAnalysis}
-        disabled={!activeDatasetId || overviewLoading || relationshipLoading || compareVariables.length === 0}
+        disabled={!overview || sourceMismatch || overviewLoading || relationshipLoading || loading || !targetVariable || compareVariables.length === 0}
         style={{
           marginBottom: "0.75rem",
           padding: "0.45rem 0.85rem",
@@ -1248,6 +1208,7 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
             <input
               type="radio"
               name="chart-selection"
+              disabled={Boolean(chartAvailability(chart.id)) || relationshipLoading}
               checked={activeChart === chart.id}
               onChange={() => handleChartSelect(chart.id)}
             />
@@ -1258,9 +1219,9 @@ const getChartContextEntries = (chartId, targetVariable, compareVariable) => {
           <p><em>{chart.whenToUse}</em></p>
           <p>
             Recommended for current dataset:{" "}
-            <strong>{chart.recommended ? "Yes" : "No"}</strong>
+            <strong>{chartAvailability(chart.id) ? "No" : "Yes"}</strong>
           </p>
-          <p style={{ opacity: 0.8 }}>{chart.recommendationReason}</p>
+          <p style={{ opacity: 0.8 }}>{chartAvailability(chart.id) || "Available for the selected fields."}</p>
 
           {loading && activeChart === chart.id ? (
             <p style={{ marginTop: "0.75rem" }}>Loading chart...</p>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { getHealth, getSessionState, resetSession } from "./api/client";
 import GlobalStatusBar from "./components/GlobalStatusBar";
 import DatasetTab from "./tabs/DatasetTab";
@@ -42,30 +42,58 @@ export default function App() {
   const [sessionState, setSessionState] = useState(null);
   const [pendingDatasetId, setPendingDatasetId] = useState(null);
 
+  const selectionVersion = useRef(0);
+  const pendingDataset = useRef(null);
+  const runInFlight = useRef(false);
+
   const activeDatasetIdentity = pendingDatasetId ?? sessionState?.active_dataset ?? null;
-  const hasDataset = activeDatasetIdentity != null;
-  const pipelineCompleted = sessionState?.pipeline_status === "completed";
+  const pipelineCompleted = pendingDatasetId == null && sessionState?.pipeline_status === "completed";
+
+  const applySessionState = useCallback((result, version) => {
+    if (!result.ok || version !== selectionVersion.current || runInFlight.current || pendingDataset.current !== null) return;
+    setSessionState(result.data);
+  }, []);
 
   const refreshSessionState = useCallback(async () => {
+    const version = selectionVersion.current;
     const result = await getSessionState();
-    if (result.ok) {
-      if (pendingDatasetId && result.data?.active_dataset !== pendingDatasetId) {
-        setSessionState(buildResetSessionState(pendingDatasetId));
-        return;
-      }
-
-      if (pendingDatasetId && result.data?.active_dataset === pendingDatasetId) {
-        setPendingDatasetId(null);
-      }
-
-      setSessionState(result.data);
-    }
-  }, [pendingDatasetId]);
+    applySessionState(result, version);
+  }, [applySessionState]);
 
   const handleDatasetChange = useCallback((datasetId) => {
+    selectionVersion.current += 1;
+    runInFlight.current = false;
+    pendingDataset.current = datasetId ?? "";
     setPendingDatasetId(datasetId || null);
+    setPipelineResult(null);
     setSessionState(buildResetSessionState(datasetId));
   }, []);
+
+  const handlePipelineStart = useCallback((datasetId) => {
+    selectionVersion.current += 1;
+    runInFlight.current = true;
+    setPipelineResult(null);
+    setSessionState({ ...buildResetSessionState(datasetId), pipeline_status: "running" });
+    return selectionVersion.current;
+  }, []);
+
+  const handlePipelineComplete = (result, version) => {
+    if (version != null && version !== selectionVersion.current) return;
+    pendingDataset.current = null;
+    setPendingDatasetId(null);
+    setPipelineResult({ datasetId: activeDatasetIdentity, data: result });
+    setSessionState((previous) => ({ ...previous, pipeline_status: "completed" }));
+  };
+
+  const handlePipelineAction = (version) => {
+    if (version != null && version !== selectionVersion.current) return;
+    if (runInFlight.current) {
+      runInFlight.current = false;
+      pendingDataset.current = null;
+      setPendingDatasetId(null);
+    }
+    refreshSessionState();
+  };
 
   useEffect(() => {
     async function checkApi() {
@@ -85,14 +113,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    refreshSessionState();
-    const intervalId = setInterval(refreshSessionState, 8000);
-    return () => clearInterval(intervalId);
-  }, [refreshSessionState]);
-
-  useEffect(() => {
-    setPipelineResult(null);
-  }, [activeDatasetIdentity]);
+    let cancelled = false;
+    const poll = async () => {
+      const version = selectionVersion.current;
+      const result = await getSessionState();
+      if (!cancelled) applySessionState(result, version);
+    };
+    poll();
+    const intervalId = setInterval(poll, 8000);
+    return () => { cancelled = true; clearInterval(intervalId); };
+  }, [applySessionState]);
 
   const handleSessionReset = useCallback(async () => {
     setResettingSession(true);
@@ -105,6 +135,9 @@ export default function App() {
       return;
     }
 
+    selectionVersion.current += 1;
+    pendingDataset.current = null;
+    runInFlight.current = false;
     setPendingDatasetId(null);
     setPipelineResult(null);
     setSessionState(response.data?.session || buildResetSessionState(null));
@@ -115,6 +148,10 @@ export default function App() {
   }, [refreshSessionState]);
 
   const panelKey = `${activeTab}-${uiResetVersion}`;
+  const analysisKey = `${panelKey}-${activeDatasetIdentity}-${sessionState?.pipeline_status}-${sessionState?.pipeline_run_id || ""}-${sessionState?.selected_variables?.target || ""}`;
+  const currentMetrics = pipelineCompleted
+    ? sessionState?.pipeline_summary || (pipelineResult?.datasetId === activeDatasetIdentity ? pipelineResult.data : null)
+    : null;
 
   const renderPanel = () => {
     switch (activeTab) {
@@ -122,21 +159,22 @@ export default function App() {
         return (
           <DatasetTab
             key={panelKey}
-            onPipelineComplete={setPipelineResult}
-            onAction={refreshSessionState}
+            onPipelineComplete={handlePipelineComplete}
+            onPipelineStart={handlePipelineStart}
+            onAction={handlePipelineAction}
             onDatasetChange={handleDatasetChange}
           />
         );
       case "metrics":
-        return <MetricsTab key={panelKey} pipelineResult={pipelineResult} />;
+        return <MetricsTab key={panelKey} pipelineResult={currentMetrics} />;
       case "charts":
-        return <ChartsTab key={panelKey} activeDatasetId={activeDatasetIdentity} />;
+        return <ChartsTab key={analysisKey} activeDatasetId={pipelineCompleted ? activeDatasetIdentity : null} />;
       case "cleaning-audit":
-        return <CleaningAuditTab key={panelKey} activeDatasetId={activeDatasetIdentity} />;
+        return <CleaningAuditTab key={analysisKey} activeDatasetId={pipelineCompleted ? activeDatasetIdentity : null} />;
       case "anomaly-detection":
-        return <AnomalyDetectionTab key={panelKey} onAction={refreshSessionState} hasDataset={hasDataset} />;
+        return <AnomalyDetectionTab key={analysisKey} onAction={refreshSessionState} pipelineCompleted={pipelineCompleted} />;
       case "prediction":
-        return <PredictionTab key={panelKey} onAction={refreshSessionState} pipelineCompleted={pipelineCompleted} />;
+        return <PredictionTab key={analysisKey} onAction={refreshSessionState} pipelineCompleted={pipelineCompleted} />;
       default:
         return null;
     }
