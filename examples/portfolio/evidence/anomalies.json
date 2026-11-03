@@ -1,0 +1,83 @@
+{
+  "total_records": 11,
+  "anomaly_count": 1,
+  "records": [
+    {
+      "entity_id": "synthetic-001",
+      "timestamp": "2026-01-01T00:00:00Z",
+      "value": 10.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.316
+    },
+    {
+      "entity_id": "synthetic-002",
+      "timestamp": "2026-01-01T00:01:00Z",
+      "value": 11.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.2774
+    },
+    {
+      "entity_id": "synthetic-003",
+      "timestamp": "2026-01-01T00:02:00Z",
+      "value": 9.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.3546
+    },
+    {
+      "entity_id": "synthetic-004",
+      "timestamp": "2026-01-01T00:03:00Z",
+      "value": 10.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.316
+    },
+    {
+      "entity_id": "synthetic-005",
+      "timestamp": "2026-01-01T00:04:00Z",
+      "value": 12.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.2387
+    },
+    {
+      "entity_id": "synthetic-006",
+      "timestamp": "2026-01-01T00:05:00Z",
+      "value": 8.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.3932
+    },
+    {
+      "entity_id": "synthetic-007",
+      "timestamp": "2026-01-01T00:06:00Z",
+      "value": 11.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.2774
+    },
+    {
+      "entity_id": "synthetic-008",
+      "timestamp": "2026-01-01T00:07:00Z",
+      "value": 9.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.3546
+    },
+    {
+      "entity_id": "synthetic-009",
+      "timestamp": "2026-01-01T00:08:00Z",
+      "value": 10.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.316
+    },
+    {
+      "entity_id": "synthetic-010",
+      "timestamp": "2026-01-01T00:09:00Z",
+      "value": 10.0,
+      "is_anomaly": false,
+      "anomaly_score": 0.316
+    },
+    {
+      "entity_id": "synthetic-011",
+      "timestamp": "2026-01-01T00:10:00Z",
+      "value": 100.0,
+      "is_anomaly": true,
+      "anomaly_score": 3.1597
+    }
+  ]
+}

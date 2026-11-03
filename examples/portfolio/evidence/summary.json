@@ -1,0 +1,21 @@
+{
+  "run_started_utc": "2026-11-03T14:29:22.340745+00:00",
+  "python": "3.12.14",
+  "input_sha256": "05fa3e9f91eafd47992238f7f7ac9e5843e1aa10f70b85500d99621e0e0f6121",
+  "input_records": 14,
+  "accepted_records": 11,
+  "rejected_records": 3,
+  "persisted_records": 11,
+  "json_round_trip_equal": true,
+  "anomaly_count": 1,
+  "anomaly_entity_ids": [
+    "synthetic-011"
+  ],
+  "model": "ZScoreAnomalyModel",
+  "threshold": 2.0,
+  "fit_mean": 18.181818181818183,
+  "fit_population_stddev": 25.89425412507985,
+  "component_elapsed_seconds": 0.001451,
+  "timing_scope": "validation, JSON write/read, feature mapping, fit and predict; excludes imports and report writes",
+  "limitations": "Synthetic in-sample illustration. No labeled accuracy, throughput benchmark, API/UI, cloud ingestion or deployment verification."
+}

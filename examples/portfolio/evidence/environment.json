@@ -1,0 +1,13 @@
+{
+  "python": "3.12.14",
+  "packages": {
+    "pandas": "2.2.3",
+    "pydantic": "2.13.4",
+    "pytest": "9.2.0",
+    "scikit-learn": "1.8.0",
+    "pyarrow": "26.0.1"
+  },
+  "test_command": "python -m pytest -q",
+  "test_result": "148 passed, 5 warnings in 8.18s",
+  "notes": "Full backend pytest suite run locally on 2026-11-03. Warnings included FastAPI startup-event deprecation and physical CPU-core detection. Frontend checks and live deployment checks not run; no frontend changes."
+}

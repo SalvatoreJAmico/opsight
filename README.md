@@ -116,6 +116,10 @@ Practical value demonstrated in this repository:
 
 For endpoint details and examples, see API_DOCUMENTATION.md.
 
+## Reproducible Offline Example
+
+See the [validation-to-anomaly walkthrough](examples/portfolio/README.md) for synthetic input, accepted and rejected records, JSON persistence, and an actual Z-score result. It runs locally without credentials and includes saved evidence and tests. This component example is separate from the live demo and does not claim production model accuracy.
+
 ## Quick Start
 
 ### Option 1: Windows one-command startup
