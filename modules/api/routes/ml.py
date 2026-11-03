@@ -67,6 +67,8 @@ def _build_isolation_forest_anomaly_sample(records: list, predictions: list, lim
         sample.append(
             {
                 "row_id": record.get("row_id", prediction.entity_id),
+                "target_field": record.get("value_field", "value"),
+                "target_value": prediction.value,
                 "Sales": key_values.get("Sales"),
                 "Profit": key_values.get("Profit"),
                 "Discount": key_values.get("Discount"),

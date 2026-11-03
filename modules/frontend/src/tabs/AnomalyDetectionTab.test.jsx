@@ -127,3 +127,23 @@ it("shows the actual target field and actionable API selection errors", async ()
   expect(await screen.findByText("Freight")).toBeInTheDocument();
   expect(screen.getByText(/2 rows excluded because/)).toBeInTheDocument();
 });
+
+
+it.each([
+  { target: "Freight", values: { Freight: 543.21 }, expected: ["Row ID", "Freight", "Anomaly Score"] },
+  { target: "Sales", values: { Sales: 2000, Profit: -500, Discount: 0 }, expected: ["Row ID", "Sales", "Profit", "Discount", "Anomaly Score"] },
+  { target: "Profit", values: { Sales: 2000, Profit: -500, Discount: 0 }, expected: ["Row ID", "Profit", "Sales", "Discount", "Anomaly Score"] },
+])("uses the selected $target field in the sample table without blank or duplicate sales columns", async ({ target, values, expected }) => {
+  runIsolationForestAnomaly.mockResolvedValue({ ok: true, data: {
+    summary: { total_records: 100, anomaly_count: 1 },
+    dataset_context: { value: target },
+    anomaly_sample_top10: [{ row_id: 42, Sales: null, Profit: null, Discount: null, ...values,
+      target_field: target, target_value: values[target], anomaly_score: -0.5 }],
+  } });
+  render(<AnomalyDetectionTab pipelineCompleted />);
+  fireEvent.click(screen.getByLabelText("Isolation Forest"));
+  await screen.findByRole("table");
+  expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(expected);
+  expect(screen.getByRole("cell", { name: String(values[target]) })).toBeInTheDocument();
+  if (target !== "Freight") expect(screen.getByRole("cell", { name: "0" })).toBeInTheDocument();
+});

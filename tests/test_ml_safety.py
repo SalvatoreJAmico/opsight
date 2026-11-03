@@ -221,3 +221,29 @@ def test_successful_ingest_populates_current_run_summary():
     assert latest["pipeline_summary"]["records_persisted"] == 4
     assert latest["pipeline_summary"]["dataset_id"] == "sales_csv"
     assert latest["pipeline_summary"]["pipeline_run_id"] == latest["pipeline_run_id"]
+
+
+@pytest.mark.parametrize("target", ["Freight", "Sales", "Profit"])
+def test_isolation_sample_reports_selected_measurement_and_preserves_sales_context(dataset, target):
+    rows = records([100 + i % 7 + (400 if i % 15 == 0 else 0) for i in range(150)], field=target)
+    # Keep valid dates while supplying enough rows to create a reproducible outlier sample.
+    for i, row in enumerate(rows):
+        row["timestamp"] = f"2026-01-{i % 28 + 1:02d}"
+        row["features"]["ShipVia"] = i % 3
+        if target in {"Sales", "Profit"}:
+            row["features"].setdefault("Sales", 200)
+            row["features"].setdefault("Profit", -5)
+            row["features"]["Discount"] = 0
+    dataset.save_records(rows)
+    state.set_selected_variables(target, [])
+    response = TestClient(app).get("/ml/anomaly/isolation-forest")
+    assert response.status_code == 200
+    sample = response.json()["anomaly_sample_top10"]
+    assert 0 < len(sample) <= 10
+    for row in sample:
+        assert row["target_field"] == target
+        assert row["target_value"] == rows[row["row_id"]]["features"][target]
+        if target in {"Sales", "Profit"}:
+            assert row["Sales"] == rows[row["row_id"]]["features"]["Sales"]
+            assert row["Profit"] == rows[row["row_id"]]["features"]["Profit"]
+            assert row["Discount"] == 0

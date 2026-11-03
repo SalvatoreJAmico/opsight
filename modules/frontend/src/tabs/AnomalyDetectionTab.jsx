@@ -170,6 +170,14 @@ export default function AnomalyDetectionTab({ onAction, pipelineCompleted }) {
             }
           : null;
 
+        const sampleTarget = state.data?.dataset_context?.value || anomalySample?.find((row) => row.target_field)?.target_field;
+        const sampleColumns = [
+          ...(sampleTarget ? [{ key: "target_value", label: sampleTarget }] : []),
+          ...["Sales", "Profit", "Discount"]
+            .filter((field) => field !== sampleTarget && anomalySample?.some((row) => row[field] != null))
+            .map((field) => ({ key: field, label: field })),
+        ];
+
         const resultFooter = showIsolationSampleTable ? (
           <div
             style={{
@@ -186,9 +194,9 @@ export default function AnomalyDetectionTab({ onAction, pipelineCompleted }) {
               <thead>
                 <tr>
                   <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Row ID</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Sales</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Profit</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Discount</th>
+                  {sampleColumns.map((column) => (
+                    <th key={column.key} style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>{column.label}</th>
+                  ))}
                   <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "0.35rem" }}>Anomaly Score</th>
                 </tr>
               </thead>
@@ -196,9 +204,11 @@ export default function AnomalyDetectionTab({ onAction, pipelineCompleted }) {
                 {anomalySample.map((row, index) => (
                   <tr key={`${row.row_id ?? "row"}-${index}`}>
                     <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>{row.row_id ?? ""}</td>
-                    <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>{row.Sales ?? ""}</td>
-                    <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>{row.Profit ?? ""}</td>
-                    <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>{row.Discount ?? ""}</td>
+                    {sampleColumns.map((column) => (
+                      <td key={column.key} style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>
+                        {row[column.key] ?? (column.key === "target_value" ? row[sampleTarget] : null) ?? ""}
+                      </td>
+                    ))}
                     <td style={{ borderBottom: "1px solid #f0f0f0", padding: "0.35rem" }}>
                       {formatAnomalyScore(row.anomaly_score)}
                     </td>
