@@ -1,4 +1,8 @@
 import unittest
+
+import numpy as np
+import pandas as pd
+from modules.adapter.adapter import adapt_records
 import sys
 from pathlib import Path
 
@@ -58,6 +62,41 @@ class TestValidationLayer(unittest.TestCase):
 
         self.assertEqual(result["status"], "invalid")
         self.assertIn("Features must be a dictionary", result["errors"])
+
+    def test_required_fields_reject_scalar_missing_sentinels(self):
+        for field in ("entity_id", "timestamp", "features", "metadata"):
+            for missing in (None, float("nan"), np.float64("nan"), pd.NA, pd.NaT):
+                with self.subTest(field=field, missing=repr(missing)):
+                    record = {
+                        "entity_id": "cust-001",
+                        "timestamp": "2026-03-15T12:00:00",
+                        "features": {"amount": 100.0},
+                        "metadata": {},
+                    }
+                    record[field] = missing
+                    result = validate_canonical_record(record)
+                    self.assertEqual(result["status"], "invalid")
+                    self.assertIn(f"Missing {field}", result["errors"])
+
+    def test_valid_falsy_values_and_containers_do_not_raise(self):
+        record = {"entity_id": 0, "timestamp": "2026-03-15", "features": {}, "metadata": {}}
+        self.assertEqual(validate_canonical_record(record)["status"], "valid")
+        for features in ([1, 2], np.array([1, 2]), pd.Series([1, 2])):
+            with self.subTest(features=type(features).__name__):
+                result = validate_canonical_record({**record, "features": features})
+                self.assertEqual(result["errors"], ["Features must be a dictionary"])
+
+    def test_adapter_missing_timestamp_with_both_string_inference_modes(self):
+        for infer_string in (False, True):
+            with self.subTest(infer_string=infer_string):
+                with pd.option_context("future.infer_string", infer_string):
+                    frame = pd.DataFrame([
+                        {"id": "1", "order_date": "2026-01-01", "amount": 10},
+                        {"id": "2", "order_date": None, "amount": 20},
+                    ])
+                    records = adapt_records(frame)
+                self.assertEqual(validate_canonical_record(records[0])["status"], "valid")
+                self.assertEqual(validate_canonical_record(records[1])["errors"], ["Missing timestamp"])
 
     def test_duplicate_record_detection_works(self):
         records = [
