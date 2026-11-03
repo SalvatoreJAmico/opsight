@@ -635,6 +635,7 @@ class TestApiLayer(unittest.TestCase):
             )
 
             session_state.set_active_dataset("sales_csv")
+            session_state.set_pipeline_status("completed")
             session_state.set_dataset_source_metadata(
                 {
                     "dataset_id": "sales_csv",
@@ -659,7 +660,7 @@ class TestApiLayer(unittest.TestCase):
         self.assertEqual(body["assignment_analysis"]["target_variable"], "Sales")
         self.assertEqual(
             body["assignment_analysis"]["compare_options"],
-            ["Profit", "Category", "Order Date"],
+            ["Sales", "Profit", "Category", "Order Date"],
         )
 
         numeric_fields = {item["field"] for item in body["numeric_summary"]}

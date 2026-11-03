@@ -42,6 +42,7 @@ def reset_session_state() -> Dict[str, Any]:
 def set_active_dataset(dataset_id: str | None) -> Dict[str, Any]:
     if _SESSION_STATE["active_dataset"] != dataset_id:
         _SESSION_STATE["active_dataset"] = dataset_id
+        _SESSION_STATE["selected_variables"] = {"target": None, "compare": []}
         _SESSION_STATE["dataset_source_metadata"] = None
         reset_processing_state()
     return get_session_state()

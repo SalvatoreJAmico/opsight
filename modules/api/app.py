@@ -3,6 +3,7 @@ import time
 import pandas as pd
 from pathlib import Path
 from collections import Counter
+from modules.api.chart_schema import schema_for, usable_series, default_target
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -35,103 +36,41 @@ from modules.validation.duplicate_check import detect_duplicates
 
 
 ASSIGNMENT_TARGET_VARIABLE = "Sales"
-ASSIGNMENT_COMPARE_VARIABLES = ["Profit", "Quantity", "Discount", "Category", "Order Date"]
-ASSIGNMENT_ANALYSIS_FIELDS = [ASSIGNMENT_TARGET_VARIABLE, *ASSIGNMENT_COMPARE_VARIABLES]
-ASSIGNMENT_FIELD_CANDIDATES = {
-    "Sales": ("sales",),
-    "Profit": ("profit",),
-    "Quantity": ("quantity",),
-    "Discount": ("discount",),
-    "Category": ("category",),
-    "Order Date": ("order date", "order_date", "timestamp"),
-}
-
-
-def _normalize_field_name(field_name) -> str:
-    return str(field_name).strip().lower().replace("_", " ")
-
-
-def _resolve_assignment_column(df: pd.DataFrame, label: str):
-    normalized_columns = {
-        _normalize_field_name(column): column
-        for column in df.columns
-    }
-
-    for candidate in ASSIGNMENT_FIELD_CANDIDATES[label]:
-        matched_column = normalized_columns.get(_normalize_field_name(candidate))
-        if matched_column is not None:
-            return matched_column
-
-    return None
 
 
 def _resolve_assignment_fields(df: pd.DataFrame) -> dict:
-    return {
-        label: column
-        for label in ASSIGNMENT_ANALYSIS_FIELDS
-        for column in [_resolve_assignment_column(df, label)]
-        if column is not None
-    }
+    return schema_for(df)[0]
 
 
 def _get_assignment_series(df: pd.DataFrame, column_name, label: str) -> pd.Series:
-    series = df[column_name]
-    if label == "Order Date":
-        return pd.to_datetime(series, errors="coerce")
-    return series
+    _, types = schema_for(df)
+    return usable_series(df, column_name, types[label])
 
 
-def _validate_target_variable(target_variable: str) -> str:
-    if target_variable != ASSIGNMENT_TARGET_VARIABLE:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Target variable must be '{ASSIGNMENT_TARGET_VARIABLE}'.",
-        )
-
-    return target_variable
-
-
-def _validate_compare_variable(compare_variable: str) -> str:
-    if compare_variable not in ASSIGNMENT_COMPARE_VARIABLES:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "Compare variable must be one of "
-                f"{', '.join(ASSIGNMENT_COMPARE_VARIABLES)}."
-            ),
-        )
-
-    return compare_variable
-
-
-def _resolve_chart_columns(
-    df: pd.DataFrame,
-    *,
-    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
-    compare_variable: str | None = None,
-):
-    resolved_fields = _resolve_assignment_fields(df)
-    target_label = _validate_target_variable(target_variable)
-    target_column = resolved_fields.get(target_label)
-
-    if target_column is None:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Target variable '{target_label}' is not available in the active dataset.",
-        )
-
-    compare_label = None
-    compare_column = None
+def _resolve_chart_columns(df, *, target_variable=None, compare_variable=None, require_target=True):
+    fields, types = schema_for(df)
+    target_label = target_variable or default_target(df)[0]
+    target_column = fields.get(target_label)
+    if require_target:
+        if target_column is None:
+            raise HTTPException(status_code=422, detail=f"Target variable '{target_label}' is not available in the active dataset.")
+        if types[target_label] != 'numeric':
+            raise HTTPException(status_code=422, detail=f"Target variable '{target_label}' must contain numeric values.")
+        df[target_column] = usable_series(df, target_column, 'numeric')
+        if df[target_column].dropna().empty:
+            raise HTTPException(status_code=422, detail='No finite numeric target values are available.')
+    compare_label, compare_column = None, None
     if compare_variable is not None:
-        compare_label = _validate_compare_variable(compare_variable)
-        compare_column = resolved_fields.get(compare_label)
+        compare_label = compare_variable
+        compare_column = fields.get(compare_label)
         if compare_column is None:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Compare variable '{compare_label}' is not available in the active dataset.",
-            )
-
-    return target_column, compare_column, resolved_fields, target_label, compare_label
+            raise HTTPException(status_code=422, detail=f"Compare variable '{compare_label}' is not available in the active dataset.")
+        df[compare_column] = usable_series(df, compare_column, types[compare_label])
+        if df[compare_column].dropna().empty:
+            raise HTTPException(status_code=422, detail='No usable comparison values are available.')
+        if require_target and df[[target_column, compare_column]].dropna().empty:
+            raise HTTPException(status_code=422, detail='No rows have usable values for both selected fields.')
+    return target_column, compare_column, fields, target_label, compare_label
 
 
 def _records_to_chart_df(records: list) -> pd.DataFrame:
@@ -191,10 +130,10 @@ def _build_chart_context(df: pd.DataFrame, compare_variable: str = "Profit") -> 
     compare_label = compare_variable if compare_variable in resolved_fields else None
     if compare_label is None:
         compare_label = next(
-            (label for label in ASSIGNMENT_COMPARE_VARIABLES if label in resolved_fields),
+            (label for label in resolved_fields if label != default_target(df)[0]),
             None,
         )
-    target_label = ASSIGNMENT_TARGET_VARIABLE if ASSIGNMENT_TARGET_VARIABLE in resolved_fields else None
+    target_label = default_target(df)[0]
 
     return {
         "histogram": {
@@ -220,9 +159,20 @@ def _build_chart_context(df: pd.DataFrame, compare_variable: str = "Profit") -> 
         },
         "time-line": {
             "target_variable": target_label,
-            "compare_variable": "Order Date" if "Order Date" in resolved_fields else None,
+            "compare_variable": next((label for label, kind in schema_for(df)[1].items() if kind == "date"), None),
         },
     }
+
+
+def _require_chart_dataset_ready():
+    """Never relabel older persisted records as a selected but unprocessed dataset."""
+    state = get_session_state()
+    status = state.get("pipeline_status")
+    if status in {"running", "failed"} or (state.get("active_dataset") and status != "completed"):
+        raise HTTPException(
+            status_code=422,
+            detail="The selected dataset has not completed processing. Run it successfully before viewing charts.",
+        )
 
 
 def get_chart_dataframe() -> pd.DataFrame:
@@ -230,6 +180,7 @@ def get_chart_dataframe() -> pd.DataFrame:
 
     Raises HTTPException 422 when no records have been persisted yet.
     """
+    _require_chart_dataset_ready()
     config = StorageConfig()
     storage = LocalStorage(storage_path=config.storage_path)
     records = storage.load_records()
@@ -407,7 +358,7 @@ async def log_requests(request: Request, call_next):
     return response
 
 @app.get("/charts/histogram")
-def histogram(request: Request, target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
+def histogram(request: Request, target_variable: str | None = None):
     try:
         enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
@@ -432,7 +383,7 @@ def histogram(request: Request, target_variable: str = ASSIGNMENT_TARGET_VARIABL
 @app.get("/charts/bar-category")
 def bar_category(
     request: Request,
-    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    target_variable: str | None = None,
     compare_variable: str = "Category",
 ):
     try:
@@ -442,6 +393,7 @@ def bar_category(
             df,
             target_variable=target_variable,
             compare_variable=compare_variable,
+            require_target=False,
         )
         path = create_bar_category_chart(
             df,
@@ -458,7 +410,7 @@ def bar_category(
 
 
 @app.get("/charts/boxplot")
-def boxplot(request: Request, target_variable: str = ASSIGNMENT_TARGET_VARIABLE):
+def boxplot(request: Request, target_variable: str | None = None):
     try:
         enhancements = _extract_chart_enhancements(request)
         df = get_chart_dataframe()
@@ -483,7 +435,7 @@ def boxplot(request: Request, target_variable: str = ASSIGNMENT_TARGET_VARIABLE)
 @app.get("/charts/scatter")
 def scatter(
     request: Request,
-    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    target_variable: str | None = None,
     compare_variable: str = "Profit",
 ):
     try:
@@ -513,7 +465,7 @@ def scatter(
 @app.get("/charts/grouped-comparison")
 def grouped_comparison(
     request: Request,
-    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    target_variable: str | None = None,
     compare_variable: str = "Category",
 ):
     try:
@@ -543,7 +495,7 @@ def grouped_comparison(
 @app.get("/charts/grouped-boxplot")
 def grouped_boxplot(
     request: Request,
-    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    target_variable: str | None = None,
     compare_variable: str = "Category",
 ):
     try:
@@ -573,7 +525,7 @@ def grouped_boxplot(
 @app.get("/charts/time-line")
 def time_line_chart(
     request: Request,
-    target_variable: str = ASSIGNMENT_TARGET_VARIABLE,
+    target_variable: str | None = None,
     compare_variable: str = "Order Date",
 ):
     try:
@@ -585,10 +537,10 @@ def time_line_chart(
             compare_variable=compare_variable,
         )
 
-        if compare_label != "Order Date":
+        if schema_for(df)[1].get(compare_label) != "date":
             raise HTTPException(
                 status_code=422,
-                detail="Time line chart requires compare variable 'Order Date'.",
+                detail="Time line chart requires a date/time compare variable, such as Order Date.",
             )
 
         path = create_time_line_chart(
@@ -618,6 +570,7 @@ def health():
 
 @app.get("/charts/overview")
 def charts_overview():
+    _require_chart_dataset_ready()
     config = StorageConfig()
     storage = LocalStorage(storage_path=config.storage_path)
     records = storage.load_records()
@@ -669,7 +622,7 @@ def charts_overview():
     }
 
     numeric_summary = []
-    for label in ["Sales", "Profit", "Quantity", "Discount"]:
+    for label in [name for name, kind in schema_for(df)[1].items() if kind == "numeric"]:
         column = resolved_fields.get(label)
         if column is None:
             continue
@@ -689,7 +642,7 @@ def charts_overview():
         )
 
     date_summary = []
-    for label in ["Order Date"]:
+    for label in [name for name, kind in schema_for(df)[1].items() if kind == "date"]:
         column = resolved_fields.get(label)
         if column is None:
             continue
@@ -706,7 +659,7 @@ def charts_overview():
         )
 
     categorical_summary = []
-    for label in ["Category"]:
+    for label in [name for name, kind in schema_for(df)[1].items() if kind == "categorical"]:
         column = resolved_fields.get(label)
         if column is None:
             continue
@@ -732,7 +685,7 @@ def charts_overview():
 
     stats: dict = {}
     sales_column = resolved_fields.get(ASSIGNMENT_TARGET_VARIABLE)
-    if sales_column is not None:
+    if sales_column is not None and schema_for(df)[1].get(ASSIGNMENT_TARGET_VARIABLE) == "numeric":
         series = _get_assignment_series(df, sales_column, ASSIGNMENT_TARGET_VARIABLE).dropna()
         if len(series) > 0:
             stats = {
@@ -765,13 +718,12 @@ def charts_overview():
         "date_summary": date_summary,
         "categorical_summary": categorical_summary,
         "chart_context": chart_context,
+        "field_types": schema_for(df)[1],
         "assignment_analysis": {
-            "target_variable": ASSIGNMENT_TARGET_VARIABLE,
-            "target_options": [ASSIGNMENT_TARGET_VARIABLE],
-            "compare_options": [
-                label for label in ASSIGNMENT_COMPARE_VARIABLES
-                if label in resolved_fields
-            ],
+            "target_variable": default_target(df)[0],
+            "target_options": default_target(df)[1],
+            "compare_options": [label for label, col in resolved_fields.items() if _get_assignment_series(df, col, label).notna().any()],
+            "field_types": schema_for(df)[1],
         },
         **stats,
     }
